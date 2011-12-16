@@ -9,9 +9,9 @@ Python syntax in Java.  The sweet spot is where you need a `DSL
 expressions, variables, some conditionals) and would like to use
 Python's syntax.
 
-It was originally written in order to have a richer configuration
-file. For example you could make the brightness setting have a value
-of 7 except on Thursday afternoons, unless the program has been
+It was originally written in order to have a richer configuration file
+on Android. For example you could make the brightness setting have a
+value of 7 except on Thursday afternoons, unless the program has been
 running for 24 hours.
 
 If you are looking for a fuller implementation of Python then try the
@@ -21,7 +21,9 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
+   example
+   lang   
 
 
 
