@@ -1,0 +1,173 @@
+#!/usr/bin/env python
+
+"Turns the subset of Python we support into virtual bytecode for Java code to run"
+
+# We use Python's ast module for the heavy lifting.  It parses the
+# target file and we then operate on the resulting abstract syntax
+# tree.
+
+import sys
+import ast
+import linecache
+
+try:
+    from IPython.Debugger import Tracer
+    debug_here=Tracer()
+    del Tracer
+except ImportError:
+    import pdb
+    debug_here=pdb.set_trace
+    del pdb
+
+        
+class Compiler(ast.NodeVisitor):
+
+    _opmap={
+        ast.Add: "+",
+        ast.Mult: "*",
+        ast.Div: "/",
+        ast.Gt: ">",
+        }
+
+    class Error(Exception):
+        def __init__(self, node, message):
+            Exception.__init__(self, message)
+            self.message=message
+            self.node=node
+
+    def compile(self, inputfile):
+        t=ast.parse(open(inputfile, "rb").read(), inputfile)
+        ast.fix_missing_locations(t)
+        res=[]
+        try:
+            for i in self.visit(t):
+                res.append(i)
+        except self.Error, e:
+            print >> sys.stderr, e.message,"at line",e.node.lineno,"of", inputfile
+            print >> sys.stderr, linecache.getline(inputfile, e.node.lineno)+e.node.col_offset*" "+"^"
+            sys.exit(2)
+        print " ".join([str(x) for x in res])
+        
+    def generic_visit(self, node):
+        raise self.Error(node, "Unsupported syntax "+node.__class__.__name__)
+
+    def visit_Module(self, node):
+        for i in node.body:
+            for x in self.visit(i):
+                yield x
+
+    def visit_Expr(self, node):
+        yield "("
+        for x in self.visit(node.value):
+            yield x
+        yield ")"
+        yield "\n"
+
+    def visit_BinOp(self, node):
+        assert len(node.op._fields)==0
+        yield "("
+        yield self._opmap[node.op.__class__]
+        for x in self.visit(node.left):
+            yield x
+        for x in self.visit(node.right):
+            yield x
+        yield ")"
+
+    def visit_Compare(self, node):
+        if len(node.ops)!=1:
+            raise self.Error(node, "Only one comparison is supported (you can't do x<y<z)")
+        yield "("
+        yield self._opmap[node.ops[0].__class__]
+        for x in self.visit(node.left):
+            yield x
+        for x in self.visit(node.comparators[0]):
+            yield x
+        yield ")"
+        
+
+    def visit_Num(self, node):
+        yield node.n
+
+    def visit_Name(self, node):
+        assert len(node.ctx._fields)==0
+        yield "L"+node.id+";"
+
+    def visit_Str(self, node):
+        yield '"%s"' % (node.s,)
+
+    def visit_Call(self, node):
+        if node.starargs:
+            raise self.Error(node, "*args not supported")
+        if node.kwargs or node.keywords:
+            raise self.Error(node, "Keyword arguments are not supported")
+        yield "("
+        yield "call"
+        for x in self.visit(node.func):
+            yield x
+        for x in node.args:
+            for y in self.visit(x):
+                yield y
+        yield ")"
+
+    def visit_If(self, node):
+        yield "("
+        yield "if"
+        for x in self.visit(node.test):
+            yield x
+        yield "("
+        for x in node.body:
+            for y in self.visit(x):
+                yield y
+        yield ")"
+        if node.orelse:
+            yield "("
+            for x in node.orelse:
+                for y in self.visit(x):
+                    yield y
+            yield ")"
+        yield ")"
+
+    def visit_Return(self, node):
+        yield "("
+        yield "return"
+        for x in self.visit(node.value):
+            yield x
+        yield ")"
+
+    def visit_FunctionDef(self, node):
+        if node.decorator_list:
+            raise self.Error(node, "Decorators are not supported")
+        args=node.args
+        if args.defaults:
+            raise self.Error(node, "Default arguments are not supported")
+        if args.kwarg:
+            raise self.Error(node, "Keyword arguments are not supported")
+        if args.vararg:
+            raise self.Error(node, "Varargs (*args) are not supported")
+        yield "("
+        yield "defproc"
+        yield node.name
+        yield "("
+        for i, n in enumerate(args.args):
+            if not isinstance(n, ast.Name):
+                raise self.Error(node, "Only single named arguments are supported (#%d)" % (i,))
+            yield n.id
+        yield ")"
+        yield "("
+        for x in node.body:
+            for y in self.visit(x):
+                yield y
+        yield ")"
+        yield ")"
+        yield "\n"
+
+if __name__=='__main__':
+    import optparse
+    p=optparse.OptionParser(usage="%prog [options] input.py [output.jmp]")
+    options, args=p.parse_args()
+
+    if len(args) not in (1,2):
+        p.error("At least one argument is required")
+
+    c=Compiler()
+    c.compile(args[0])
