@@ -27,6 +27,9 @@ class Compiler(ast.NodeVisitor):
         ast.Mult: "*",
         ast.Div: "/",
         ast.Gt: ">",
+        ast.Lt: "<",
+        ast.Eq: "==",
+        ast.In: "in",
         ast.UAdd: "++", # distinguish from unary
         }
 
@@ -36,7 +39,7 @@ class Compiler(ast.NodeVisitor):
             self.message=message
             self.node=node
 
-    def compile(self, inputfile, linenumbers=False):
+    def compile(self, options, inputfile):
         t=ast.parse(open(inputfile, "rb").read(), inputfile)
         ast.fix_missing_locations(t)
         res=[]
@@ -44,6 +47,10 @@ class Compiler(ast.NodeVisitor):
             for node,v  in self.visit(t):
                 res.append( (node, v) )
         except self.Error, e:
+            if options.traceback:
+                x=sys.exc_info()
+                import traceback
+                traceback.print_exc(x)
             print >> sys.stderr, e.message,"at line",e.node.lineno,"of", inputfile
             print >> sys.stderr, linecache.getline(inputfile, e.node.lineno)+e.node.col_offset*" "+"^"
             sys.exit(2)
@@ -52,7 +59,7 @@ class Compiler(ast.NodeVisitor):
             v=unicode(v)
             if v[-1] in ('\n', ' ', ')') or len(final)==0 or final[-1]=='(':
                 final+=v
-                if linenumbers and node and not isinstance(node, (ast.Num, ast.Name, ast.Str)):
+                if options.line_numbers and node and not isinstance(node, (ast.Num, ast.Name, ast.Str)):
                     final+=":"+str(node.lineno)
             else:
                 final+=" "+v
@@ -116,6 +123,9 @@ class Compiler(ast.NodeVisitor):
     def visit_Str(self, node):
         yield node, '"%s"' % (node.s.replace('"', '""'),)
 
+    def visit_NoneType(self, node):
+        yield node, "None"
+
     def visit_List(self, node):
         assert len(node.ctx._fields)==0
         yield None, "("
@@ -148,7 +158,7 @@ class Compiler(ast.NodeVisitor):
         assert len(node.ctx._fields)==0
         yield None, "("
         if isinstance(node.slice, ast.Slice):
-            yield node, "[:]"            
+            yield node, "[_]"            
         else:
             yield node, "[]"
         for x in self.visit(node.value):
@@ -173,14 +183,23 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         if len(node.targets)!=1:
-            raise self.Error(node, "Only assigning to one variable at a time is supported")
-        if not isinstance(node.targets[0], ast.Name):
-            debug_here()
-            raise self.Error(node, "Only assigning to a single named variable is supported")
+            raise self.Error(node, "Only assigning to one item at a time is supported")
+        target=node.targets[0]
+        if not isinstance(target, (ast.Name, ast.Subscript)):
+            raise self.Error(target, "That kind of assignment is not supported")
         yield None, "("
-        yield node, "="
-        for x in self.visit_Name(node.targets[0]):
-            yield x
+        if isinstance(target, ast.Name):
+            yield node, "="
+            for x in self.visit_Name(target):
+                yield x
+        else:
+            yield node, "[]="
+            for x in self.visit(target.value):
+                yield x
+            if not isinstance(target.slice, ast.Index):
+                raise self.Error(target.slice, "Only simple array/list subscript assignment supported")
+            for x in self.visit(target.slice.value):
+                yield x
         for x in self.visit(node.value):
             yield x
         yield None, ")"
@@ -217,6 +236,20 @@ class Compiler(ast.NodeVisitor):
             yield None, ")"
         yield None, ")"
 
+    def visit_While(self, node):
+        yield None, "("
+        yield node, "while"
+        for x in self.visit(node.test):
+            yield x
+        yield None, "("
+        for x in node.body:
+            for y in self.visit(x):
+                yield y
+        yield None, ")"
+        if node.orelse:
+            raise self.Error(node, "else not supported for while")
+        yield None, ")"
+
     def visit_Return(self, node):
         yield None, "("
         yield node, "return"
@@ -237,12 +270,12 @@ class Compiler(ast.NodeVisitor):
         yield None, "("
         yield node, "defproc"
         yield node, node.name
-        yield None, "("
+        v=[]
         for i, n in enumerate(args.args):
             if not isinstance(n, ast.Name):
-                raise self.Error(node, "Only single named arguments are supported (#%d)" % (i,))
-            yield None, n.id
-        yield None, ")"
+                raise self.Error(n, "Only single named arguments are supported (#%d)" % (i,))
+            v.append(n.id)
+        yield None, "@"+",".join(v)
         yield None, "("
         for x in node.body:
             for y in self.visit(x):
@@ -255,10 +288,11 @@ if __name__=='__main__':
     import optparse
     p=optparse.OptionParser(usage="%prog [options] input.py [output.jmp]")
     p.add_option("--line-numbers", action="store_true", default=False, help="Include line numbers")
+    p.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on error")
     options, args=p.parse_args()
 
     if len(args) not in (1,2):
         p.error("At least one argument is required")
 
     c=Compiler()
-    c.compile(args[0], linenumbers=options.line_numbers)
+    c.compile(options, args[0])
