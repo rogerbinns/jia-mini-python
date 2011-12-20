@@ -43,4 +43,3 @@ What is not supported
 * More than one source file/module
 * Generators
 * List comprehensions
-* Top level module code (everything must be in a method)
