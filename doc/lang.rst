@@ -43,3 +43,5 @@ What is not supported
 * More than one source file/module
 * Generators
 * List comprehensions
+
+Use Jython if you want more than mini-Python

@@ -9,7 +9,9 @@
 import sys
 import ast
 import linecache
+import array
 
+# Get the nicest debugger possible
 try:
     from IPython.Debugger import Tracer
     debug_here=Tracer()
@@ -20,17 +22,24 @@ except ImportError:
     del pdb
 
         
+class Label:
+    "Instances used to mark locations while generating byte code"
+    def __repr__(self):
+        return "Label_"+str(id(self))
+
+
 class Compiler(ast.NodeVisitor):
 
+    # ast classes to string opcodes
     _opmap={
-        ast.Add: "+",
-        ast.Mult: "*",
-        ast.Div: "/",
-        ast.Gt: ">",
-        ast.Lt: "<",
-        ast.Eq: "==",
-        ast.In: "in",
-        ast.UAdd: "++", # distinguish from unary
+        ast.Add: "ADD",
+        ast.Mult: "MULT",
+        ast.Div: "DIV",
+        ast.Gt: "GT",
+        ast.Lt: "LT",
+        ast.Eq: "EQ",
+        ast.In: "IN",
+        ast.UAdd: "UNARY_ADD", 
         }
 
     class Error(Exception):
@@ -39,7 +48,9 @@ class Compiler(ast.NodeVisitor):
             self.message=message
             self.node=node
 
-    def compile(self, options, inputfile):
+    # main method to turn .py into .jmp
+    def compile(self, options, inputfile, outputfile):
+        self.counter=0
         t=ast.parse(open(inputfile, "rb").read(), inputfile)
         ast.fix_missing_locations(t)
         res=[]
@@ -54,132 +65,196 @@ class Compiler(ast.NodeVisitor):
             print >> sys.stderr, e.message,"at line",e.node.lineno,"of", inputfile
             print >> sys.stderr, linecache.getline(inputfile, e.node.lineno)+e.node.col_offset*" "+"^"
             sys.exit(2)
-        final=""
-        for node, v in res:
-            v=unicode(v)
-            if v[-1] in ('\n', ' ', ')') or len(final)==0 or final[-1]=='(':
-                final+=v
-                if options.line_numbers and node and not isinstance(node, (ast.Num, ast.Name, ast.Str)):
-                    final+=":"+str(node.lineno)
+
+        if False:
+            # prints raw content before fixups
+            for n,v in res:
+                print n.lineno, v
+
+        # integer, string and location tables
+        integers=[]
+        strings=[]
+        locations={}
+        linenotab=[]
+        lastlineno=-1
+        pos=0
+        out=[]
+        for n,v in res:
+            if isinstance(v, Label):
+                locations[v]=pos
+                continue
+            if lastlineno!=n.lineno:
+                linenotab.append( (pos, n.lineno) )
+                lastlineno=n.lineno
+            if not isinstance(v, tuple):
+                out.append( (n,v) )
+                pos+=1
+                continue
+            pos+=3
+            op, val=v
+            if op in self.string_ops:
+                if val not in strings:
+                    strings.append(val)
+                v=(op, strings.index(val))
+            elif op in self.integer_ops:
+                # ::TODO:: check that the integer fits in signed 32 bits
+                if val not in integers:
+                    integers.append(val)
+                v=(op, integers.index(val))
+            elif op in self.label_ops: 
+                # Second pass does these
+                pass
             else:
-                final+=" "+v
-        print final.encode("utf8")
+                assert False, "Unhandled opcode "+op
+            out.append( (n, v) )
+        res=out
+        codelen=pos
+        if codelen>65535:
+            print >> sys.stderr, "Your code is too long - %d instructions" % (codelen,)
+            sys.exit(3)
+        if linenotab[-1][1]>65535:
+            print >> sys.stderr, "Too many lines of code - %d" % (linenotab[-1][1],)
+            sys.exit(3)
         
+        # fixup labels
+        out=[]
+        for n,v in res:
+            if isinstance(v,tuple) and v[0] in self.label_ops:
+                v=v[0],locations[v[1]]
+            out.append( (n,v) )
+        res=out
+
+        if False:
+            # prints after fixups -this should match dumper output
+            print ">>> String table"
+            for i,v in enumerate(strings):
+                print "% 4d" % (i,), v
+            print ">>> Integer table"
+            for i,v in enumerate(integers):
+                print "% 4d" % (i,), v
+            print ">>> Line number table"
+            for pos,line in linenotab:
+                print "% 4d  -> % 4d" % (pos, line)
+            pos=0
+            for _,v in res:
+                for p,l in linenotab:
+                    if p>pos:
+                        break
+                    if p==pos:
+                        print "\n# % 4d %s" % (l, linecache.getline(inputfile, l))
+                        break
+                print "% 5d" % pos, v,
+                if isinstance(v, tuple):
+                    if v[0] in self.string_ops:
+                        print "   \t# string", v[1], "=", repr(strings[v[1]]),
+                    elif v[0] in self.integer_ops:
+                        print "   \t# int", v[1], "=", integers[v[1]],
+                    pos+=3
+                else:
+                    pos+=1
+                print
+
+        ### final output - this could really use a bytes type
+        out=array.array("B")
+        assert out.itemsize==1, "Bytes must be one byte in length!"
+        
+        # string table
+        if len(strings)>65535:
+            print >> sys.stderr, "There are too many strings (%d) - maximum is %d" % (len(strings), 65535)
+            sys.exit(3)
+        out.append(len(strings)&0xff)
+        out.append(len(strings)>>8)
+        for s in strings:
+            s=s.encode("utf8")
+            if len(s)>65535:
+                print >> sys.stderr, "One of your strings is too long - %d bytes" % (len(s),)
+                sys.exit(3)
+            out.append(len(s)&0xff)
+            out.append(len(s)>>8)
+            out.extend(ord(x) for x in s)
+
+        # integer table
+        if len(integers)>65535:
+            print >> sys.stderr, "There are too many integers (%d) - maximum is %d" % (len(integers), 65535)
+            sys.exit(3)
+        out.append(len(integers)&0xff)
+        out.append(len(integers)>>8)
+        for i in integers:
+            out.append(i & 0xff)
+            out.append( (i>>8) & 0xff )
+            out.append( (i>>16) & 0xff )
+            out.append( (i>>24) & 0xff )
+
+        # line number table
+        if len(linenotab)>65535:
+            print >> sys.stderr, "There are too many lines with code (%d) - maximum is %d" % (len(linenotab), 65535)
+            sys.exit(3)
+        out.append(len(linenotab)&0xff)
+        out.append(len(linenotab)>>8)
+        for x,y in linenotab:
+            out.append( x & 0xff)
+            out.append( x >> 8 )
+            out.append( y & 0xff)
+            out.append( y >> 8 )
+
+        # The code
+        out.append(codelen & 0xff)
+        out.append(codelen >> 8 )
+        startsize=len(out) # sanity check code size
+        for n,v in res:
+            if isinstance(v, tuple):
+                out.append(self.opcode_for(v[0]))
+                out.append(v[1] & 0xff)
+                out.append(v[1] >> 8)
+            else:
+                out.append(self.opcode_for(v))
+        assert len(out)-startsize==codelen, "Internal error: code actual size doesn't match calculated size"
+
+        # Write it 
+        with open(outputfile, "wb") as f:
+            out.tofile(f)
+    
+    def opcode_for(self, opcode):
+        try:
+            return opcode_map[opcode]
+        except KeyError:
+            print >> sys.stderr, "Internal error.  No opcode for \"%s\"" % (opcode,)
+            sys.exit(5)
+
+    string_ops=("PUSH_STR", "LOAD_NAME", "STORE_NAME")
+    integer_ops=("PUSH_INT",)
+    label_ops=("SET_METHOD", "GOTO")
+
     def generic_visit(self, node):
         raise self.Error(node, "Unsupported syntax "+node.__class__.__name__)
 
     def visit_Module(self, node):
-        yield None, '('
         for i in node.body:
             for x in self.visit(i):
                 yield x
-        yield None, ')'
 
     def visit_Expr(self, node):
-        vals=[x for x in self.visit(node.value)]
-        if len(vals)==1:
-            yield vals[0]
-        else:
-            yield None, "("
-            for x in vals:
-                yield x
-            yield None, ")\n"
+        for x in self.visit(node.value):
+            yield x
+        yield node, "POP_TOP"
 
     def visit_BinOp(self, node):
         assert len(node.op._fields)==0
-        yield None, "("
-        yield node, self._opmap[node.op.__class__]
         for x in self.visit(node.left):
             yield x
         for x in self.visit(node.right):
             yield x
-        yield None, ")"
-
-    def visit_UnaryOp(self, node):
-        yield None, "("
         yield node, self._opmap[node.op.__class__]
-        for x in self.visit(node.operand):
-            yield x
-        yield None, ")"
-
-    def visit_Compare(self, node):
-        if len(node.ops)!=1:
-            raise self.Error(node, "Only one comparison is supported (you can't do x<y<z)")
-        yield None, "("
-        yield node, self._opmap[node.ops[0].__class__]
-        for x in self.visit(node.left):
-            yield x
-        for x in self.visit(node.comparators[0]):
-            yield x
-        yield None, ")"
 
     def visit_Num(self, node):
-        yield node, node.n
+        yield node, ("PUSH_INT", node.n)
+
+    def visit_Str(self, node):
+        yield node, ("PUSH_STR", node.s)
 
     def visit_Name(self, node):
         assert len(node.ctx._fields)==0
-        yield node, node.id
-
-    def visit_Str(self, node):
-        yield node, '"%s"' % (node.s.replace('"', '""'),)
-
-    def visit_NoneType(self, node):
-        yield node, "None"
-
-    def visit_List(self, node):
-        assert len(node.ctx._fields)==0
-        yield None, "("
-        yield node, "list"
-        for x in node.elts:
-            for y in self.visit(x):
-                yield y
-        yield None, ")"
-
-    def visit_Dict(self, node):
-        yield None, "("
-        yield node, "dict"
-        for k,v in zip(node.keys, node.values):
-            for x in self.visit(k):
-                yield x
-            for x in self.visit(v):
-                yield x
-        yield None, ")"
-
-    def visit_Attribute(self, node):
-        assert len(node.ctx._fields)==0
-        yield None, "("
-        yield node, "."
-        for x in self.visit(node.value):
-            yield x
-        yield None, node.attr
-        yield None, ")"
-
-    def visit_Subscript(self, node):
-        assert len(node.ctx._fields)==0
-        yield None, "("
-        if isinstance(node.slice, ast.Slice):
-            yield node, "[_]"            
-        else:
-            yield node, "[]"
-        for x in self.visit(node.value):
-            yield x
-        if isinstance(node.slice, ast.Slice):
-            if node.slice.step is not None:
-                raise self.Error(node.slice, "Steps not supported in slices")
-            if node.slice.lower is None:
-                yield None, 0
-            else:
-                for x in self.visit(node.slice.lower):
-                    yield x
-            if node.slice.upper is None:
-                yield None, -1
-            else:
-                for x in self.visit(node.slice.upper):
-                    yield x
-        else:
-            for x in self.visit(node.slice.value):
-                yield x
-        yield None, ")"
+        yield node, ("LOAD_NAME", node.id)
 
     def visit_Assign(self, node):
         if len(node.targets)!=1:
@@ -187,75 +262,35 @@ class Compiler(ast.NodeVisitor):
         target=node.targets[0]
         if not isinstance(target, (ast.Name, ast.Subscript)):
             raise self.Error(target, "That kind of assignment is not supported")
-        yield None, "("
-        if isinstance(target, ast.Name):
-            yield node, "="
-            for x in self.visit_Name(target):
-                yield x
-        else:
-            yield node, "[]="
-            for x in self.visit(target.value):
-                yield x
-            if not isinstance(target.slice, ast.Index):
-                raise self.Error(target.slice, "Only simple array/list subscript assignment supported")
-            for x in self.visit(target.slice.value):
-                yield x
         for x in self.visit(node.value):
             yield x
-        yield None, ")"
-
-    def visit_Call(self, node):
-        if node.starargs:
-            raise self.Error(node, "*args not supported")
-        if node.kwargs or node.keywords:
-            raise self.Error(node, "Keyword arguments are not supported")
-        yield None, "("
-        yield node, "call"
-        for x in self.visit(node.func):
-            yield x
-        for x in node.args:
-            for y in self.visit(x):
-                yield y
-        yield None, ")"
+        if isinstance(target, ast.Name):
+            yield node, ("STORE_NAME", target.id)
+        else:
+            if not isinstance(target.slice, ast.Index):
+                raise self.Error(node, "Only simple array/list subscript assignment supported")
+            for x in self.visit(target.slice.value):
+                yield x
+            for x in self.visit(target.value):
+                yield x
+            yield node, "ASSIGN_INDEX"
 
     def visit_If(self, node):
-        yield None, "("
-        yield node, "if"
         for x in self.visit(node.test):
             yield x
-        yield None, "("
+        end=Label()
+        elsepart=Label() if node.orelse else None
+        yield node, ("IF_FALSE", elsepart if elsepart else end)
         for x in node.body:
             for y in self.visit(x):
                 yield y
-        yield None, ")"
-        if node.orelse:
-            yield None, "("
+        if elsepart:
+            yield node, ("GOTO", end)
+            yield node, elsepart
             for x in node.orelse:
                 for y in self.visit(x):
                     yield y
-            yield None, ")"
-        yield None, ")"
-
-    def visit_While(self, node):
-        yield None, "("
-        yield node, "while"
-        for x in self.visit(node.test):
-            yield x
-        yield None, "("
-        for x in node.body:
-            for y in self.visit(x):
-                yield y
-        yield None, ")"
-        if node.orelse:
-            raise self.Error(node, "else not supported for while")
-        yield None, ")"
-
-    def visit_Return(self, node):
-        yield None, "("
-        yield node, "return"
-        for x in self.visit(node.value):
-            yield x
-        yield None, ")"
+        yield node, end
 
     def visit_FunctionDef(self, node):
         if node.decorator_list:
@@ -267,32 +302,194 @@ class Compiler(ast.NodeVisitor):
             raise self.Error(node, "Keyword arguments are not supported")
         if args.vararg:
             raise self.Error(node, "Varargs (*args) are not supported")
-        yield None, "("
-        yield node, "defproc"
-        yield node, node.name
-        v=[]
+        body=Label()
+        end=Label()
+        yield node, ("PUSH_STR", node.name)
+        yield node, ("SET_METHOD", body)
+        yield node, ("GOTO", end)
+        yield node, body
         for i, n in enumerate(args.args):
             if not isinstance(n, ast.Name):
                 raise self.Error(n, "Only single named arguments are supported (#%d)" % (i,))
-            v.append(n.id)
-        yield None, "@"+",".join(v)
-        yield None, "("
+        yield node, ("PUSH_INT", len(args.args))
+        yield node, "FUNCTION_PROLOG"
+        for n in reversed(args.args):
+            yield n, ("STORE_NAME", n.id)
+        last=None
         for x in node.body:
             for y in self.visit(x):
+                last=y[1]
                 yield y
-        yield None, ")"
-        yield None, ")"
-        yield None, "\n"
+        if last!="RETURN":
+            yield None, "RETURN_NONE"
+        yield node, end
+
+    def visit_Call(self, node):
+        if node.starargs:
+            raise self.Error(node, "*args not supported")
+        if node.kwargs or node.keywords:
+            raise self.Error(node, "Keyword arguments are not supported")
+        for x in node.args:
+            for y in self.visit(x):
+                yield y
+        yield node, ("PUSH_INT", len(node.args))
+        for x in self.visit(node.func):
+            yield x
+        yield node, "CALL"
+
+    def visit_Return(self, node):
+        for x in self.visit(node.value):
+            yield x
+        yield node, "RETURN"
+
+def dumper(options, infile):
+    getline=lambda x: linecache.getline(options.dump_source, x) if options.dump_source else ""
+    data=array.array("B")
+
+    # convenience
+    def get16(): # these are always positive
+        data.read(infile, 2)
+        return (data[-1]<<8)+data[-2]
+
+    def get32(): # could be negative
+        data.read(infile, 4)
+        return (data[-1]<<24) + (data[-2]<<16) + (data[-3] << 8) + data[-4]
+
+    infile=open(infile, "rb")
+
+    # string table
+    strings=[]
+    for i in range(get16()):
+        slen=get16()
+        data.read(infile, slen)
+        string=data[-slen:].tostring().decode("utf8")
+        strings.append(string)
+
+    # integer table
+    integers=[]
+    for i in range(get16()):
+        integers.append(get32())
+
+    # line number table
+    linenotab=[]
+    for i in range(get16()):
+        linenotab.append( (get16(), get16()) )
+
+    # code bytes
+    codesize=get16()
+    data.read(infile, codesize)
+    if infile.read()!="":
+        print >> sys.stderr, "There is extra gunk at the end of the file - position", len(data)
+    code=data[-codesize:]
+
+    if True:
+        # prints tables
+        print ">>> String table"
+        for i,v in enumerate(strings):
+            print "% 4d" % (i,), v
+        print ">>> Integer table"
+        for i,v in enumerate(integers):
+            print "% 4d" % (i,), v
+        print ">>> Line number table"
+        for pos,line in linenotab:
+            print "% 4d  -> % 4d" % (pos, line)
+
+    # map ints to strings
+    bytecode_map={}
+    for k,v in opcode_map.items():
+        bytecode_map[v]=k
+
+    # print the code
+    pos=0
+    while pos<len(code):
+        for p,l in linenotab:
+            if p>pos:
+                break
+            if p==pos:
+                print "\n# % 4d %s" % (l, getline(l))
+                break
+
+        op=code[pos]
+        if op>=128:
+            val=code[pos+1]+(code[pos+2]<<8)
+        
+        if op not in bytecode_map:
+            print >> sys.stderr, "Unknown opcode %d at position %d" % (op, pos)
+            sys.exit(6)
+        
+        if op<128:
+            print "% 5d" % pos, bytecode_map[op]
+            pos+=1
+        else:
+            v=bytecode_map[op]
+            print "% 5d" % pos, v, val,
+            if v in Compiler.string_ops:
+                print "   \t# string", val, "=", repr(strings[val]),
+            elif v in Compiler.integer_ops:
+                print "   \t# int", val, "=", integers[val],
+            print
+            pos+=3
+        
+            
+
+# The operations making up our bytecode.  We use a dict not a list so
+# that there can be holes/changes without affecting the stability of
+# the numbers.  Codes with the upper bit set take an additional two bytes
+# of integer (mapping into string or integer tables)
+opcode_map={
+    "FUNCTION_PROLOG": 0,
+    "ADD": 1,
+    "MULT": 2,
+    "DIV": 3,
+    "GT": 4,
+    "LT": 5,
+    "EQ": 6,
+    "IN": 7,
+    "UNARY_ADD": 8,
+    "RETURN": 9,
+    "CALL": 10,
+    "POP_TOP": 11,
+
+    ### All the following take two byte int value
+    # code position
+    "SET_METHOD": 128,
+    "GOTO": 129,
+
+    # strings
+    "LOAD_NAME": 160,
+    "STORE_NAME": 161,
+    "PUSH_STR": 162,
+
+    # integers
+    "PUSH_INT": 200,
+}
+
 
 if __name__=='__main__':
+    import os
     import optparse
-    p=optparse.OptionParser(usage="%prog [options] input.py [output.jmp]")
-    p.add_option("--line-numbers", action="store_true", default=False, help="Include line numbers")
+    p=optparse.OptionParser(usage="""%prog [options] input.py [output.jmp]
+
+Produces JMP format from input.py file. Output goes to input.jmp by
+default but you can specify your own output file.
+
+Usage: %prog --dump [options] output.jmp
+
+Dumps an existing .jmp file so you can see the internal representation.""")
     p.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on error")
+    p.add_option("--dump", action="store_true", default=False, help="Dump a .jmp file internal representation")
+    p.add_option("--dump-source", metavar="INPUT.PY", help="Optional source file that the .jmp was compiled from.  The lines of the source will be intermingled with the output.")
     options, args=p.parse_args()
 
-    if len(args) not in (1,2):
-        p.error("At least one argument is required")
-
-    c=Compiler()
-    c.compile(options, args[0])
+    if options.dump:
+        if len(args)!=1:
+            p.error("One argument expected")
+        if options.dump_source:
+            if not os.path.exists(options.dump_source):
+                p.error("Source file \"%s\" not found" % (options.source,))
+        dumper(options, args[0])
+    else:
+        if len(args) not in (1,2):
+            p.error("At least one argument is required")
+        c=Compiler()
+        c.compile(options, args[0], args[1] if len(args)==2 else os.path.splitext(args[0])[0]+".jmp")
