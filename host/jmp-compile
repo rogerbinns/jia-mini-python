@@ -69,10 +69,10 @@ class Compiler(ast.NodeVisitor):
         if False:
             # prints raw content before fixups
             for n,v in res:
-                print n.lineno, v
+                print n.lineno if n is not None else "", v
 
         # integer, string and location tables
-        integers=[]
+        integers=[0]
         strings=[]
         locations={}
         linenotab=[]
@@ -83,27 +83,37 @@ class Compiler(ast.NodeVisitor):
             if isinstance(v, Label):
                 locations[v]=pos
                 continue
-            if lastlineno!=n.lineno:
+            if n is not None and lastlineno!=n.lineno:
                 linenotab.append( (pos, n.lineno) )
                 lastlineno=n.lineno
             if not isinstance(v, tuple):
+                if v not in opcode_map:
+                    print >> sys.stderr, "Internal error: unknown opcode \"%s\"" % (v,)
+                    sys.exit(3)
+                assert opcode_map[v]<128
                 out.append( (n,v) )
                 pos+=1
                 continue
             pos+=3
             op, val=v
-            if op in self.string_ops:
+            if op not in opcode_map:
+                print >> sys.stderr, "Internal error: unknown opcode \"%s\"" % (op,)
+                sys.exit(3)
+
+            opcode=opcode_map[op]
+
+            if is_string_op(opcode):
+                assert isinstance(val, (str, unicode))
                 if val not in strings:
                     strings.append(val)
                 v=(op, strings.index(val))
-            elif op in self.integer_ops:
-                # ::TODO:: check that the integer fits in signed 32 bits
+            elif is_int_op(opcode):
+                assert isinstance(val, int)
                 if val not in integers:
                     integers.append(val)
                 v=(op, integers.index(val))
-            elif op in self.label_ops: 
-                # Second pass does these
-                pass
+            elif is_code_op(opcode):
+                assert isinstance(val, Label)
             else:
                 assert False, "Unhandled opcode "+op
             out.append( (n, v) )
@@ -119,7 +129,7 @@ class Compiler(ast.NodeVisitor):
         # fixup labels
         out=[]
         for n,v in res:
-            if isinstance(v,tuple) and v[0] in self.label_ops:
+            if isinstance(v,tuple) and isinstance(v[1], Label):
                 v=v[0],locations[v[1]]
             out.append( (n,v) )
         res=out
@@ -221,10 +231,6 @@ class Compiler(ast.NodeVisitor):
             print >> sys.stderr, "Internal error.  No opcode for \"%s\"" % (opcode,)
             sys.exit(5)
 
-    string_ops=("PUSH_STR", "LOAD_NAME", "STORE_NAME")
-    integer_ops=("PUSH_INT",)
-    label_ops=("SET_METHOD", "GOTO")
-
     def generic_visit(self, node):
         raise self.Error(node, "Unsupported syntax "+node.__class__.__name__)
 
@@ -238,6 +244,10 @@ class Compiler(ast.NodeVisitor):
             yield x
         yield node, "POP_TOP"
 
+    def visit_BoolOp(self, node):
+        debug_here()
+        pass
+
     def visit_BinOp(self, node):
         assert len(node.op._fields)==0
         for x in self.visit(node.left):
@@ -246,15 +256,80 @@ class Compiler(ast.NodeVisitor):
             yield x
         yield node, self._opmap[node.op.__class__]
 
+    def visit_Compare(self, node):
+        if len(node.ops)!=1:
+            raise self.Error(node, "Only one comparison is supported (you can't do x<y<z)")
+        for x in self.visit(node.left):
+            yield x
+        for x in self.visit(node.comparators[0]):
+            yield x
+        yield node, self._opmap[node.ops[0].__class__]
+
     def visit_Num(self, node):
+        if node.n>0x7fffffff or node.n<-0x80000000:
+            raise self.Error(node, "Value is too large")
         yield node, ("PUSH_INT", node.n)
 
     def visit_Str(self, node):
         yield node, ("PUSH_STR", node.s)
 
+    def visit_NoneType(self, node):
+        yield node, "PUSH_NONE"
+
     def visit_Name(self, node):
         assert len(node.ctx._fields)==0
         yield node, ("LOAD_NAME", node.id)
+
+    def visit_Attribute(self, node):
+        assert len(node.ctx._fields)==0
+        yield node, ("PUSH_STR", node.attr)
+        for x in self.visit(node.value):
+            yield x
+        yield node, "ATTR"
+
+    def visit_Subscript(self, node):
+        assert len(node.ctx._fields)==0
+        if isinstance(node.slice, ast.Slice):
+            if node.slice.step is not None:
+                raise self.Error(node.slice, "Steps not supported in slices")
+            if node.slice.upper is None:
+                yield None, ("PUSH_INT", -1)
+            else:
+                for x in self.visit(node.slice.upper):
+                    yield x
+            if node.slice.lower is None:
+                yield None, ("PUSH_INT", 0)
+            else:
+                for x in self.visit(node.slice.lower):
+                    yield x
+        else:
+            for x in self.visit(node.slice.value):
+                yield x
+
+        for x in self.visit(node.value):
+            yield x
+
+        if isinstance(node.slice, ast.Slice):
+            yield node, "SUBSCRIPT_SLICE"
+        else:
+            yield node, "SUBSCRIPT"
+
+    def visit_List(self, node):
+        assert len(node.ctx._fields)==0
+        for x in reversed(node.elts):
+            for y in self.visit(x):
+                yield y
+        yield node, ("PUSH_INT", len(node.elts))
+        yield node, "LIST"
+
+    def visit_Dict(self, node):
+        for k,v in reversed(zip(node.keys, node.values)):
+            for x in self.visit(v):
+                yield x
+            for x in self.visit(k):
+                yield x
+        yield node, ("PUSH_INT", len(node.keys))
+        yield node, "DICT"
 
     def visit_Assign(self, node):
         if len(node.targets)!=1:
@@ -292,6 +367,21 @@ class Compiler(ast.NodeVisitor):
                     yield y
         yield node, end
 
+    def visit_While(self, node):
+        if node.orelse:
+            raise self.Error(node, "else not supported for while")
+        test=Label()
+        end=Label()
+        yield node, test
+        for x in self.visit(node.test):
+            yield x
+        yield node, ("IF_FALSE", end)
+        for x in node.body:
+            for y in self.visit(x):
+                yield y
+        yield node, end
+        
+
     def visit_FunctionDef(self, node):
         if node.decorator_list:
             raise self.Error(node, "Decorators are not supported")
@@ -321,7 +411,8 @@ class Compiler(ast.NodeVisitor):
                 last=y[1]
                 yield y
         if last!="RETURN":
-            yield None, "RETURN_NONE"
+            yield None, "PUSH_NONE"
+            yield None, "RETURN"
         yield node, end
 
     def visit_Call(self, node):
@@ -351,9 +442,12 @@ def dumper(options, infile):
         data.read(infile, 2)
         return (data[-1]<<8)+data[-2]
 
-    def get32(): # could be negative
+    def get32(): # could be negative (two's complement)
         data.read(infile, 4)
-        return (data[-1]<<24) + (data[-2]<<16) + (data[-3] << 8) + data[-4]
+        i=(data[-1]<<24) + (data[-2]<<16) + (data[-3] << 8) + data[-4]
+        if i & 0x80000000:
+            i=i-0xffffffff-1
+        return i
 
     infile=open(infile, "rb")
 
@@ -423,9 +517,9 @@ def dumper(options, infile):
         else:
             v=bytecode_map[op]
             print "% 5d" % pos, v, val,
-            if v in Compiler.string_ops:
+            if is_string_op(op):
                 print "   \t# string", val, "=", repr(strings[val]),
-            elif v in Compiler.integer_ops:
+            elif is_int_op(op):
                 print "   \t# int", val, "=", integers[val],
             print
             pos+=3
@@ -449,11 +543,19 @@ opcode_map={
     "RETURN": 9,
     "CALL": 10,
     "POP_TOP": 11,
+    "ATTR": 12,
+    "UNARY_NEG": 13,
+    "SUBSCRIPT": 14,
+    "SUBSCRIPT_SLICE": 15,
+    "DICT": 16,
+    "LIST": 17,
+    "PUSH_NONE": 18,
 
     ### All the following take two byte int value
     # code position
     "SET_METHOD": 128,
     "GOTO": 129,
+    "IF_FALSE": 130,
 
     # strings
     "LOAD_NAME": 160,
@@ -463,6 +565,15 @@ opcode_map={
     # integers
     "PUSH_INT": 200,
 }
+
+def is_code_op(v):
+    return 128<=v<160
+
+def is_string_op(v):
+    return 160<=v<200
+
+def is_int_op(v):
+    return 200<=v
 
 
 if __name__=='__main__':
