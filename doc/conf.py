@@ -284,3 +284,5 @@ epub_copyright = u'2011, Roger Binns'
 
 # Allow duplicate toc entries.
 #epub_tocdup = True
+
+extensions.append('sphinxcontrib.javadomain')

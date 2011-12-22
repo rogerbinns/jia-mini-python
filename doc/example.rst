@@ -14,21 +14,21 @@ default the same filename as the input but with an extension of .jmp::
 
   jmp-compile settings.py
 
-Add the Java Mini Python java source to your project.  It is one .java
-file and you can put it anywhere.  Using your own namespace is
+Add the Java Mini Python java source file to your project.  It is one
+.java file and you can put it anywhere.  Using your own namespace is
 recommended.  This means you do not have to worry about anyone else
 using it as well, having version clashes etc.
 
 .. code-block:: java
 
   // make new instance
-  JMP jmp=new JMP();
+  MiniPython mp=new MiniPython();
   // make methods available
   class timestuff { 
        int day_of_week() { return 4; } 
   };
-  jmp.addModule("time", new timestuff());
-  // give it code to run
-  jmp.setCode(inputStream);
+  mp.addModule("time", new timestuff());
+  // give it code to run in an inputstream from a file, network etc
+  mp.setCode(inputStream);
   // Call a method 
-  int brightness=jmp.callInt("get_brightness");
+  int brightness=mp.callInt("get_brightness");
