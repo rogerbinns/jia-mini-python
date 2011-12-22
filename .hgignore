@@ -2,3 +2,4 @@ syntax: glob
 doc/_build/
 *~
 *.pyc
+bin/
