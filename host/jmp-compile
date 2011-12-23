@@ -10,6 +10,7 @@ import sys
 import ast
 import linecache
 import array
+import re
 
 # Get the nicest debugger possible
 try:
@@ -155,9 +156,9 @@ class Compiler(ast.NodeVisitor):
                         break
                 print "% 5d" % pos, v,
                 if isinstance(v, tuple):
-                    if v[0] in self.string_ops:
+                    if is_string_op(v[0]):
                         print "   \t# string", v[1], "=", repr(strings[v[1]]),
-                    elif v[0] in self.integer_ops:
+                    elif is_int_op(v[0]):
                         print "   \t# int", v[1], "=", integers[v[1]],
                     pos+=3
                 else:
@@ -476,7 +477,7 @@ def dumper(options, infile):
         print >> sys.stderr, "There is extra gunk at the end of the file - position", len(data)
     code=data[-codesize:]
 
-    if True:
+    if False:
         # prints tables
         print ">>> String table"
         for i,v in enumerate(strings):
@@ -524,6 +525,58 @@ def dumper(options, infile):
             print
             pos+=3
         
+
+def java_maintenance(javafile):
+    out=[]
+    seen=set()
+    indent=None
+
+    int_map={}
+    for s,v in opcode_map.items():
+        int_map[v]=s
+
+    with open(javafile, "rt") as java:
+        capturing=False
+        for line in java:
+            if not capturing and line.lstrip().startswith("// -- check start :"):
+                assert len(seen)==0, "Multiple check sections!"
+                out.append(line)
+                capturing=True
+                indent=re.match(r"^(\s*)", line).group(1)
+                continue
+            if capturing:
+                m=re.match(r"\s*case\s+(?P<val>[0-9]+):\s*//\s*(?P<name>\w+)\s*$", line)
+                if m:
+                    val=int(m.group("val"))
+                    if val in seen:
+                        print >> sys.stderr, "Second occurrence of",val,": line", len(out)+1
+                        sys.exit(3)
+                    if val not in int_map:
+                        print >> sys.stderr, "Line",len(out)+1,"opcode",val,"/", m.group("name"), "is not known"
+                        sys.exit(3)
+                    if int_map[val]!=m.group("name"):
+                        print >> sys.stderr, "Line",len(out)+1,"opcode",val,"has comment of",m.group("name"),"but should be", int_map[val]
+                        sys.exit(3)
+                    seen.add(val)
+                if line.lstrip().startswith("// -- check end :"):
+                    for val,name in sorted(int_map.items()):
+                        if val not in seen:
+                            out.append("%scase %d: // %s\n" % (indent, val, name))
+                    capturing=False
+            out.append(line)
+    
+
+    if capturing:
+        print >> sys.stderr, "End marker not seen in", javafile
+        sys.exit(3)
+
+    if not seen:
+        print >> sys.stderr, "Special markers not identified in", javafile
+        sys.exit(3)
+
+    with open(javafile, "wt") as java:
+        java.write("".join(out))
+                    
             
 
 # The operations making up our bytecode.  We use a dict not a list so
@@ -587,18 +640,27 @@ default but you can specify your own output file.
 Usage: %prog --dump [options] output.jmp
 
 Dumps an existing .jmp file so you can see the internal representation.""")
-    p.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on error")
+    p.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on compile error")
     p.add_option("--dump", action="store_true", default=False, help="Dump a .jmp file internal representation")
     p.add_option("--dump-source", metavar="INPUT.PY", help="Optional source file that the .jmp was compiled from.  The lines of the source will be intermingled with the output.")
+    p.add_option("--java-maintenance", action="store_true", help="Internal:  Used during development to ensuire consistency of implementation")
+    p.disable_interspersed_args()
     options, args=p.parse_args()
 
     if options.dump:
         if len(args)!=1:
-            p.error("One argument expected")
+            p.error("--dump: One argument expected")
         if options.dump_source:
             if not os.path.exists(options.dump_source):
                 p.error("Source file \"%s\" not found" % (options.source,))
         dumper(options, args[0])
+    elif options.java_maintenance:
+        if len(args)!=1:
+            p.error("--java-maintenance: One argument expected")
+        java=args[0]
+        if not os.path.isfile(java):
+            p.error(java+" doesn't exist")
+        java_maintenance(java)
     else:
         if len(args) not in (1,2):
             p.error("At least one argument is required")
