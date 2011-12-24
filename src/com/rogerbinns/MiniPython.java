@@ -262,9 +262,7 @@ public class MiniPython {
 						}
 						sb.append((String)stack[stacktop+i+1]);
 					}
-					if(nl) {
-						sb.append("\n");
-					}
+					sb.append(nl?"\n":" ");
 					if(mTheClient!=null) {
 						mTheClient.print(sb.toString());
 					}
@@ -372,6 +370,9 @@ public class MiniPython {
 		Context context;
 		public String toString() {
 			return type+": "+message;
+		}
+		public String getType() {
+			return type;
 		}
 		public int linenumber() {
 			// note that context.pc points to the instruction after the one being executed
