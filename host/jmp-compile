@@ -40,7 +40,8 @@ class Compiler(ast.NodeVisitor):
         ast.Lt: "LT",
         ast.Eq: "EQ",
         ast.In: "IN",
-        ast.UAdd: "UNARY_ADD", 
+        ast.UAdd: "UNARY_ADD",
+        ast.USub: "UNARY_NEG",
         }
 
     class Error(Exception):
@@ -58,6 +59,157 @@ class Compiler(ast.NodeVisitor):
         try:
             for node,v  in self.visit(t):
                 res.append( (node, v) )
+
+            if False:
+                # prints raw content before fixups
+                for n,v in res:
+                    print n.lineno if n is not None else "", v
+
+            # string and location tables
+            strings=[]
+            locations={}
+            linenotab=[]
+            lastlineno=-1
+            pos=0
+            out=[]
+            for n,v in res:
+                if isinstance(v, Label):
+                    locations[v]=pos
+                    continue
+                if n is not None and lastlineno!=n.lineno:
+                    linenotab.append( (pos, n.lineno) )
+                    lastlineno=n.lineno
+                if not isinstance(v, tuple):
+                    if v not in opcode_map:
+                        print >> sys.stderr, "Internal error: unknown opcode \"%s\"" % (v,)
+                        sys.exit(3)
+                    assert opcode_map[v]<128
+                    out.append( (n,v) )
+                    pos+=1
+                    continue
+                pos+=3
+                op, val=v
+                if op not in opcode_map:
+                    print >> sys.stderr, "Internal error: unknown opcode \"%s\"" % (op,)
+                    sys.exit(3)
+
+                opcode=opcode_map[op]
+
+                if is_string_op(opcode):
+                    assert isinstance(val, (str, unicode))
+                    if val not in strings:
+                        strings.append(val)
+                    v=(op, strings.index(val))
+                    out.append( (n, v) )
+                elif is_code_op(opcode):
+                    assert isinstance(val, Label)
+                    out.append( (n, v) )
+                elif op=="PUSH_INT":
+                    # turn into two operations depending on value size
+                    if val>=0 and val<=0xffff:
+                        out.append( (n, v) )
+                    elif val<0 and val>=-0xffff:
+                        out.append( (n, ("PUSH_INT", -val)) )
+                        out.append( (n, "UNARY_NEG") )
+                        pos+=1
+                    else:
+                        out.append( (n, ("PUSH_INT", val&0xffff)) )
+                        out.append( (n, ("PUSH_INT_HI", (val>>16)&0xffff)) )
+                        pos+=3
+                else:
+                    assert False, "Unhandled opcode "+op
+            res=out
+            codelen=pos
+            if codelen>65535:
+                print >> sys.stderr, "Your code is too long - %d instructions" % (codelen,)
+                sys.exit(3)
+            if linenotab[-1][1]>65535:
+                print >> sys.stderr, "Too many lines of code - %d" % (linenotab[-1][1],)
+                sys.exit(3)
+
+            # fixup labels
+            out=[]
+            for n,v in res:
+                if isinstance(v,tuple) and isinstance(v[1], Label):
+                    v=v[0],locations[v[1]]
+                out.append( (n,v) )
+            res=out
+
+            if False:
+                # prints after fixups -this should match dumper output
+                print ">>> String table"
+                for i,v in enumerate(strings):
+                    print "% 4d" % (i,), v
+                print ">>> Line number table"
+                for pos,line in linenotab:
+                    print "% 4d  -> % 4d" % (pos, line)
+                pos=0
+                for _,v in res:
+                    for p,l in linenotab:
+                        if p>pos:
+                            break
+                        if p==pos:
+                            print "\n# % 4d %s" % (l, linecache.getline(inputfile, l))
+                            break
+                    print "% 5d" % pos, v,
+                    if isinstance(v, tuple):
+                        if is_string_op(v[0]):
+                            print "   \t# string", v[1], "=", repr(strings[v[1]]),
+                        elif is_int_op(v[0]):
+                            print "   \t# int", v[1], "=", integers[v[1]],
+                        pos+=3
+                    else:
+                        pos+=1
+                    print
+
+            ### final output - this could really use a bytes type
+            out=array.array("B")
+            assert out.itemsize==1, "Bytes must be one byte in length!"
+
+            # string table
+            if len(strings)>65535:
+                print >> sys.stderr, "There are too many strings (%d) - maximum is %d" % (len(strings), 65535)
+                sys.exit(3)
+            out.append(len(strings)&0xff)
+            out.append(len(strings)>>8)
+            for s in strings:
+                s=s.encode("utf8")
+                if len(s)>65535:
+                    print >> sys.stderr, "One of your strings is too long - %d bytes" % (len(s),)
+                    sys.exit(3)
+                out.append(len(s)&0xff)
+                out.append(len(s)>>8)
+                out.extend(ord(x) for x in s)
+
+            # line number table
+            if len(linenotab)>65535:
+                print >> sys.stderr, "There are too many lines with code (%d) - maximum is %d" % (len(linenotab), 65535)
+                sys.exit(3)
+            out.append(len(linenotab)&0xff)
+            out.append(len(linenotab)>>8)
+            for x,y in linenotab:
+                out.append( x & 0xff)
+                out.append( x >> 8 )
+                out.append( y & 0xff)
+                out.append( y >> 8 )
+
+            # The code
+            out.append(codelen & 0xff)
+            out.append(codelen >> 8 )
+            startsize=len(out) # sanity check code size
+            for n,v in res:
+                if isinstance(v, tuple):
+                    out.append(self.opcode_for(v[0]))
+                    out.append(v[1] & 0xff)
+                    out.append(v[1] >> 8)
+                else:
+                    out.append(self.opcode_for(v))
+            assert len(out)-startsize==codelen, "Internal error: code actual size doesn't match calculated size"
+
+            # Write it 
+            with open(outputfile, "wb") as f:
+                out.tofile(f)
+
         except self.Error, e:
             if options.traceback:
                 x=sys.exc_info()
@@ -67,163 +219,6 @@ class Compiler(ast.NodeVisitor):
             print >> sys.stderr, linecache.getline(inputfile, e.node.lineno)+e.node.col_offset*" "+"^"
             sys.exit(2)
 
-        if False:
-            # prints raw content before fixups
-            for n,v in res:
-                print n.lineno if n is not None else "", v
-
-        # integer, string and location tables
-        integers=[0]
-        strings=[]
-        locations={}
-        linenotab=[]
-        lastlineno=-1
-        pos=0
-        out=[]
-        for n,v in res:
-            if isinstance(v, Label):
-                locations[v]=pos
-                continue
-            if n is not None and lastlineno!=n.lineno:
-                linenotab.append( (pos, n.lineno) )
-                lastlineno=n.lineno
-            if not isinstance(v, tuple):
-                if v not in opcode_map:
-                    print >> sys.stderr, "Internal error: unknown opcode \"%s\"" % (v,)
-                    sys.exit(3)
-                assert opcode_map[v]<128
-                out.append( (n,v) )
-                pos+=1
-                continue
-            pos+=3
-            op, val=v
-            if op not in opcode_map:
-                print >> sys.stderr, "Internal error: unknown opcode \"%s\"" % (op,)
-                sys.exit(3)
-
-            opcode=opcode_map[op]
-
-            if is_string_op(opcode):
-                assert isinstance(val, (str, unicode))
-                if val not in strings:
-                    strings.append(val)
-                v=(op, strings.index(val))
-            elif is_int_op(opcode):
-                assert isinstance(val, int)
-                if val not in integers:
-                    integers.append(val)
-                v=(op, integers.index(val))
-            elif is_code_op(opcode):
-                assert isinstance(val, Label)
-            else:
-                assert False, "Unhandled opcode "+op
-            out.append( (n, v) )
-        res=out
-        codelen=pos
-        if codelen>65535:
-            print >> sys.stderr, "Your code is too long - %d instructions" % (codelen,)
-            sys.exit(3)
-        if linenotab[-1][1]>65535:
-            print >> sys.stderr, "Too many lines of code - %d" % (linenotab[-1][1],)
-            sys.exit(3)
-        
-        # fixup labels
-        out=[]
-        for n,v in res:
-            if isinstance(v,tuple) and isinstance(v[1], Label):
-                v=v[0],locations[v[1]]
-            out.append( (n,v) )
-        res=out
-
-        if False:
-            # prints after fixups -this should match dumper output
-            print ">>> String table"
-            for i,v in enumerate(strings):
-                print "% 4d" % (i,), v
-            print ">>> Integer table"
-            for i,v in enumerate(integers):
-                print "% 4d" % (i,), v
-            print ">>> Line number table"
-            for pos,line in linenotab:
-                print "% 4d  -> % 4d" % (pos, line)
-            pos=0
-            for _,v in res:
-                for p,l in linenotab:
-                    if p>pos:
-                        break
-                    if p==pos:
-                        print "\n# % 4d %s" % (l, linecache.getline(inputfile, l))
-                        break
-                print "% 5d" % pos, v,
-                if isinstance(v, tuple):
-                    if is_string_op(v[0]):
-                        print "   \t# string", v[1], "=", repr(strings[v[1]]),
-                    elif is_int_op(v[0]):
-                        print "   \t# int", v[1], "=", integers[v[1]],
-                    pos+=3
-                else:
-                    pos+=1
-                print
-
-        ### final output - this could really use a bytes type
-        out=array.array("B")
-        assert out.itemsize==1, "Bytes must be one byte in length!"
-        
-        # string table
-        if len(strings)>65535:
-            print >> sys.stderr, "There are too many strings (%d) - maximum is %d" % (len(strings), 65535)
-            sys.exit(3)
-        out.append(len(strings)&0xff)
-        out.append(len(strings)>>8)
-        for s in strings:
-            s=s.encode("utf8")
-            if len(s)>65535:
-                print >> sys.stderr, "One of your strings is too long - %d bytes" % (len(s),)
-                sys.exit(3)
-            out.append(len(s)&0xff)
-            out.append(len(s)>>8)
-            out.extend(ord(x) for x in s)
-
-        # integer table
-        if len(integers)>65535:
-            print >> sys.stderr, "There are too many integers (%d) - maximum is %d" % (len(integers), 65535)
-            sys.exit(3)
-        out.append(len(integers)&0xff)
-        out.append(len(integers)>>8)
-        for i in integers:
-            out.append(i & 0xff)
-            out.append( (i>>8) & 0xff )
-            out.append( (i>>16) & 0xff )
-            out.append( (i>>24) & 0xff )
-
-        # line number table
-        if len(linenotab)>65535:
-            print >> sys.stderr, "There are too many lines with code (%d) - maximum is %d" % (len(linenotab), 65535)
-            sys.exit(3)
-        out.append(len(linenotab)&0xff)
-        out.append(len(linenotab)>>8)
-        for x,y in linenotab:
-            out.append( x & 0xff)
-            out.append( x >> 8 )
-            out.append( y & 0xff)
-            out.append( y >> 8 )
-
-        # The code
-        out.append(codelen & 0xff)
-        out.append(codelen >> 8 )
-        startsize=len(out) # sanity check code size
-        for n,v in res:
-            if isinstance(v, tuple):
-                out.append(self.opcode_for(v[0]))
-                out.append(v[1] & 0xff)
-                out.append(v[1] >> 8)
-            else:
-                out.append(self.opcode_for(v))
-        assert len(out)-startsize==codelen, "Internal error: code actual size doesn't match calculated size"
-
-        # Write it 
-        with open(outputfile, "wb") as f:
-            out.tofile(f)
     
     def opcode_for(self, opcode):
         try:
@@ -239,6 +234,7 @@ class Compiler(ast.NodeVisitor):
         for i in node.body:
             for x in self.visit(i):
                 yield x
+        yield None, "EXIT_LOOP"
 
     def visit_Expr(self, node):
         for x in self.visit(node.value):
@@ -248,6 +244,11 @@ class Compiler(ast.NodeVisitor):
     def visit_BoolOp(self, node):
         debug_here()
         pass
+
+    def visit_UnaryOp(self, node):
+        for x in self.visit(node.operand):
+            yield x
+        yield node, self._opmap[node.op.__class__]
 
     def visit_BinOp(self, node):
         assert len(node.op._fields)==0
@@ -279,7 +280,19 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Name(self, node):
         assert len(node.ctx._fields)==0
-        yield node, ("LOAD_NAME", node.id)
+        # we don't allow true/false/none to be redefined
+        if node.id=="True":
+            yield node, "PUSH_TRUE"
+        elif node.id=="False":
+            yield node, "PUSH_FALSE"
+        elif node.id=="None":
+            yield node, "PUSH_NONE"
+        else:
+            yield node, ("LOAD_NAME", node.id)
+
+    def visit_Global(self, node):
+        for name in node.names:
+            yield node, ("GLOBAL", name)
 
     def visit_Attribute(self, node):
         assert len(node.ctx._fields)==0
@@ -382,6 +395,16 @@ class Compiler(ast.NodeVisitor):
                 yield y
         yield node, end
         
+    def visit_Print(self, node):
+        if node.dest is not None:
+            raise self.Error(node, "print targets are not supported")
+        for x in node.values:
+            for y in self.visit(x):
+                yield y
+            yield x, "STR"
+        yield node, "PUSH_TRUE" if node.nl else "PUSH_FALSE"
+        yield node, ("PUSH_INT", len(node.values))
+        yield node, "PRINT"
 
     def visit_FunctionDef(self, node):
         if node.decorator_list:
@@ -460,11 +483,6 @@ def dumper(options, infile):
         string=data[-slen:].tostring().decode("utf8")
         strings.append(string)
 
-    # integer table
-    integers=[]
-    for i in range(get16()):
-        integers.append(get32())
-
     # line number table
     linenotab=[]
     for i in range(get16()):
@@ -481,9 +499,6 @@ def dumper(options, infile):
         # prints tables
         print ">>> String table"
         for i,v in enumerate(strings):
-            print "% 4d" % (i,), v
-        print ">>> Integer table"
-        for i,v in enumerate(integers):
             print "% 4d" % (i,), v
         print ">>> Line number table"
         for pos,line in linenotab:
@@ -520,8 +535,6 @@ def dumper(options, infile):
             print "% 5d" % pos, v, val,
             if is_string_op(op):
                 print "   \t# string", val, "=", repr(strings[val]),
-            elif is_int_op(op):
-                print "   \t# int", val, "=", integers[val],
             print
             pos+=3
         
@@ -603,6 +616,11 @@ opcode_map={
     "DICT": 16,
     "LIST": 17,
     "PUSH_NONE": 18,
+    "EXIT_LOOP": 19,
+    "STR": 20,
+    "PUSH_TRUE": 21,
+    "PUSH_FALSE": 22,
+    "PRINT": 23,
 
     ### All the following take two byte int value
     # code position
@@ -614,9 +632,11 @@ opcode_map={
     "LOAD_NAME": 160,
     "STORE_NAME": 161,
     "PUSH_STR": 162,
+    "GLOBAL": 163,
 
     # integers
     "PUSH_INT": 200,
+    "PUSH_INT_HI": 201,
 }
 
 def is_code_op(v):
