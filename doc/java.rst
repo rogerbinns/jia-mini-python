@@ -58,6 +58,11 @@ Only methods that have been declared `public` will be available.
 Additionally the method has to be implemented directly in the class.
 For example `toString` is not available in the above example.
 
+If you have multiple methods with the same name, declared public and
+implemented directly in the class (eg taking different numbers of
+arguments) then the one to be used is picked at random.  No attempt is
+made to try and select a method based on number or type of arguments.
+
 Errors
 ******
 
