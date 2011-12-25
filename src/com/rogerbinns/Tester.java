@@ -25,12 +25,30 @@ public class Tester {
 		}
 		MiniPython mp=new MiniPython();
 		mp.setClient(new MiniPython.Client() {
-
 			@Override
 			public void print(String s) throws ExecutionError {
 				System.out.print(s);
+				System.out.flush();
 			}
 		});
+
+		@SuppressWarnings("unused") // used via reflection, why does it whine?
+		class TimeWrapper {
+			public int time() {
+				return (int) (System.currentTimeMillis()/1000);
+			}
+			public int add(int x, int y) {
+				return x+y;
+			}
+			private int veryprivate() {
+				return 3;
+			}
+			public void returnsvoid() {
+
+			}
+		}
+
+		mp.addModule("time", new TimeWrapper());
 		try {
 			mp.setCode(is);
 			System.exit(0);
