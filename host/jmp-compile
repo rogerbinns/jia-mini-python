@@ -303,6 +303,10 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Subscript(self, node):
         assert len(node.ctx._fields)==0
+
+        for x in self.visit(node.value):
+            yield x
+
         if isinstance(node.slice, ast.Slice):
             if node.slice.step is not None:
                 raise self.Error(node.slice, "Steps not supported in slices")
@@ -320,9 +324,6 @@ class Compiler(ast.NodeVisitor):
             for x in self.visit(node.slice.value):
                 yield x
 
-        for x in self.visit(node.value):
-            yield x
-
         if isinstance(node.slice, ast.Slice):
             yield node, "SUBSCRIPT_SLICE"
         else:
@@ -330,14 +331,14 @@ class Compiler(ast.NodeVisitor):
 
     def visit_List(self, node):
         assert len(node.ctx._fields)==0
-        for x in reversed(node.elts):
+        for x in node.elts:
             for y in self.visit(x):
                 yield y
         yield node, ("PUSH_INT", len(node.elts))
         yield node, "LIST"
 
     def visit_Dict(self, node):
-        for k,v in reversed(zip(node.keys, node.values)):
+        for k,v in zip(node.keys, node.values):
             for x in self.visit(v):
                 yield x
             for x in self.visit(k):
@@ -369,6 +370,7 @@ class Compiler(ast.NodeVisitor):
             yield x
         end=Label()
         elsepart=Label() if node.orelse else None
+        yield node, "BOOL"
         yield node, ("IF_FALSE", elsepart if elsepart else end)
         for x in node.body:
             for y in self.visit(x):
@@ -621,6 +623,7 @@ opcode_map={
     "PUSH_TRUE": 21,
     "PUSH_FALSE": 22,
     "PRINT": 23,
+    "BOOL": 24,
 
     ### All the following take two byte int value
     # code position
