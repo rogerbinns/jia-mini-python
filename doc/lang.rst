@@ -17,6 +17,7 @@ Types
 * dict
 * bool
 * None
+* tuple (note: treated as list and mutable)
 
 Keywords
 --------
@@ -28,8 +29,9 @@ Keywords
 Operators
 ---------
 
-* and & or
+* boolean: and, or
 * \+ - * / (where applicable)
+* :ref:`comparisons`  < <= == != >= > 
 * len (as applicable)
 * [] (list and dict indexing)
 

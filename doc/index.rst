@@ -25,6 +25,7 @@ Contents:
    example
    lang   
    java
+   quirks
 
 
 
@@ -33,6 +34,5 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

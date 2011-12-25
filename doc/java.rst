@@ -5,9 +5,79 @@ Java API Reference
 
 .. default-domain:: java
 
+:index:`Types`
+--------------
+
+Where possible types are mapped directly from Python to Java.
+
++------------------------------+------------------------------+
+| Python type                  | Java type                    |
++==============================+==============================+
+| int                          | int/Integer - 32 bit signed  |
++------------------------------+------------------------------+
+| str/unicode                  | String (unicode only)        |
++------------------------------+------------------------------+
+| None                         | null                         |
++------------------------------+------------------------------+
+| dict                         | Map<Object, Object>          |
++------------------------------+------------------------------+
+| list/tuple                   | List<Object>                 |
++------------------------------+------------------------------+
+
+Objects in Map and List should only be ones present in the table.
+Note that tuples are mutable and treated indistinguishably from lists.
+
+:index:`Adding methods`
+-----------------------
+
+You can make methods available to the Python by calling
+`MiniPython.addModule`.
+
+.. code-block:: java
+
+    class timeinfo {
+       public boolean isdst() { return false; }
+       public int day_of_week(int year, int month, day) {  return 2; }
+       public int sum_all(List<Object> items) { return 17; }
+       private void not_exposed() {}
+    }
+
+    // register it as a module named "example"
+    MiniPython mp=new MiniPython();
+    mp.addModule("example", new timeinfo());
+
+You can then call these from Python::
+
+    print example.isdst()
+    print example.sum_all([1, 2, 3, 4])
+
+Exposure
+********
+
+Only methods that have been declared `public` will be available.
+Additionally the method has to be implemented directly in the class.
+For example `toString` is not available in the above example.
+
+Errors
+******
+
+If your code encounters an error (for example one of the list items
+not being an integer in the sum_all method above) then you should call
+`MiniPython.signalError`.  Note that it will throw
+ExecutionError after performing internal bookkeeping (eg tracking line
+numbers).
+
+Class
+=====
+
 .. class:: MiniPython
 
    This class implements the MiniPython environment.
+
+   .. method:: void addModule(String name, Object methods)
+
+      Makes methods on the methods Object available to the Python.
+      See `Adding methods`_ for more details.
 
    .. method:: void setCode(InputStream stream)
 
@@ -35,6 +105,19 @@ Java API Reference
       to provide diagnostics to the original caller and then throw an
       :class:`ExecutionError` which you should not catch.
 
+
+   .. method:: String toPyString(Object o)
+
+      Returns a string representing the object using Python
+      nomenclature where possible.  For example `null` is returned as
+      `None`, `true` as True etc.  For compound types like `dict/Map`
+      and `list/List` the string returned notes their type and how
+      many items are contained but does not include a string
+      representation of the items.
+
+      This method is useful for generating error messages and
+      diagnostics.
+
    .. class:: ExecutionError
   
       This class extends :class:`Exception` encapsulating errors found while executing code.
@@ -55,7 +138,7 @@ Java API Reference
 
    .. class:: Client
 
-      Implement this interface to provide behaviour.
+      Implement this interface to provide behaviour, and register with `MiniPython.setClient`.
 
       .. method:: void print(String s)
 

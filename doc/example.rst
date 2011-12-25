@@ -1,7 +1,9 @@
-Example
-*******
+:index:`Example`
+****************
 
 Write your Python code::
+
+  launches=0
 
   def get_brightness():
     if time.day_of_week() == 4 and launches < 3:
@@ -23,12 +25,23 @@ using it as well, having version clashes etc.
 
   // make new instance
   MiniPython mp=new MiniPython();
+
   // make methods available
   class timestuff { 
        int day_of_week() { return 4; } 
   };
   mp.addModule("time", new timestuff());
+
+  // provide print and other Client behaviour
+  mp.setClient(new MiniPython.Client() {
+      @Override
+      void print(String s) {
+           System.out.print(s);
+      }
+  });
+
   // give it code to run in an inputstream from a file, network etc
-  mp.setCode(inputStream);
+  mp.setCode(new FileInputStream("settings.jmp"));
+
   // Call a method 
   int brightness=mp.callInt("get_brightness");
