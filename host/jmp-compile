@@ -243,6 +243,11 @@ class Compiler(ast.NodeVisitor):
                 yield x
         yield None, "EXIT_LOOP"
 
+    def visit_Pass(self, node):
+        # needed to force the method to be a generator
+        if False:
+            yield None
+
     def visit_Expr(self, node):
         for x in self.visit(node.value):
             yield x
