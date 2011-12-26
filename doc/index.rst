@@ -26,6 +26,7 @@ Contents:
    lang   
    java
    quirks
+   internals
 
 
 

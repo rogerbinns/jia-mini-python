@@ -27,3 +27,20 @@ Dictionary keys
 Python only allows immutable types as keys, for example string,
 numbers and tuples.  This implementation will also let you use mutable
 lists as the key.
+
+.. _booleans:
+
+Booleans
+--------
+
+Python treats True as the integer 1 and False as zero in several
+places::
+
+   >>> 3+True-4*False
+   4
+   >>> 1==True
+   True
+   >>> True>-1
+   True
+
+It is currently an error in Java Mini Python to do so.

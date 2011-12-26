@@ -15,7 +15,7 @@ Types
 * string (unicode only)
 * list
 * dict
-* bool
+* bool (:ref:`note <booleans>`)
 * None
 * tuple (note: treated as list and mutable)
 
@@ -25,6 +25,8 @@ Keywords
 * def (new methods)
 * if
 * while
+* for
+* return
 
 Operators
 ---------
@@ -38,12 +40,23 @@ Operators
 What is not supported
 =====================
 
+* Variable arguments and keywork arguments (`*args` and `**kwargs`).
+  Note that methods :ref:`added via Java <adding_methods>` can take
+  variable numbers of arguments.
 * Classes
 * Decorators
 * Threads
 * Exceptions
 * More than one source file/module
 * Generators
+* Import
+* With
 * List comprehensions
+* Tuple unpacking.  For example::
+
+    for x,y in z:
+        pass
+* Floating point
+* Bytes type
 
 Use Jython if you want more than mini-Python

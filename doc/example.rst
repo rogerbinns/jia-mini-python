@@ -5,10 +5,10 @@ Write your Python code::
 
   launches=0
 
-  def get_brightness():
+  def get_brightness(base):
     if time.day_of_week() == 4 and launches < 3:
-       return 10
-    return 7
+       return base+10
+    return base+7
 
 Turn that into the bytecode that Java Mini Python uses.  This checks
 the syntax, tokenizes and produces a smaller file.  The output is by
@@ -44,4 +44,4 @@ using it as well, having version clashes etc.
   mp.setCode(new FileInputStream("settings.jmp"));
 
   // Call a method 
-  int brightness=mp.callInt("get_brightness");
+  int brightness=(Integer)mp.callMethod("get_brightness", 2);
