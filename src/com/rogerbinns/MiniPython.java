@@ -3,6 +3,7 @@ package com.rogerbinns;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -26,9 +27,10 @@ public class MiniPython {
 	int stacktop;
 
 	MiniPython() {
-		root=new Context(0, null);
+		root=current=new Context(0, null);
 		stack=new Object[256];
 		stacktop=-1;
+		addBuiltins();
 	}
 
 	private enum Compare {
@@ -55,10 +57,16 @@ public class MiniPython {
 		// code
 		int codelen=get16(is);
 		code=new byte[codelen];
+		// ::TODO:: read in chunks
 		if(is.read(code)!=codelen)
 			throw new EOFException();
 
-		mainLoop(root);
+		try {
+			stacktop=-1;
+			mainLoop(root);
+		} finally {
+			stacktop=-1;
+		}
 	}
 
 	private static final int get16(InputStream is) throws IOException {
@@ -89,7 +97,7 @@ public class MiniPython {
 		}
 		void addGlobal(String s) {
 			if(globals==null) {
-				globals=new HashSet<String>();
+				globals=new HashSet<String>(1);
 			}
 			globals.add(s);
 		}
@@ -123,10 +131,11 @@ public class MiniPython {
 	private static final class TNativeMethod {
 		TModule mod;
 		String name;
-		int nargs;
 		Method nativeMethod;
-		TNativeMethod(TModule mod, String name) {
+		TNativeMethod(TModule mod) {
 			this.mod=mod;
+		}
+		void Lookup(String name) {
 			this.name=name;
 			for(Method m : mod.o.getClass().getDeclaredMethods()) {
 				// we only want public methods
@@ -138,34 +147,72 @@ public class MiniPython {
 					break;
 				}
 			}
-			if(nativeMethod!=null) {
-				nargs=nativeMethod.getParameterTypes().length;
-			}
 		}
 		public String toString() {
-			return String.format("<native method %s.%s (%d args)>", mod.name, name, nargs);
+			return String.format("<native method %s.%s>", mod.name, name);
 		}
 	}
 
+	private final void addBuiltins() {
+		TModule tm=new TModule(this, "__builtins__");
+		for(Method m : this.getClass().getDeclaredMethods()) {
+			if(m.getName().startsWith("builtin_")) {
+				TNativeMethod tn=new TNativeMethod(tm);
+				tn.nativeMethod=m;
+				String name=m.getName().substring("builtin_".length());
+				tn.name=name;
+				root.names.put(name, tn);
+			}
+		}
+	}
+
+
+	public Object callMethod(String name, Object ...args) throws ExecutionError {
+		int savedsp=stacktop;
+		try {
+			Object meth=root.names.get(name);
+			if(meth==null) {
+				internalError("NameError", name+" is not defined");
+			}
+			int sp=stacktop;
+			while(sp+2+args.length>=stack.length) {
+				extendStack();
+			}
+			for(int i=0; i<args.length; i++) {
+				stack[++stacktop]=args[i];
+			}
+			stack[++stacktop]=args.length;
+			stack[++stacktop]=meth;
+			if(meth instanceof TMethod) {
+				Context c=new Context(((TMethod)meth).addr, current);
+				return mainLoop(c);
+			} else if (meth instanceof TNativeMethod) {
+				nativeCall();
+				return stack[--stacktop];
+			} else {
+				internalError("TypeError", toPyString(meth)+" is not callable");
+				return null;
+			}
+		} finally {
+			stacktop=savedsp;
+		}
+	}
 
 	// execution
 	private final Object mainLoop(Context context) throws ExecutionError {
-		if(true) {
-			current=context;
+		Context savedcontext=current;
+		current=context;
+		try {
 			return _mainLoop();
-		} else {
-			int savedstacktop=stacktop;
-			Context savedcontext=current;
-			current=context;
-			try {
-				return _mainLoop();
-			} finally {
-				stacktop=savedstacktop;
-				current=savedcontext;
-			}
+		} finally {
+			current=savedcontext;
 		}
 	}
 
+	// The virtual cpu execution loop.
+	// Java's generics are poor and it whines about conversions even when the generic types are Object
+	// so this turns off the whining as there is nothing we can do about it.
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private final Object _mainLoop() throws ExecutionError {
 		int op, val=-1;
 		opcodeswitch:
@@ -196,6 +243,22 @@ public class MiniPython {
 					}
 					continue;
 				}
+				case 131: // NEXT
+				{
+					Iterator it=(Iterator)stack[stacktop];
+					if(it.hasNext()) {
+						if(stacktop+1==stack.length) {
+							extendStack();
+						}
+						stack[++stacktop]=it.next();
+					} else {
+						// take iterator off stack
+						stacktop--;
+						current.pc=val;
+					}
+					continue;
+				}
+
 				// Mostly harmless/lightweight codes
 				case 11: // POP_TOP
 				{
@@ -307,12 +370,36 @@ public class MiniPython {
 						stack[++stacktop]=sb.toString();
 						continue;
 					}
-					internalErrorBinaryOp("TypeError", "multiply", left, right);
+					internalErrorBinaryOp("TypeError", "*", left, right);
 				}
+				case 1: // ADD
+				{
+					Object right=stack[stacktop--],
+							left=stack[stacktop--];
+					if ((left==null || right==null) || !right.getClass().equals(left.getClass())) {
+						internalErrorBinaryOp("TypeError", "+", left, right);
+					}
+					// both are the same type
+					if(left instanceof Integer) {
+						stack[++stacktop]=(Integer)left+(Integer)right;
+					} else 	if(left instanceof String) {
+						stack[++stacktop]=(String)left+(String)right;
+					} else if(left instanceof List) {
+						List<Object> m=new ArrayList<Object>(((List)left).size()+((List)right).size());
+						m.addAll((List)left);
+						m.addAll((List)right);
+						stack[++stacktop]=m;
+					} else {
+						internalErrorBinaryOp("TypeError", "+", left, right);
+					}
+					continue;
+				}
+
 				// comparisons
 				case 5: // LT
 				case 4: // GT
 				case 6: // EQ
+				case 26: // NOT_EQ
 				{
 					Object right=stack[stacktop--],
 							left=stack[stacktop--];
@@ -320,8 +407,9 @@ public class MiniPython {
 					boolean res=false;
 
 					switch(op) {
-					case 6: // = EQ
-						res= cmp==Compare.Equal;
+					case 6:  // == EQ
+					case 26: // != NOT_EQ
+						res=(op==6) ? (cmp==Compare.Equal): (cmp!=Compare.Equal);
 						break;
 					case 5: // < LT
 						if(cmp==Compare.DifferentTypes) {
@@ -350,7 +438,8 @@ public class MiniPython {
 					if(!(o instanceof TModule)) {
 						internalError("AttributeError", "Can only get attributes of modules");
 					}
-					TNativeMethod m=new TNativeMethod((TModule)o, name);
+					TNativeMethod m=new TNativeMethod((TModule)o);
+					m.Lookup(name);
 					if(m.nativeMethod==null) {
 						internalError("AtrributeError", "No method named "+name);
 					}
@@ -366,7 +455,6 @@ public class MiniPython {
 							internalError("TypeError", "list indices must be integers: "+toPyString(key));
 						}
 						int index=(Integer)key;
-						@SuppressWarnings("unchecked")
 						List<Object> l=(List<Object>)obj;
 						if(index<0) {
 							index=l.size()+index;
@@ -377,7 +465,6 @@ public class MiniPython {
 						stack[++stacktop]=l.get(index);
 						continue;
 					} else if (obj instanceof Map) {
-						@SuppressWarnings("unchecked")
 						Map<Object,Object> m=(Map<Object, Object>) obj;
 						if(m.containsKey(key)) {
 							stack[++stacktop]=m.get(key);
@@ -392,14 +479,10 @@ public class MiniPython {
 					Object collection=stack[stacktop--];
 					Object key=stack[stacktop--];
 					if(collection instanceof Map) {
-						@SuppressWarnings("unchecked")
-						Map<Object,Object> m=(Map<Object, Object>) collection;
-						stack[++stacktop]=m.containsKey(key);
+						stack[++stacktop]=((Map)collection).containsKey(key);
 						continue;
 					} else if (collection instanceof List) {
-						@SuppressWarnings("unchecked")
-						List<Object> l=(List<Object>) collection;
-						stack[++stacktop]=l.contains(key);
+						stack[++stacktop]=((List)collection).contains(key);
 						continue;
 					}
 					internalError("TypeError", "can't do 'in' in "+toPyString(collection));
@@ -432,17 +515,29 @@ public class MiniPython {
 					} else if(o instanceof Map) {
 						stack[stacktop]= ((Map)o).size()>0;
 					} else {
-						internalError("SystemError", "Unknown type to bool "+toPyString(o));
+						internalError("TypeError", "Can't 'bool' "+toPyString(o));
 					}
 					continue;
 				}
-
-				// More heavyweight stuff
 				case 20: // STR
 				{
 					stack[stacktop]=toPyString(stack[stacktop]);
 					continue;
 				}
+				case 25: // ITER
+				{
+					Object o=stack[stacktop];
+					if(o instanceof List) {
+						stack[stacktop]=((List)o).iterator();
+					} else if (o instanceof Map) {
+						stack[stacktop]=((Map)o).keySet().iterator();
+					} else {
+						internalError("TypeError", toPyString(o)+" is not iterable");
+					}
+					continue;
+				}
+
+				// More heavyweight stuff
 				case 23: // PRINT
 				{
 					StringBuilder sb=new StringBuilder();
@@ -453,7 +548,7 @@ public class MiniPython {
 						if(i!=0) {
 							sb.append(" ");
 						}
-						sb.append((String)stack[stacktop+i+1]);
+						sb.append(toPyString(stack[stacktop+i+1]));
 					}
 					sb.append(nl?"\n":" ");
 					if(mTheClient!=null) {
@@ -473,6 +568,9 @@ public class MiniPython {
 				}
 				case 163: // GLOBAL
 				{
+					if(current!=root && current.names.containsKey(strings[val])) {
+						internalError("SyntaxError", String.format("Name '%s' is assigned to before 'global' declaration", strings[val]));
+					}
 					current.addGlobal(strings[val]);
 					continue;
 				}
@@ -491,7 +589,7 @@ public class MiniPython {
 						continue;
 					}
 					if(!(stack[stacktop] instanceof TMethod)) {
-						internalError("TypeError", "object is not callable");
+						internalError("TypeError", toPyString(stack[stacktop])+" is not callable");
 					}
 					TMethod meth=(TMethod)stack[stacktop--];
 					current=new Context(meth.addr, current);
@@ -515,7 +613,6 @@ public class MiniPython {
 					continue;
 				}
 
-				case 1: // ADD
 				case 3: // DIV
 				case 8: // UNARY_ADD
 				case 15: // SUBSCRIPT_SLICE
@@ -537,21 +634,77 @@ public class MiniPython {
 	}
 
 	private void nativeCall() throws ExecutionError {
+		// It requires a heroic amount of code to call the single invoke method, and get decent error message
+		// such as wrong parameter types.  Varargs is even more comical.
 		TNativeMethod tm=(TNativeMethod)stack[stacktop--];
+
 		int suppliedargs=(Integer)stack[stacktop--];
-		if(suppliedargs!=tm.nargs) {
-			internalError("TypeError", String.format("%s takes %d arguments (%d given)", tm.name, tm.nargs, suppliedargs));
-		}
-		Object[] args=new Object[suppliedargs];
 		stacktop-=suppliedargs;
-		for(int i=0;i<suppliedargs;i++) {
-			args[i]=stack[stacktop+i+1];
+		Object[] args;
+
+		@SuppressWarnings("rawtypes")
+		Class[] parameterTypes=tm.nativeMethod.getParameterTypes();
+
+		int badarg=-1;
+
+		boolean varargs=tm.nativeMethod.isVarArgs();
+		if(varargs) {
+			int varargsindex=tm.nativeMethod.getGenericParameterTypes().length-1;
+
+			Object varargsdata=Array.newInstance(
+					parameterTypes[varargsindex].getComponentType(),
+					suppliedargs-varargsindex);
+			args=new Object[varargsindex+1];
+
+			args[varargsindex]=varargsdata;
+
+			for(int i=0;i<suppliedargs;i++) {
+				try {
+					if(i<varargsindex) {
+						args[i]=parameterTypes[i].cast(stack[stacktop+i+1]);
+					} else {
+						Array.set(varargsdata, i-varargsindex, stack[stacktop+i+1]);
+					}
+				} catch (IllegalArgumentException e) {
+					badarg=i; break;
+				} catch (ClassCastException e) {
+					badarg=i; break;
+				}
+			}
+		} else {
+			args=new Object[suppliedargs];
+			for(int i=0;i<suppliedargs;i++) {
+				try {
+					args[i]=parameterTypes[i].cast(stack[stacktop+i+1]);
+				} catch (ClassCastException e) {
+					badarg=i; break;
+				}
+			}
 		}
+
+		if(badarg>=0) {
+			Class expecting=null;
+			if(varargs) {
+				expecting=parameterTypes[parameterTypes.length-1].getComponentType();
+			} else {
+				expecting=parameterTypes[badarg];
+			}
+
+			internalError("TypeError", String.format("Calling %s - bad argument #%d - got %s, expecting %s",
+					tm,
+					badarg+1,
+					toPyString(stack[stacktop+badarg+1].getClass().getSimpleName()),
+					toPyString(expecting.getSimpleName())));
+		}
+
 		Object result=null;
 		try {
 			result=tm.nativeMethod.invoke(tm.mod.o, args);
 		} catch (IllegalArgumentException e) {
-			internalError("TypeError", String.format("Call to %s: %s", tm, e));
+			String msg=String.format("Call to %s: %s.  Takes %d%s args, %d provided", tm, e,
+					tm.nativeMethod.getGenericParameterTypes().length+(varargs?-1:0),
+					varargs?"+":"", suppliedargs);
+			internalError("TypeError", msg);
 		} catch (IllegalAccessException e) {
 			// this shouldn't be possible since we checked it is public
 			internalError("RuntimeError", String.format("Illegal access to native method %s: %s", tm, e));
@@ -681,5 +834,30 @@ public class MiniPython {
 
 	public void addModule(String name, Object object) {
 		root.names.put(name, new TModule(object, name));
+	}
+
+	// builtin methods
+	@SuppressWarnings("rawtypes")
+	int builtin_len(Object item) throws ExecutionError {
+		if(item instanceof Map) return ((Map)item).size();
+		if(item instanceof List) return ((List)item).size();
+		if(item instanceof String) return ((String)item).length();
+		internalError("TypeError", "Can't get length of "+toPyString(item));
+		// unreachable code
+		return -1;
+	}
+
+	void builtin_print(Object ...items) throws ExecutionError {
+		StringBuilder sb=new StringBuilder();
+		for(int i=0; i<items.length; i++) {
+			if(i!=0) {
+				sb.append(" ");
+			}
+			sb.append(toPyString(items[i]));
+		}
+		sb.append("\n");
+		if(mTheClient!=null) {
+			mTheClient.print(sb.toString());
+		}
 	}
 }
