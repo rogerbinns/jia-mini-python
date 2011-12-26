@@ -633,6 +633,24 @@ public class MiniPython {
 		stack=newstack;
 	}
 
+
+	static final private boolean checkTypeCompatible(Class<?> type, Object val) {
+		if(val==null)
+			return !type.isPrimitive();
+		if(type.isAssignableFrom(val.getClass()))
+			return true;
+		if(!type.isPrimitive())
+			return false;
+
+		// type could be 'int' while val is 'Integer' - work out if that is the case
+		// as autoboxing will make them compatible
+		Class<?>vc=val.getClass();
+		return (vc==Integer.class && type==Integer.TYPE) ||
+				(vc==Boolean.class && type==Boolean.TYPE);
+
+	}
+
+
 	private void nativeCall() throws ExecutionError {
 		// It requires a heroic amount of code to call the single invoke method, and get decent error message
 		// such as wrong parameter types.  Varargs is even more comical.
@@ -642,43 +660,42 @@ public class MiniPython {
 		stacktop-=suppliedargs;
 		Object[] args;
 
-		@SuppressWarnings("rawtypes")
-		Class[] parameterTypes=tm.nativeMethod.getParameterTypes();
+		Class<?>[] parameterTypes=tm.nativeMethod.getParameterTypes();
 
 		int badarg=-1;
 
 		boolean varargs=tm.nativeMethod.isVarArgs();
 		if(varargs) {
 			int varargsindex=tm.nativeMethod.getGenericParameterTypes().length-1;
-
-			Object varargsdata=Array.newInstance(
-					parameterTypes[varargsindex].getComponentType(),
-					suppliedargs-varargsindex);
+			Class<?> vatype=parameterTypes[varargsindex].getComponentType();
+			Object varargsdata=Array.newInstance(vatype, suppliedargs-varargsindex);
 			args=new Object[varargsindex+1];
 
 			args[varargsindex]=varargsdata;
 
 			for(int i=0;i<suppliedargs;i++) {
-				try {
-					if(i<varargsindex) {
-						args[i]=parameterTypes[i].cast(stack[stacktop+i+1]);
-					} else {
-						Array.set(varargsdata, i-varargsindex, stack[stacktop+i+1]);
+				Object val=stack[stacktop+i+1];
+
+				if(i<varargsindex) {
+					if(!checkTypeCompatible(parameterTypes[i], val)) {
+						badarg=i; break;
 					}
-				} catch (IllegalArgumentException e) {
-					badarg=i; break;
-				} catch (ClassCastException e) {
-					badarg=i; break;
+					args[i]=val;
+				} else {
+					if(!checkTypeCompatible(vatype, val)) {
+						badarg=i; break;
+					}
+					Array.set(varargsdata, i-varargsindex, val);
 				}
 			}
 		} else {
 			args=new Object[suppliedargs];
 			for(int i=0;i<suppliedargs;i++) {
-				try {
-					args[i]=parameterTypes[i].cast(stack[stacktop+i+1]);
-				} catch (ClassCastException e) {
+				Object val=stack[stacktop+i+1];
+				if(!checkTypeCompatible(parameterTypes[i], val)) {
 					badarg=i; break;
 				}
+				args[i]=val;
 			}
 		}
 
