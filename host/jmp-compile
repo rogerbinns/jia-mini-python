@@ -53,6 +53,7 @@ class Compiler(ast.NodeVisitor):
 
     # main method to turn .py into .jmp
     def compile(self, options, inputfile, outputfile):
+        self.bcstack=[None]
         self.counter=0
         flags=ast.PyCF_ONLY_AST
         if options.print_function:
@@ -402,6 +403,7 @@ class Compiler(ast.NodeVisitor):
             raise self.Error(node, "else not supported for while")
         test=Label()
         end=Label()
+        self.bcstack.append( (end, test) )
         yield node, test
         for x in self.visit(node.test):
             yield x
@@ -411,6 +413,7 @@ class Compiler(ast.NodeVisitor):
                 yield y
         yield None, ("GOTO", test)
         yield node, end
+        self.bcstack.pop()
 
     def visit_For(self, node):
         if node.orelse:
@@ -420,6 +423,7 @@ class Compiler(ast.NodeVisitor):
 
         loop=Label()
         end=Label()
+        self.bcstack.append( (end, loop) )
         for x in self.visit(node.iter):
             yield x
         yield node, "ITER"
@@ -431,7 +435,22 @@ class Compiler(ast.NodeVisitor):
                 yield y
         yield None, ("GOTO", loop)
         yield None, end
-        
+        # get rid of iterator
+        yield None, "POP_TOP"
+        self.bcstack.pop()
+
+    def visit_Break(self, node):
+        bc=self.bcstack[-1]
+        if bc is None:
+            raise self.Error(node, "'break' not relevant here")
+        yield node, ("GOTO", bc[0])
+
+    def visit_Continue(self, node):
+        bc=self.bcstack[-1]
+        if bc is None:
+            raise self.Error(node, "'continue' not relevant here")
+        yield node, ("GOTO", bc[1])
+
     def visit_Print(self, node):
         if node.dest is not None:
             raise self.Error(node, "print targets are not supported")
@@ -443,6 +462,7 @@ class Compiler(ast.NodeVisitor):
         yield node, "PRINT"
 
     def visit_FunctionDef(self, node):
+        self.bcstack.append(None)
         if node.decorator_list:
             raise self.Error(node, "Decorators are not supported")
         args=node.args
@@ -474,6 +494,7 @@ class Compiler(ast.NodeVisitor):
             yield None, "PUSH_NONE"
             yield None, "RETURN"
         yield node, end
+        self.bcstack.pop()
 
     def visit_Call(self, node):
         if node.starargs:
