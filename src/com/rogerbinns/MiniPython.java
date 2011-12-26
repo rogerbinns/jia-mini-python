@@ -64,6 +64,10 @@ public class MiniPython {
 		try {
 			stacktop=-1;
 			mainLoop(root);
+			// ::TODO:: remove once thoroughly tested
+			if(stacktop!=-1) {
+				internalError("StackLeak", "Buggy code has led to a leak on the stack");
+			}
 		} finally {
 			stacktop=-1;
 		}
@@ -90,6 +94,7 @@ public class MiniPython {
 		Map<String,Object> names;
 		Set<String> globals; // only initialized if needed
 		int pc;
+		boolean return_on_return=false;
 		Context(int pc, Context parent) {
 			this.pc=pc;
 			this.parent=parent;
@@ -185,10 +190,20 @@ public class MiniPython {
 			stack[++stacktop]=meth;
 			if(meth instanceof TMethod) {
 				Context c=new Context(((TMethod)meth).addr, current);
-				return mainLoop(c);
+				c.return_on_return=true;
+				Object retval=mainLoop(c);
+				// ::TODO:: remove once thoroughly tested
+				if(stacktop!=savedsp) {
+					internalError("StackLeak", "Buggy code has led to a leak on the stack");
+				}
+				return retval;
 			} else if (meth instanceof TNativeMethod) {
 				nativeCall();
-				return stack[--stacktop];
+				Object retval=stack[--stacktop];
+				if(stacktop!=savedsp) {
+					internalError("StackLeak", "Buggy code has led to a leak on the stack");
+				}
+				return retval;
 			} else {
 				internalError("TypeError", toPyString(meth)+" is not callable");
 				return null;
@@ -252,8 +267,6 @@ public class MiniPython {
 						}
 						stack[++stacktop]=it.next();
 					} else {
-						// take iterator off stack
-						stacktop--;
 						current.pc=val;
 					}
 					continue;
@@ -609,7 +622,11 @@ public class MiniPython {
 					if(current.parent==null) {
 						internalError("SyntaxError", "'return' outside function");
 					}
+
+					boolean ror=current.return_on_return;
 					current=current.parent;
+					if(ror)
+						return stack[stacktop--];
 					continue;
 				}
 
@@ -700,8 +717,8 @@ public class MiniPython {
 		}
 
 		if(badarg>=0) {
-			Class expecting=null;
-			if(varargs) {
+			Class<?> expecting=null;
+			if(varargs && badarg>=parameterTypes.length-1) {
 				expecting=parameterTypes[parameterTypes.length-1].getComponentType();
 			} else {
 				expecting=parameterTypes[badarg];
