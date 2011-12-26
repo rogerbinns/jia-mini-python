@@ -39,6 +39,7 @@ class Compiler(ast.NodeVisitor):
         ast.Gt: "GT",
         ast.Lt: "LT",
         ast.Eq: "EQ",
+        ast.NotEq: "NOT_EQ",
         ast.In: "IN",
         ast.UAdd: "UNARY_ADD",
         ast.USub: "UNARY_NEG",
@@ -53,7 +54,13 @@ class Compiler(ast.NodeVisitor):
     # main method to turn .py into .jmp
     def compile(self, options, inputfile, outputfile):
         self.counter=0
-        t=ast.parse(open(inputfile, "rb").read(), inputfile)
+        flags=ast.PyCF_ONLY_AST
+        if options.print_function:
+            import __future__
+            flags|=__future__.print_function.compiler_flag
+
+        t=compile(open(inputfile, "rb").read(), inputfile, 'exec', flags)
+
         ast.fix_missing_locations(t)
         res=[]
         try:
@@ -337,6 +344,8 @@ class Compiler(ast.NodeVisitor):
         yield node, ("PUSH_INT", len(node.elts))
         yield node, "LIST"
 
+    visit_Tuple=visit_List
+
     def visit_Dict(self, node):
         for k,v in zip(node.keys, node.values):
             for x in self.visit(v):
@@ -395,7 +404,28 @@ class Compiler(ast.NodeVisitor):
         for x in node.body:
             for y in self.visit(x):
                 yield y
+        yield None, ("GOTO", test)
         yield node, end
+
+    def visit_For(self, node):
+        if node.orelse:
+            raise self.Error(node, "else not supported for 'for'")
+        if not isinstance(node.target, ast.Name):
+            raise self.Error(node.name, "Can only use single name for 'for' variable")
+
+        loop=Label()
+        end=Label()
+        for x in self.visit(node.iter):
+            yield x
+        yield node, "ITER"
+        yield node, loop
+        yield node, ("NEXT", end)
+        yield node.target, ("STORE_NAME", node.target.id)
+        for x in node.body:
+            for y in self.visit(x):
+                yield y
+        yield None, ("GOTO", loop)
+        yield None, end
         
     def visit_Print(self, node):
         if node.dest is not None:
@@ -403,7 +433,6 @@ class Compiler(ast.NodeVisitor):
         for x in node.values:
             for y in self.visit(x):
                 yield y
-            yield x, "STR"
         yield node, "PUSH_TRUE" if node.nl else "PUSH_FALSE"
         yield node, ("PUSH_INT", len(node.values))
         yield node, "PRINT"
@@ -624,12 +653,15 @@ opcode_map={
     "PUSH_FALSE": 22,
     "PRINT": 23,
     "BOOL": 24,
+    "ITER": 25,
+    "NOT_EQ": 26,
 
     ### All the following take two byte int value
     # code position
     "SET_METHOD": 128,
     "GOTO": 129,
     "IF_FALSE": 130,
+    "NEXT": 131,
 
     # strings
     "LOAD_NAME": 160,
@@ -655,18 +687,26 @@ def is_int_op(v):
 if __name__=='__main__':
     import os
     import optparse
-    p=optparse.OptionParser(usage="""%prog [options] input.py [output.jmp]
+    p=optparse.OptionParser(usage="""%prog [options] file[s]""")
 
-Produces JMP format from input.py file. Output goes to input.jmp by
-default but you can specify your own output file.
+    g=optparse.OptionGroup(p, "Compiling", """Supply a filename
+containing Python code.  By default the output is written
+alongside the input file with a .jmp extension.  Supply a second
+filename to override where the output goes.""")
 
-Usage: %prog --dump [options] output.jmp
+    g.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on compile error")
+    g.add_option("--print-function", action="store_true", default=sys.version_info>(3,), help="'print' is a function (Python 3 style) [%default]")
+    p.add_option_group(g)
 
-Dumps an existing .jmp file so you can see the internal representation.""")
-    p.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on compile error")
-    p.add_option("--dump", action="store_true", default=False, help="Dump a .jmp file internal representation")
-    p.add_option("--dump-source", metavar="INPUT.PY", help="Optional source file that the .jmp was compiled from.  The lines of the source will be intermingled with the output.")
-    p.add_option("--java-maintenance", action="store_true", help="Internal:  Used during development to ensuire consistency of implementation")
+    g=optparse.OptionGroup(p, "Dumping", """Shows the internal representation of .jmp files""")
+    g.add_option("--dump", action="store_true", default=False, help="Enables dump mode")
+    g.add_option("--dump-source", metavar="INPUT.PY", help="Optional source file that the .jmp was compiled from.  The lines of the source will be intermingled with the output.")
+    p.add_option_group(g)
+
+    g=optparse.OptionGroup(p, "Internal developer")
+    g.add_option("--java-maintenance", action="store_true", help="Used during development to ensure consistency of implementation")
+    p.add_option_group(g)
+
     p.disable_interspersed_args()
     options, args=p.parse_args()
 
