@@ -23,7 +23,7 @@ public class Tester {
 			System.err.printf("Failed to open input file: %s\n", e);
 			System.exit(3);
 		}
-		MiniPython mp=new MiniPython();
+		final MiniPython mp=new MiniPython();
 		mp.setClient(new MiniPython.Client() {
 			@Override
 			public void print(String s) throws ExecutionError {
@@ -45,6 +45,9 @@ public class Tester {
 			}
 			public void returnsvoid() {
 
+			}
+			public String callback(String s) throws ExecutionError {
+				return "a"+mp.callMethod("meth", s, 2)+"b";
 			}
 			public String vatest(String s, int... ints) {
 				return s+ints.toString();
