@@ -46,6 +46,9 @@ public class Tester {
 			public void returnsvoid() {
 
 			}
+			public String vatest(String s, int... ints) {
+				return s+ints.toString();
+			}
 		}
 
 		mp.addModule("time", new TimeWrapper());
