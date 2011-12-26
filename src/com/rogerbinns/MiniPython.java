@@ -187,7 +187,6 @@ public class MiniPython {
 				stack[++stacktop]=args[i];
 			}
 			stack[++stacktop]=args.length;
-			stack[++stacktop]=meth;
 			if(meth instanceof TMethod) {
 				Context c=new Context(((TMethod)meth).addr, current);
 				c.return_on_return=true;
