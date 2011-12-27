@@ -96,8 +96,12 @@ not being an integer in the sum_all method above) then you should call
 ExecutionError after performing internal bookkeeping (eg tracking line
 numbers) and not return.
 
-Class
-=====
+MiniPython Class
+----------------
+
+.. index:: javadoc
+
+You can also read this in `javadoc format <_static/javadoc/index.html>`__
 
 .. class:: MiniPython
 
