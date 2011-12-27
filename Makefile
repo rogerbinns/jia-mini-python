@@ -1,7 +1,8 @@
-VERSION = 0.1
+VERSION = 0.2
+DATE = "26 December 2011"
 
 
-.PHONY: doc docs publish test ant nose help
+.PHONY: doc docs publish test ant nose help javadoc
 
 help:
 	@echo "Use \`make <target>' where target is one of"
@@ -12,8 +13,8 @@ help:
 
 docs: doc
 
-doc:
-	make -C doc html VERSION=$(VERSION)
+doc: javadoc
+	make -C doc html VERSION=$(VERSION) DATE=$(DATE)
 
 publish: doc
 	rsync -av --delete --exclude=.hg doc/_build/html/ ../jmp-doc/
@@ -27,3 +28,10 @@ test: ant
 
 nose: ant
 	nosetests test/
+
+JAVADOCDIR="doc/_build/javadoc"
+
+javadoc:
+	rm -rf $(JAVADOCDIR)
+	mkdir -p $(JAVADOCDIR)
+	javadoc -notree -nohelp -nonavbar -sourcepath src -d $(JAVADOCDIR)/javadoc -link http://docs.oracle.com/javase/6/docs/api/  src/com/rogerbinns/MiniPython.java
