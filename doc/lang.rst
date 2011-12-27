@@ -40,7 +40,7 @@ Operators
 What is not supported
 =====================
 
-* Variable arguments and keywork arguments (`*args` and `**kwargs`).
+* Variable arguments and keyword arguments (`*args` and `**kwargs`).
   Note that methods :ref:`added via Java <adding_methods>` can take
   variable numbers of arguments.
 * Classes

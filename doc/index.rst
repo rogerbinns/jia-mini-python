@@ -1,5 +1,5 @@
-Welcome to Java Mini Python's documentation!
-============================================
+Welcome to Java Mini Python's documentation
+===========================================
 
 .. centered::  Version |version| released |today|
 
@@ -10,12 +10,14 @@ expressions, variables, conditionals, methods/macros, callbacks) and
 would like to use Python's syntax.
 
 It was originally written in order to have a richer configuration file
-on Android. For example you could make the brightness setting have a
-value of 7 except on Thursday afternoons, unless the program has been
-running for 24 hours.
+for an Android app library. For example you could make the brightness
+setting have a value of 7 except on Thursday afternoons, unless the
+program has been running for 24 hours.
 
 If you are looking for a fuller implementation of Python then try the
 `Jython Project <http://www.jython.org/>`__
+
+Java Mini Python is hosted at http://code.google.com/p/java-mini-python/
 
 Contents:
 
@@ -26,9 +28,11 @@ Contents:
    lang   
    java
    python
+   jmp-compile
    quirks
    internals
    faq
+   copyright
 
 
 

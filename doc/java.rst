@@ -10,28 +10,27 @@ Java API Reference
 
 Where possible types are mapped directly from Python to Java.
 
-+------------------------------+------------------------------+
-| Python type                  | Java type                    |
-+==============================+==============================+
-| int                          | int/Integer - 32 bit signed  |
-+------------------------------+------------------------------+
-| str/unicode                  | String (unicode only)        |
-+------------------------------+------------------------------+
-| None                         | null                         |
-+------------------------------+------------------------------+
-| bool                         | boolean/Boolean              |
-+------------------------------+------------------------------+
-| dict                         | Map<Object, Object>          |
-+------------------------------+------------------------------+
-| list/tuple                   | List<Object>                 |
-+------------------------------+------------------------------+
++--------------+---------------------------------------------------+
+| Python type  | Java type                                         |
++==============+===================================================+
+| int          | int/Integer - 32 bit signed                       |
++--------------+---------------------------------------------------+
+| str          | String (unicode only)                             |
++--------------+---------------------------------------------------+
+| None         | null                                              |
++--------------+---------------------------------------------------+
+| bool         | boolean/Boolean                                   |
++--------------+---------------------------------------------------+
+| dict         | :jdoc:`Map <java/util/Map.html>` <Object, Object> |
++--------------+---------------------------------------------------+
+| list         | :jdoc:`List <java/util/List.html>` <Object>       |
++--------------+---------------------------------------------------+
 
-Objects in Map and List should only be ones present in the table.
-Note that tuples are mutable and treated indistinguishably from lists.
+Note that tuples are mutable and treated as lists.
 
 Your added methods can return types other than the above without
 error.  However there will be type errors if you try to operations on
-them (eg use them as an `if` express, add to them).
+them (eg use them as an `if` expression or add them).
 
 .. _adding_methods:
 
@@ -101,11 +100,13 @@ MiniPython Class
 
 .. index:: javadoc
 
-You can also read this in `javadoc format <_static/javadoc/index.html>`__
+You can also read API information in `javadoc format <_static/javadoc/index.html>`__
 
 .. class:: MiniPython
 
-   This class implements the MiniPython environment.
+   (`javadoc for MiniPython class
+   <_static/javadoc/com/rogerbinns/MiniPython.html>`__) This class
+   implements the MiniPython environment.
 
    .. method:: void addModule(String name, Object methods)
 
@@ -151,9 +152,25 @@ You can also read this in `javadoc format <_static/javadoc/index.html>`__
       This method is useful for generating error messages and
       diagnostics.
 
+   .. method:: String toPyTypeString(Object o)
+
+      Returns a string representing the type of the object using
+      Python nomenclature where possible.  For example `null` is
+      returned as `NoneType`, `true` as `bool`, `Map` as `dict` etc.
+      You can also pass in Class objects as well as instances.  Note
+      that primitives (eg `int`) and the corresponding boxed type (eg
+      `Integer`) will both be returned as the same string (`int` in
+      this case).
+
+      This method is useful for generating error messages and
+      diagnostics.
+
    .. class:: ExecutionError
   
-      This class extends :class:`Exception` encapsulating errors found while executing code.
+         (`javadoc for MiniPython.ExecutionError class
+         <_static/javadoc/com/rogerbinns/MiniPython.ExecutionError.html>`__)
+         This class extends :class:`Exception` encapsulating errors
+         found while executing code.
 
       .. method:: String getType()
 
@@ -171,7 +188,10 @@ You can also read this in `javadoc format <_static/javadoc/index.html>`__
 
    .. class:: Client
 
-      Implement this interface to provide behaviour, and register with `MiniPython.setClient`.
+         (`javadoc for MiniPython.Client interface
+         <_static/javadoc/com/rogerbinns/MiniPython.Client.html>`__)
+         Implement this interface to provide behaviour, and register
+         with `MiniPython.setClient`.
 
       .. method:: void print(String s)
 
