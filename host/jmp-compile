@@ -43,6 +43,8 @@ class Compiler(ast.NodeVisitor):
         ast.In: "IN",
         ast.UAdd: "UNARY_ADD",
         ast.USub: "UNARY_NEG",
+        ast.And: "AND",
+        ast.Or: "OR",
         }
 
     class Error(Exception):
@@ -255,8 +257,13 @@ class Compiler(ast.NodeVisitor):
         yield node, "POP_TOP"
 
     def visit_BoolOp(self, node):
-        debug_here()
-        pass
+        end=Label()
+        for i,v in enumerate(node.values):
+            for x in self.visit(v):
+                yield x
+            if i!=len(node.values)-1:
+                yield node, (self._opmap[node.op.__class__], end)
+        yield None, end
 
     def visit_UnaryOp(self, node):
         for x in self.visit(node.operand):
@@ -323,15 +330,15 @@ class Compiler(ast.NodeVisitor):
         if isinstance(node.slice, ast.Slice):
             if node.slice.step is not None:
                 raise self.Error(node.slice, "Steps not supported in slices")
-            if node.slice.upper is None:
-                yield None, ("PUSH_INT", -1)
-            else:
-                for x in self.visit(node.slice.upper):
-                    yield x
             if node.slice.lower is None:
                 yield None, ("PUSH_INT", 0)
             else:
                 for x in self.visit(node.slice.lower):
+                    yield x
+            if node.slice.upper is None:
+                yield None, ("PUSH_INT", -1)
+            else:
+                for x in self.visit(node.slice.upper):
                     yield x
         else:
             for x in self.visit(node.slice.value):
@@ -385,7 +392,6 @@ class Compiler(ast.NodeVisitor):
             yield x
         end=Label()
         elsepart=Label() if node.orelse else None
-        yield node, "BOOL"
         yield node, ("IF_FALSE", elsepart if elsepart else end)
         for x in node.body:
             for y in self.visit(x):
@@ -652,7 +658,7 @@ def java_maintenance(javafile):
 # The operations making up our bytecode.  We use a dict not a list so
 # that there can be holes/changes without affecting the stability of
 # the numbers.  Codes with the upper bit set take an additional two bytes
-# of integer (mapping into string or integer tables)
+# of integer (as is or mapping into string table)
 opcode_map={
     "FUNCTION_PROLOG": 0,
     "ADD": 1,
@@ -678,7 +684,6 @@ opcode_map={
     "PUSH_TRUE": 21,
     "PUSH_FALSE": 22,
     "PRINT": 23,
-    "BOOL": 24,
     "ITER": 25,
     "NOT_EQ": 26,
 
@@ -688,6 +693,8 @@ opcode_map={
     "GOTO": 129,
     "IF_FALSE": 130,
     "NEXT": 131,
+    "AND": 132,
+    "OR": 133,
 
     # strings
     "LOAD_NAME": 160,

@@ -252,7 +252,7 @@ public class MiniPython {
 				}
 				case 130: // IF_FALSE
 				{
-					if((Boolean)stack[stacktop--]==false) {
+					if(builtin_bool(stack[stacktop--])==false) {
 						current.pc=val;
 					}
 					continue;
@@ -267,6 +267,18 @@ public class MiniPython {
 						stack[++stacktop]=it.next();
 					} else {
 						current.pc=val;
+					}
+					continue;
+				}
+				case 132: // AND
+				case 133: // OR
+				{
+					if(builtin_bool(stack[stacktop])==(op==133)) {
+						// on true (OR) or false (AND), goto end
+						current.pc=val;
+					} else {
+						// clear top value so next one can be tested
+						stacktop--;
 					}
 					continue;
 				}
@@ -509,27 +521,6 @@ public class MiniPython {
 					} else {
 						internalError("TypeError", "Can only negate integers");
 					}
-				}
-				case 24: // BOOL
-				{
-					Object o=stack[stacktop];
-					if(o instanceof Boolean) {
-						continue;
-					}
-					if(o instanceof String) {
-						stack[stacktop]= ((String)o).length()!=0;
-					} else if(o instanceof Integer) {
-						stack[stacktop]= ((Integer)o)!=0;
-					} else if(o==null) {
-						stack[stacktop]=false;
-					} else if(o instanceof List) {
-						stack[stacktop]= ((List)o).size()>0;
-					} else if(o instanceof Map) {
-						stack[stacktop]= ((Map)o).size()>0;
-					} else {
-						internalError("TypeError", "Can't 'bool' "+toPyString(o));
-					}
-					continue;
 				}
 				case 20: // STR
 				{
@@ -830,7 +821,7 @@ public class MiniPython {
 		return o.toString();
 	}
 
-	class ExecutionError extends Exception {
+	public class ExecutionError extends Exception {
 		private static final long serialVersionUID = -4271385191079964823L;
 		String type,message;
 		Context context;
@@ -856,7 +847,7 @@ public class MiniPython {
 		}
 	}
 
-	interface Client {
+	public interface Client {
 		public void print(String s) throws ExecutionError;
 	}
 
@@ -893,4 +884,26 @@ public class MiniPython {
 			mTheClient.print(sb.toString());
 		}
 	}
+
+	@SuppressWarnings("rawtypes")
+	boolean builtin_bool(Object o) throws ExecutionError {
+		if(o instanceof Boolean)
+			return (Boolean)o;
+		if(o instanceof String)
+			return ((String)o).length()!=0;
+		if(o instanceof Integer)
+			return ((Integer)o)!=0;
+		if(o==null)
+			return false;
+		if(o instanceof List)
+			return ((List)o).size()>0;
+
+			// Eclipse is retarded and screws up indentation from here on
+			if(o instanceof Map)
+				return ((Map)o).size()>0;
+
+				internalError("TypeError", "Can't 'bool' "+toPyString(o));
+				return false;
+	}
+
 }
