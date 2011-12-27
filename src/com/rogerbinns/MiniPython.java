@@ -26,9 +26,13 @@ public class MiniPython {
 	Object[] stack;
 	int stacktop;
 
+	// If true then the stack is resized on every instruction to be as short as possible.
+	// This catches code that doesn't extend the stack as necessary.
+	boolean PARANOIDSTACK=true;
+
 	MiniPython() {
 		root=current=new Context(0, null);
-		stack=new Object[256];
+		stack=new Object[PARANOIDSTACK?0:256];
 		stacktop=-1;
 		addBuiltins();
 	}
@@ -133,14 +137,41 @@ public class MiniPython {
 		}
 	}
 
-	private static final class TNativeMethod {
+	private interface TNativeMethod {
+		Method getMethod();
+		Object getThis();
+		Object[] getPrefixArgs();
+	}
+
+	private final class TBuiltinInstanceMethod implements TNativeMethod {
+		Object[] prefixargs;
+		String prettyname;
+		Method method;
+
+		TBuiltinInstanceMethod(Object[] prefixargs, Method m, String prettyname) {
+			this.prefixargs=prefixargs;
+			this.prettyname=prettyname;
+			method=m;
+		}
+		@Override
+		public Object getThis() { return MiniPython.this; }
+
+		@Override
+		public Method getMethod() { return method; }
+
+		@Override
+		public Object[] getPrefixArgs() { return prefixargs; }
+
+		public String toString() { return String.format("<instance method %s.%s>", toPyTypeString(prefixargs[0]), prettyname); }
+	}
+
+	private final class TModuleNativeMethod implements TNativeMethod {
 		TModule mod;
 		String name;
 		Method nativeMethod;
-		TNativeMethod(TModule mod) {
+
+		TModuleNativeMethod(TModule mod, String name) throws ExecutionError {
 			this.mod=mod;
-		}
-		void Lookup(String name) {
 			this.name=name;
 			for(Method m : mod.o.getClass().getDeclaredMethods()) {
 				// we only want public methods
@@ -152,9 +183,34 @@ public class MiniPython {
 					break;
 				}
 			}
+			if(nativeMethod==null) {
+				internalError("AttributeError", "No method named "+name);
+			}
 		}
+
+		TModuleNativeMethod(TModule mod, Method meth, String name) {
+			this.mod=mod;
+			this.nativeMethod=meth;
+			this.name=name;
+		}
+
 		public String toString() {
 			return String.format("<native method %s.%s>", mod.name, name);
+		}
+
+		@Override
+		public Method getMethod() {
+			return nativeMethod;
+		}
+
+		@Override
+		public Object getThis() {
+			return mod.o;
+		}
+
+		@Override
+		public Object[] getPrefixArgs() {
+			return null;
 		}
 	}
 
@@ -162,10 +218,8 @@ public class MiniPython {
 		TModule tm=new TModule(this, "__builtins__");
 		for(Method m : this.getClass().getDeclaredMethods()) {
 			if(m.getName().startsWith("builtin_")) {
-				TNativeMethod tn=new TNativeMethod(tm);
-				tn.nativeMethod=m;
 				String name=m.getName().substring("builtin_".length());
-				tn.name=name;
+				TModuleNativeMethod tn=new TModuleNativeMethod(tm, m, name);
 				root.names.put(name, tn);
 			}
 		}
@@ -231,6 +285,14 @@ public class MiniPython {
 		int op, val=-1;
 		opcodeswitch:
 			while(true) {
+				if(PARANOIDSTACK) {
+					if(stacktop+1<stack.length)
+					{
+						Object[] newstack=new Object[stacktop+1];
+						System.arraycopy(stack, 0, newstack, 0, newstack.length);
+						stack=newstack;
+					}
+				}
 				op=code[current.pc] & 0xff;
 				current.pc++;
 				if(op>=128) {
@@ -292,14 +354,15 @@ public class MiniPython {
 				// Codes that make the stack bigger
 				case 200: // PUSH_INT
 				{
-					try {
-						stack[++stacktop]=val;
-					} catch(ArrayIndexOutOfBoundsException e) {
-						extendStack();
-						current.pc-=3;
-						stacktop--;
+					while(true) {
+						try {
+							stack[++stacktop]=val;
+							continue opcodeswitch;
+						} catch(ArrayIndexOutOfBoundsException e) {
+							extendStack();
+							stacktop--;
+						}
 					}
-					continue;
 				}
 				case 201: // PUSH_INT_HI
 				{
@@ -308,46 +371,48 @@ public class MiniPython {
 				}
 				case 162: // PUSH_STR
 				{
-					try {
-						stack[++stacktop]=strings[val];
-					} catch(ArrayIndexOutOfBoundsException e) {
-						extendStack();
-						current.pc-=3;
-						stacktop--;
+					while(true) {
+						try {
+							stack[++stacktop]=strings[val];
+							continue opcodeswitch;
+						} catch(ArrayIndexOutOfBoundsException e) {
+							extendStack();
+							stacktop--;
+						}
 					}
-					continue;
 				}
 				case 18: // PUSH_NONE
 				case 21: // PUSH_TRUE
 				case 22: // PUSH_FALSE
 				{
-					try {
-						stack[++stacktop]=(op==18)?null:(op==21);
-					} catch(ArrayIndexOutOfBoundsException e) {
-						extendStack();
-						current.pc-=3;
-						stacktop--;
+					while(true) {
+						try {
+							stack[++stacktop]=(op==18)?null:(op==21);
+							continue opcodeswitch;
+						} catch(ArrayIndexOutOfBoundsException e) {
+							extendStack();
+							stacktop--;
+						}
 					}
-					continue;
 				}
 				case 160: // LOAD_NAME
 				{
-					try {
-						Context c=current;
-						String key=strings[val];
-						while(c!=null) {
-							if(c.names.containsKey(key)) {
-								stack[++stacktop]=c.names.get(key);
-								continue opcodeswitch;
+					while(true) {
+						try {
+							Context c=current;
+							String key=strings[val];
+							while(c!=null) {
+								if(c.names.containsKey(key)) {
+									stack[++stacktop]=c.names.get(key);
+									continue opcodeswitch;
+								}
+								c=c.parent;
 							}
-							c=c.parent;
+							internalError("NameError", String.format("name '%s' is not defined", key));
+						} catch(ArrayIndexOutOfBoundsException e) {
+							extendStack();
+							stacktop--;
 						}
-						internalError("NameError", String.format("name '%s' is not defined", key));
-					} catch(ArrayIndexOutOfBoundsException e) {
-						extendStack();
-						current.pc-=3;
-						stacktop--;
-						continue;
 					}
 				}
 				case 17: // LIST
@@ -458,16 +523,7 @@ public class MiniPython {
 				{
 					Object o=stack[stacktop--];
 					String name=(String)stack[stacktop--];
-					// we only support attributes of modules
-					if(!(o instanceof TModule)) {
-						internalError("AttributeError", "Can only get attributes of modules");
-					}
-					TNativeMethod m=new TNativeMethod((TModule)o);
-					m.Lookup(name);
-					if(m.nativeMethod==null) {
-						internalError("AtrributeError", "No method named "+name);
-					}
-					stack[++stacktop]=m;
+					stack[++stacktop]=getAttr(o, name);
 					continue;
 				}
 				case 14: // SUBSCRIPT
@@ -631,7 +687,7 @@ public class MiniPython {
 	}
 
 	private void extendStack() throws ExecutionError {
-		int newsize=stack.length+512;
+		int newsize=stack.length+(PARANOIDSTACK?1:512);
 		if(newsize>8192) {
 			internalError("RuntimeError", "Maximum stack depth exceeded");
 		}
@@ -666,14 +722,19 @@ public class MiniPython {
 		int suppliedargs=(Integer)stack[stacktop--];
 		stacktop-=suppliedargs;
 		Object[] args;
+		Object[] prefixargs=tm.getPrefixArgs();
+		int lpargs=(prefixargs!=null)?prefixargs.length:0;
+		suppliedargs+=lpargs;
 
-		Class<?>[] parameterTypes=tm.nativeMethod.getParameterTypes();
+		Method method=tm.getMethod();
+		Class<?>[] parameterTypes=method.getParameterTypes();
 
 		int badarg=-1;
+		Object badval=null;
 
-		boolean varargs=tm.nativeMethod.isVarArgs();
+		boolean varargs=method.isVarArgs();
 		if(varargs) {
-			int varargsindex=tm.nativeMethod.getGenericParameterTypes().length-1;
+			int varargsindex=method.getGenericParameterTypes().length-1;
 			Class<?> vatype=parameterTypes[varargsindex].getComponentType();
 			Object varargsdata=Array.newInstance(vatype, suppliedargs-varargsindex);
 			args=new Object[varargsindex+1];
@@ -681,16 +742,18 @@ public class MiniPython {
 			args[varargsindex]=varargsdata;
 
 			for(int i=0;i<suppliedargs;i++) {
-				Object val=stack[stacktop+i+1];
+				Object val=(i<lpargs) ? prefixargs[i] : stack[stacktop+i-lpargs+1];
 
 				if(i<varargsindex) {
 					if(!checkTypeCompatible(parameterTypes[i], val)) {
-						badarg=i; break;
+						badarg=i; badval=val;
+						break;
 					}
 					args[i]=val;
 				} else {
 					if(!checkTypeCompatible(vatype, val)) {
-						badarg=i; break;
+						badarg=i; badval=val;
+						break;
 					}
 					Array.set(varargsdata, i-varargsindex, val);
 				}
@@ -698,9 +761,11 @@ public class MiniPython {
 		} else {
 			args=new Object[suppliedargs];
 			for(int i=0;i<suppliedargs;i++) {
-				Object val=stack[stacktop+i+1];
+				Object val=(i<lpargs) ? prefixargs[i] : stack[stacktop+i-lpargs+1];
+
 				if(!checkTypeCompatible(parameterTypes[i], val)) {
-					badarg=i; break;
+					badarg=i; badval=val;
+					break;
 				}
 				args[i]=val;
 			}
@@ -716,19 +781,24 @@ public class MiniPython {
 
 			internalError("TypeError", String.format("Calling %s - bad argument #%d - got %s, expecting %s",
 					tm,
-					badarg+1,
-					toPyString(stack[stacktop+badarg+1].getClass().getSimpleName()),
-					toPyString(expecting.getSimpleName())));
+					badarg+1-lpargs,
+					toPyTypeString(badval),
+					toPyTypeString(expecting)));
+		}
+
+		if(args.length!=parameterTypes.length) {
+			String msg=String.format("Call to %s.  Takes %d%s args, %d provided", tm,
+					method.getGenericParameterTypes().length+(varargs?-1:0)-lpargs,
+					varargs?"+":"", suppliedargs-lpargs);
+			internalError("TypeError", msg);
 		}
 
 		Object result=null;
 		try {
-			result=tm.nativeMethod.invoke(tm.mod.o, args);
+			result=method.invoke(tm.getThis(), args);
 		} catch (IllegalArgumentException e) {
-			String msg=String.format("Call to %s: %s.  Takes %d%s args, %d provided", tm, e,
-					tm.nativeMethod.getGenericParameterTypes().length+(varargs?-1:0),
-					varargs?"+":"", suppliedargs);
-			internalError("TypeError", msg);
+			// this shouldn't be possible since we checked arg typing
+			internalError("RuntimeError", String.format("Illegal arguments to native method %s: %s", tm, e));
 		} catch (IllegalAccessException e) {
 			// this shouldn't be possible since we checked it is public
 			internalError("RuntimeError", String.format("Illegal access to native method %s: %s", tm, e));
@@ -758,12 +828,30 @@ public class MiniPython {
 		internalError(exctype, message);
 	}
 
+	Object getAttr(Object o, String name) throws ExecutionError {
+		if(o instanceof TModule)
+			return new TModuleNativeMethod((TModule)o, name);
+
+		// find an instance method
+		String target="instance_"+toPyTypeString(o)+"_"+name;
+		for(Method meth : this.getClass().getDeclaredMethods()) {
+			if(meth.getName().equals(target))
+				return new TBuiltinInstanceMethod(new Object[]{o}, meth, name);
+		}
+
+		internalError("AttributeError", String.format("No attribute '%s' of %s", name, toPyString(o)));
+		return null;
+	}
+
 	private static final Compare compareTo(Object left, Object right) {
 		if(left==null || right==null) {
 			if(left==right)
 				return Compare.Equal;
 			return Compare.DifferentTypes;
 		}
+		if(left.equals(right))
+			return Compare.Equal;
+
 		if(left.getClass()!=right.getClass())
 			return Compare.DifferentTypes;
 		// from here on they are the same type and neither is null
@@ -804,6 +892,7 @@ public class MiniPython {
 		}
 		if(left instanceof Map) {
 			// ::TODO:: something here although we can only do equality checking
+			assert false;
 		}
 		return left.equals(right)?Compare.Equal:Compare.DifferentTypes;
 	}
@@ -819,6 +908,24 @@ public class MiniPython {
 		if(o instanceof List)
 			return String.format("<list (%d items) >", ((List)o).size());
 		return o.toString();
+	}
+
+	public String toPyTypeString(Object o) {
+		if(o==null)
+			return "NoneType";
+		if(o instanceof Boolean || o==Boolean.TYPE || o==Boolean.class)
+			return "bool";
+		if(o instanceof Map || o==Map.class)
+			return "dict";
+		if(o instanceof List || o==List.class)
+			return "list";
+		if(o instanceof Integer || o==Integer.TYPE || o==Integer.class)
+			return "int";
+		if(o instanceof String)
+			return "str";
+		if(o instanceof Class<?>)
+			return ((Class<?>)o).getSimpleName();
+		return toPyTypeString(o.getClass());
 	}
 
 	public class ExecutionError extends Exception {
@@ -862,6 +969,27 @@ public class MiniPython {
 
 	// builtin methods
 	@SuppressWarnings("rawtypes")
+	boolean builtin_bool(Object o) throws ExecutionError {
+		if(o instanceof Boolean)
+			return (Boolean)o;
+		if(o instanceof String)
+			return ((String)o).length()!=0;
+		if(o instanceof Integer)
+			return ((Integer)o)!=0;
+		if(o==null)
+			return false;
+		if(o instanceof List)
+			return ((List)o).size()>0;
+
+			// Eclipse is retarded and screws up indentation from here on
+			if(o instanceof Map)
+				return ((Map)o).size()>0;
+
+				internalError("TypeError", "Can't 'bool' "+toPyString(o));
+				return false;
+	}
+
+	@SuppressWarnings("rawtypes")
 	int builtin_len(Object item) throws ExecutionError {
 		if(item instanceof Map) return ((Map)item).size();
 		if(item instanceof List) return ((List)item).size();
@@ -885,25 +1013,57 @@ public class MiniPython {
 		}
 	}
 
-	@SuppressWarnings("rawtypes")
-	boolean builtin_bool(Object o) throws ExecutionError {
-		if(o instanceof Boolean)
-			return (Boolean)o;
-		if(o instanceof String)
-			return ((String)o).length()!=0;
-		if(o instanceof Integer)
-			return ((Integer)o)!=0;
-		if(o==null)
-			return false;
-		if(o instanceof List)
-			return ((List)o).size()>0;
+	List<Object> builtin_range(int start, int... constraints) throws ExecutionError {
+		if(constraints.length>2) {
+			internalError("TypeError", "Expected at most 3 arguments");
+		}
+		int step=1;
+		int stop=1;
+		switch(constraints.length) {
+		case 0:
+			stop=start;
+			start=0;
+			break;
+		case 1:
+			stop=constraints[0];
+			break;
+		case 2:
+			stop=constraints[0];
+			step=constraints[1];
+			break;
+		}
+		if(step==0) {
+			internalError("ValueError", "step argument must not be zero");
+		}
+		List<Object> res=new ArrayList<Object>();
 
-			// Eclipse is retarded and screws up indentation from here on
-			if(o instanceof Map)
-				return ((Map)o).size()>0;
-
-				internalError("TypeError", "Can't 'bool' "+toPyString(o));
-				return false;
+		if(step<0 && stop<start) {
+			for(int i=start; i>stop; i+=step) {
+				res.add(i);
+			}
+		} else {
+			for(int i=start; i<stop; i+=step) {
+				res.add(i);
+			}
+		}
+		return res;
 	}
 
+	String builtin_str(Object o) {
+		return toPyString(o);
+	}
+
+	String builtin_type(Object o) {
+		return toPyTypeString(o);
+	}
+
+	// instance methods
+	String instance_str_upper(String s) {
+		return s.toUpperCase();
+	}
+
+	@SuppressWarnings("unchecked")
+	void instance_list_append(List list, Object item) {
+		list.add(item);
+	}
 }
