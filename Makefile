@@ -1,5 +1,5 @@
 VERSION = 0.2
-DATE = "26 December 2011"
+DATE = "28 December 2011"
 
 
 .PHONY: doc docs publish test ant nose help javadoc
