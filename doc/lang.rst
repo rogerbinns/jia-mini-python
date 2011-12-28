@@ -25,24 +25,39 @@ Keywords
 * def (new methods)
 * if
 * while
-* for
+* for  iterate over list members and dict keys
 * return
+* del
 
 Operators
 ---------
 
 * boolean: and, or
-* \+ - * / (where applicable)
+* \+ - * / % (where applicable for types)
 * :ref:`comparisons`  < <= == != >= > 
 * len (as applicable)
 * [] (list and dict indexing)
+* [from:to] list slicing (step not supported)
+
+Beware
+======
+
+It is generally a bad idea to modify lists or dicts while iterating
+over them.  (This is true of regular Python too.)
+
+The `str % list` (% operator) just calls :jdoc:`String.format
+<java/lang/String.html#format(java.lang.String, java.lang.Object...)>`
+which uses different rules than Python's equivalent.  For example
+Python will complain if too many arguments are provided while
+String.format doesn't.
 
 What is not supported
 =====================
 
 * Variable arguments and keyword arguments (`*args` and `**kwargs`).
   Note that methods :ref:`added via Java <adding_methods>` can take
-  variable numbers of arguments.
+  variable numbers of arguments.  You can call :func:`apply` to call
+  a function with a list of arguments.
 * Classes
 * Decorators
 * Threads
