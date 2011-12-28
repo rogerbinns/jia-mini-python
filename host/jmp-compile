@@ -34,15 +34,21 @@ class Compiler(ast.NodeVisitor):
     # ast classes to string opcodes
     _opmap={
         ast.Add: "ADD",
+        ast.Sub: "SUB",
         ast.Mult: "MULT",
         ast.Div: "DIV",
+        ast.Mod: "MOD",
+
         ast.Gt: "GT",
         ast.Lt: "LT",
         ast.Eq: "EQ",
         ast.NotEq: "NOT_EQ",
+
         ast.In: "IN",
+
         ast.UAdd: "UNARY_ADD",
         ast.USub: "UNARY_NEG",
+
         ast.And: "AND",
         ast.Or: "OR",
         }
@@ -62,8 +68,16 @@ class Compiler(ast.NodeVisitor):
             import __future__
             flags|=__future__.print_function.compiler_flag
 
-        t=compile(open(inputfile, "rb").read(), inputfile, 'exec', flags)
+        try:
+            t=compile(open(inputfile, "rb").read(), inputfile, 'exec', flags)
+        except SyntaxError, e:
+            print >> sys.stderr, "SyntaxError:", e.msg,"at line",e.lineno,"of", inputfile
+            print >> sys.stderr, linecache.getline(inputfile, e.lineno)
+            if e.offset is not None:
+                print >> sys.stderr, e.offset*" "+"^"
+            sys.exit(2)
 
+        # sadly this doesn't always work - especially for slices
         ast.fix_missing_locations(t)
         res=[]
         try:
@@ -225,8 +239,13 @@ class Compiler(ast.NodeVisitor):
                 x=sys.exc_info()
                 import traceback
                 traceback.print_exc(x)
-            print >> sys.stderr, e.message,"at line",e.node.lineno,"of", inputfile
-            print >> sys.stderr, linecache.getline(inputfile, e.node.lineno)+e.node.col_offset*" "+"^"
+            # Slice objects don't have line/column set so we use the
+            # most recent item emitted.  If you tried really hard you
+            # could also make that a Slice giving an error here.
+            lineno=getattr(e.node, "lineno", res[-1][0].lineno)
+            column=getattr(e.node, "col_offset", res[-1][0].col_offset)
+            print >> sys.stderr, e.message,"at line", lineno, "of", inputfile
+            print >> sys.stderr, linecache.getline(inputfile, lineno)+column*" "+"^"
             sys.exit(2)
 
     
@@ -327,27 +346,32 @@ class Compiler(ast.NodeVisitor):
         for x in self.visit(node.value):
             yield x
 
-        if isinstance(node.slice, ast.Slice):
-            if node.slice.step is not None:
-                raise self.Error(node.slice, "Steps not supported in slices")
-            if node.slice.lower is None:
-                yield None, ("PUSH_INT", 0)
-            else:
-                for x in self.visit(node.slice.lower):
-                    yield x
-            if node.slice.upper is None:
-                yield None, ("PUSH_INT", -1)
-            else:
-                for x in self.visit(node.slice.upper):
-                    yield x
-        else:
-            for x in self.visit(node.slice.value):
-                yield x
+        for x in self.visit(node.slice):
+            yield x
 
-        if isinstance(node.slice, ast.Slice):
-            yield node, "SUBSCRIPT_SLICE"
-        else:
+        if isinstance(node.slice, ast.Index):
             yield node, "SUBSCRIPT"
+        else:
+            yield node, "SUBSCRIPT_SLICE"
+        
+    def visit_Index(self, node):
+        for x in self.visit(node.value):
+            yield x
+
+    def visit_Slice(self, node):
+        if node.step is not None:
+            debug_here()
+            raise self.Error(node, "Steps not supported in slices")
+        if node.lower is None:
+            yield None, ("PUSH_INT", 0)
+        else:
+            for x in self.visit(node.lower):
+                yield x
+        if node.upper is None:
+            yield None, ("PUSH_INT", -1)
+        else:
+            for x in self.visit(node.upper):
+                yield x
 
     def visit_List(self, node):
         assert len(node.ctx._fields)==0
@@ -520,6 +544,23 @@ class Compiler(ast.NodeVisitor):
             yield x
         yield node, "RETURN"
 
+    def visit_Delete(self, node):
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                yield target, ("DEL_NAME", target.id)
+            elif isinstance(target, ast.Subscript):
+                for x in self.visit(target.value):
+                    yield x
+                for x in self.visit(target.slice):
+                    yield x
+                if isinstance(target.slice, ast.Index):
+                    yield target, "DEL_INDEX"
+                else:
+                    yield target, "DEL_SLICE"
+            else:
+                raise self.Error(target, "Unsupported item to delete")
+                
+
 def dumper(options, infile):
     getline=lambda x: linecache.getline(options.dump_source, x) if options.dump_source else ""
     data=array.array("B")
@@ -528,13 +569,6 @@ def dumper(options, infile):
     def get16(): # these are always positive
         data.read(infile, 2)
         return (data[-1]<<8)+data[-2]
-
-    def get32(): # could be negative (two's complement)
-        data.read(infile, 4)
-        i=(data[-1]<<24) + (data[-2]<<16) + (data[-3] << 8) + data[-4]
-        if i & 0x80000000:
-            i=i-0xffffffff-1
-        return i
 
     infile=open(infile, "rb")
 
@@ -686,6 +720,10 @@ opcode_map={
     "PRINT": 23,
     "ITER": 25,
     "NOT_EQ": 26,
+    "SUB": 27,
+    "DEL_INDEX": 28,
+    "DEL_SLICE": 29,
+    "MOD": 30,
 
     ### All the following take two byte int value
     # code position
@@ -701,6 +739,7 @@ opcode_map={
     "STORE_NAME": 161,
     "PUSH_STR": 162,
     "GLOBAL": 163,
+    "DEL_NAME": 164,
 
     # integers
     "PUSH_INT": 200,
