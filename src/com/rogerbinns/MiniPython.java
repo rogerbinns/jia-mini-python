@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class MiniPython {
 
@@ -26,25 +27,20 @@ public class MiniPython {
 
 	Context root;
 	Context current;
-	Object[] stack;
-	int stacktop;
+	Object[] stack; // stack of values
+	int stacktop; // top occupied slot on stack
+	int pc;
 
 	// If true then the stack is resized on every instruction to be as short as possible.
 	// This catches code that doesn't extend the stack as necessary.
 	boolean PARANOIDSTACK=true;
 
 	MiniPython() {
-		root=current=new Context(0, null);
+		root=current=new Context(null);
 		stack=new Object[PARANOIDSTACK?0:256];
 		stacktop=-1;
+		pc=0;
 		addBuiltins();
-	}
-
-	private enum Compare {
-		NotComparable, // Types don't match, unorderable etc
-		Less,
-		Equal,
-		Greater
 	}
 
 	public void setCode(InputStream is) throws IOException, ExecutionError {
@@ -71,9 +67,10 @@ public class MiniPython {
 		try {
 			stacktop=-1;
 			mainLoop(root);
-			// ::TODO:: remove once thoroughly tested
-			if(stacktop!=-1) {
-				internalError("StackLeak", "Buggy code has led to a leak on the stack");
+			if(PARANOIDSTACK) {
+				if(stacktop!=-1) {
+					internalError("StackLeak", "Buggy code has led to a leak on the stack");
+				}
 			}
 		} finally {
 			stacktop=-1;
@@ -98,13 +95,10 @@ public class MiniPython {
 
 	// this encapsulates the current stack frame
 	private static final class Context {
-		Context parent;
+		Context parent; // used for variable lookups
 		Map<String,Object> variables;
 		Set<String> globals; // only initialized if needed
-		int pc;
-		boolean return_on_return=false;
-		Context(int pc, Context parent) {
-			this.pc=pc;
+		Context(Context parent) {
 			this.parent=parent;
 			variables=new HashMap<String,Object>();
 		}
@@ -123,8 +117,10 @@ public class MiniPython {
 	private static final class TMethod implements Callable{
 		// address of method in bytecode
 		int addr;
-		TMethod(int addr) {
+		Context context;
+		TMethod(int addr, Context context) {
 			this.addr=addr;
+			this.context=context;
 		}
 		public String toString() {
 			return String.format("<method at %d>", addr);
@@ -150,7 +146,7 @@ public class MiniPython {
 		Object[] getPrefixArgs();
 	}
 
-	private final class TBuiltinInstanceMethod implements TNativeMethod, Callable {
+	private final class TBuiltinInstanceMethod implements TNativeMethod {
 		Object[] prefixargs;
 		String prettyname;
 		Method method;
@@ -172,7 +168,7 @@ public class MiniPython {
 		public String toString() { return String.format("<instance method %s.%s>", toPyTypeString(prefixargs[0]), prettyname); }
 	}
 
-	private final class TModuleNativeMethod implements TNativeMethod, Callable {
+	private final class TModuleNativeMethod implements TNativeMethod {
 		TModule mod;
 		String name;
 		Method nativeMethod;
@@ -246,9 +242,10 @@ public class MiniPython {
 
 	Object call(Callable meth, Object ...args) throws ExecutionError {
 		int savedsp=stacktop;
+		int savedpc=pc;
 		try {
 			int sp=stacktop;
-			while(sp+3+args.length>=stack.length) {
+			while(sp+4+args.length>=stack.length) {
 				extendStack();
 			}
 			for(int i=0; i<args.length; i++) {
@@ -256,8 +253,10 @@ public class MiniPython {
 			}
 			stack[++stacktop]=args.length;
 			if(meth instanceof TMethod) {
-				Context c=new Context(((TMethod)meth).addr, current);
-				c.return_on_return=true;
+				TMethod tmeth=(TMethod)meth;
+				Context c=new Context(tmeth.context);
+				stack[++stacktop]=-1; // returnpc
+				pc=tmeth.addr;
 				Object retval=mainLoop(c);
 				if(PARANOIDSTACK) {
 					if(stacktop!=savedsp) {
@@ -276,11 +275,12 @@ public class MiniPython {
 				}
 				return retval;
 			} else {
-				internalError("RuntimeError", "callable failed to be callable");
+				internalError("TypeError", toPyTypeString(meth)+" is not callable");
 				return null;
 			}
 		} finally {
 			stacktop=savedsp;
+			pc=savedpc;
 		}
 	}
 
@@ -311,11 +311,10 @@ public class MiniPython {
 						stack=newstack;
 					}
 				}
-				op=code[current.pc] & 0xff;
-				current.pc++;
+				op=code[pc++] & 0xff;
 				if(op>=128) {
-					val=(code[current.pc]&0xff)+((code[current.pc+1]&0xff)<<8);
-					current.pc+=2;
+					val=(code[pc]&0xff)+((code[pc+1]&0xff)<<8);
+					pc+=2;
 				}
 				switch(op) {
 				// -- check start : marker used by tool
@@ -327,13 +326,13 @@ public class MiniPython {
 				}
 				case 129: // GOTO
 				{
-					current.pc=val;
+					pc=val;
 					continue;
 				}
 				case 130: // IF_FALSE
 				{
 					if(builtin_bool(stack[stacktop--])==false) {
-						current.pc=val;
+						pc=val;
 					}
 					continue;
 				}
@@ -346,7 +345,7 @@ public class MiniPython {
 						}
 						stack[++stacktop]=it.next();
 					} else {
-						current.pc=val;
+						pc=val;
 					}
 					continue;
 				}
@@ -355,7 +354,7 @@ public class MiniPython {
 				{
 					if(builtin_bool(stack[stacktop])==(op==133)) {
 						// on true (OR) or false (AND), goto end
-						current.pc=val;
+						pc=val;
 					} else {
 						// clear top value so next one can be tested
 						stacktop--;
@@ -513,6 +512,17 @@ public class MiniPython {
 					}
 					continue;
 				}
+				case 3: // DIV
+				{
+					Object right=stack[stacktop--],
+							left=stack[stacktop--];
+					if(left instanceof Integer && right instanceof Integer) {
+						stack[++stacktop]=(Integer)left / (Integer)right;
+					} else {
+						internalErrorBinaryOp("TypeError", "/", left, right);
+					}
+					continue;
+				}
 				case 30: // MOD
 				{
 					Object right=stack[stacktop--],
@@ -531,18 +541,12 @@ public class MiniPython {
 					continue;
 				}
 				// comparisons
-				case 6: // EQ
-				case 26: // NOT_EQ
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-					Compare cmp=compareTo(left, right);
-					stack[++stacktop]=(op==6) ? (cmp==Compare.Equal): (cmp!=Compare.Equal);
-					continue;
-				}
-
 				case 5: // LT
 				case 4: // GT
+				case 31: // GTE
+				case 32: // LTE
+				case 6: // EQ
+				case 26: // NOT_EQ
 				{
 					Object right=stack[stacktop--],
 							left=stack[stacktop--];
@@ -553,8 +557,16 @@ public class MiniPython {
 					switch(op) {
 					case 5: // < LT
 						res= cmp<0;	break;
+					case 32: // <= LTE
+						res= cmp<=0; break;
 					case 4: // > GT
 						res= cmp>0; break;
+					case 31: // >= GTE
+						res= cmp>=0; break;
+					case 6: // = EQ
+						res= cmp==0; break;
+					case 26: // != NOT_EQ
+						res= cmp!=0; break;
 					default:
 						internalError("RuntimeError", "Unhandled comparison operator");
 					}
@@ -720,8 +732,21 @@ public class MiniPython {
 						stack[stacktop]=-(Integer)stack[stacktop];
 						continue;
 					} else {
-						internalError("TypeError", "Can only negate integers");
+						internalError("TypeError", "Can't negate "+toPyTypeString(stack[stacktop]));
 					}
+				}
+				case 8: // UNARY_ADD
+				{
+					if(stack[stacktop] instanceof Integer) {
+					} else {
+						internalError("TypeError", "Can't unary plus "+toPyTypeString(stack[stacktop]));
+					}
+					continue;
+				}
+				case 24: // NOT
+				{
+					stack[stacktop]=!builtin_bool(stack[stacktop]);
+					continue;
 				}
 				case 20: // STR
 				{
@@ -780,11 +805,17 @@ public class MiniPython {
 				}
 
 				// Function call related
-				case 128: // SET_METHOD
+				case 128: // MAKE_METHOD
 				{
-					String name=(String)stack[stacktop--];
-					current.variables.put(name, new TMethod(val));
-					continue;
+					while(true) {
+						try {
+							stack[++stacktop]=new TMethod(val, current);
+							continue opcodeswitch;
+						} catch(ArrayIndexOutOfBoundsException e) {
+							extendStack();
+							stacktop--;
+						}
+					}
 				}
 				case 10: // CALL
 				{
@@ -796,16 +827,23 @@ public class MiniPython {
 						internalError("TypeError", toPyString(stack[stacktop])+" is not callable");
 					}
 					TMethod meth=(TMethod)stack[stacktop--];
-					current=new Context(meth.addr, current);
+					current=new Context(meth.context);
+					stack[++stacktop]=pc; // return address
+					pc=meth.addr;
 					continue;
 				}
 				case 0: // FUNCTION_PROLOG
 				{
 					int argsexpected=(Integer)stack[stacktop--];
+					int returnpc=(Integer)stack[stacktop--];
 					int argsprovided=(Integer)stack[stacktop--];
 					if(argsexpected!=argsprovided) {
-						internalError("TypeError", String.format("Takes exactly %d arguments (%d given)", argsexpected, argsprovided));
+						internalError("TypeError", String.format("Method takes exactly %d arguments (%d given)", argsexpected, argsprovided));
 					}
+					// we need to insert the returnpc before the args
+					stacktop++;
+					System.arraycopy(stack, stacktop-argsprovided, stack, stacktop-argsprovided+1, argsprovided);
+					stack[stacktop-argsprovided]=returnpc;
 					continue;
 				}
 				case 9: // RETURN
@@ -814,16 +852,16 @@ public class MiniPython {
 						internalError("SyntaxError", "'return' outside function");
 					}
 
-					boolean ror=current.return_on_return;
+					Object retval=stack[stacktop--];
+					int returnpc=(Integer)stack[stacktop--];
 					current=current.parent;
-					if(ror)
-						return stack[stacktop--];
+					if(returnpc<0)
+						return retval;
+					pc=returnpc;
+					stack[++stacktop]=retval;
 					continue;
 				}
-
-				case 3: // DIV
-				case 8: // UNARY_ADD
-					// -- check end : marker used by tool
+				// -- check end : marker used by tool
 				default:
 					internalError("RuntimeError", String.format("Unknown/unimplemented opcode: %d", op));
 				}
@@ -961,11 +999,12 @@ public class MiniPython {
 		e.type=exctype;
 		e.message=message;
 		e.context=current;
+		e.pc=pc;
 		throw e;
 	}
 
 	private void internalErrorBinaryOp(String exctype, String op, Object left, Object right) throws ExecutionError {
-		internalError(exctype, String.format("Can't %s %s %s", toPyString(left), op, toPyString(right)));
+		internalError(exctype, String.format("Can't do binary op: %s %s %s", toPyTypeString(left), op, toPyTypeString(right)));
 	}
 
 	public void signalError(String exctype, String message) throws ExecutionError {
@@ -987,37 +1026,42 @@ public class MiniPython {
 		return null;
 	}
 
-	private static final Compare compareTo(Object left, Object right) {
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private final int compareTo(Object left, Object right) throws ExecutionError {
 		if(left==null || right==null) {
 			if(left==right)
-				return Compare.Equal;
-			return Compare.NotComparable;
+				return 0;
+			return compareTo(toPyTypeString(left), toPyTypeString(right));
 		}
-		if(left.equals(right))
-			return Compare.Equal;
+
+		try {
+			// ignore any exceptions this throws
+			if(left.equals(right))
+				return 0;
+		} catch(ClassCastException e) {}
 
 		if(left.getClass()!=right.getClass())
-			return Compare.NotComparable;
+			return compareTo(toPyTypeString(left), toPyTypeString(right));
+
 		// from here on they are the same type and neither is null
 		if(left instanceof Integer) {
 			int l=(Integer)left, r=(Integer)right;
 			if(l==r)
-				return Compare.Equal;
+				return 0;
 			if(l<r)
-				return Compare.Less;
-			return Compare.Greater;
+				return -1;
+			return +1;
 		}
+
 		if(left instanceof String) {
 			int cmp=((String)left).compareTo((String)right);
-			if(cmp<0) return Compare.Less;
-			if(cmp==0) return Compare.Equal;
-			return Compare.Greater;
+			if(cmp<0) return -1;
+			if(cmp==0) return 0;
+			return +1;
 		}
 		if(left instanceof List) {
-			@SuppressWarnings("unchecked")
-			Iterator<Object> li=((List<Object>)left).iterator();
-			@SuppressWarnings("unchecked")
-			Iterator<Object> ri=((List<Object>)right).iterator();
+			Iterator li=((List)left).iterator();
+			Iterator ri=((List)right).iterator();
 			while(true) {
 				// both ended at same place
 				if(!li.hasNext() && !ri.hasNext()) {
@@ -1025,20 +1069,37 @@ public class MiniPython {
 				}
 				// one ends before the other
 				if(!li.hasNext())
-					return Compare.Less;
+					return -1;
 				if(!ri.hasNext())
-					return Compare.Greater;
-				Compare cmp=compareTo(li.next(), ri.next());
-				if(cmp!=Compare.Equal)
+					return +1;
+				int cmp=compareTo(li.next(), ri.next());
+				if(cmp!=0)
 					return cmp;
 			}
-			return Compare.Equal;
+			return 0;
 		}
 		if(left instanceof Map) {
-			// ::TODO:: something here although we can only do equality checking
-			assert false;
+			Map mleft=(Map)left;
+			Map mright=(Map)right;
+			if(mleft.size() != mright.size())
+				return compareTo(mleft.size(), mright.size());
+			Iterator<Map.Entry> li=mleft.entrySet().iterator();
+			Iterator<Map.Entry> ri=mright.entrySet().iterator();
+			while(true) {
+				if(!li.hasNext())
+					return 0;
+				Map.Entry lme=li.next();
+				Map.Entry rme=ri.next();
+
+				int cmp=compareTo(lme.getKey(), rme.getKey());
+				if(cmp!=0) return cmp;
+				cmp=compareTo(lme.getValue(), rme.getValue());
+				if(cmp!=0) return cmp;
+			}
 		}
-		return left.equals(right)?Compare.Equal:Compare.NotComparable;
+		if(left instanceof Boolean)
+			return compareTo(builtin_int(left), builtin_int(right));
+		return compareTo(left.toString(), right.toString());
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -1132,6 +1193,7 @@ public class MiniPython {
 		private static final long serialVersionUID = -4271385191079964823L;
 		String type,message;
 		Context context;
+		int pc;
 		public String toString() {
 			return type+": "+message;
 		}
@@ -1142,7 +1204,7 @@ public class MiniPython {
 			// note that context.pc points to the instruction after the one being executed
 			int lastline=-1;
 			for(int i=0;i<linenumbers.length;i++) {
-				if(linenumbers[i][0]>=context.pc) {
+				if(linenumbers[i][0]>=pc) {
 					break;
 				}
 				lastline=linenumbers[i][1];
@@ -1150,7 +1212,7 @@ public class MiniPython {
 			return lastline;
 		}
 		public int pc() {
-			return context.pc;
+			return this.pc;
 		}
 	}
 
@@ -1198,17 +1260,7 @@ public class MiniPython {
 	}
 
 	int builtin_cmp(Object left, Object right) throws ExecutionError {
-		Compare cmp=compareTo(left, right);
-		switch(cmp) {
-		case Less: return -1;
-		case Equal: return 0;
-		case Greater: return 1;
-		default:
-		case NotComparable:
-			internalError("TypeError", String.format("Can't compare %s against %s", toPyTypeString(left), toPyTypeString(right)));
-			// not reachable
-			return -100;
-		}
+		return compareTo(left, right);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -1227,6 +1279,27 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings("rawtypes")
+	int builtin_index(List list, Object item) {
+		return list.indexOf(item);
+	}
+
+	int builtin_int(Object o) throws ExecutionError {
+		if(o instanceof Integer)
+			return (Integer)o;
+		if(o instanceof Boolean)
+			return ((Boolean)o)?1:0;
+		if(o instanceof String) {
+			try {
+				return Integer.parseInt((String)o);
+			} catch(NumberFormatException e) {
+				internalError("ValueError", e.toString());
+			}
+		}
+		internalError("TypeError", "int argument must be bool, string or int not "+toPyTypeString(o));
+		return 0;
+	}
+
+	@SuppressWarnings("rawtypes")
 	int builtin_len(Object item) throws ExecutionError {
 		if(item instanceof Map) return ((Map)item).size();
 		if(item instanceof List) return ((List)item).size();
@@ -1234,6 +1307,15 @@ public class MiniPython {
 		internalError("TypeError", "Can't get length of "+toPyString(item));
 		// unreachable code
 		return -1;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	List builtin_map(Callable function, List items) throws ExecutionError {
+		List res=new ArrayList(items.size());
+		for(Object item : items) {
+			res.add(call(function, item));
+		}
+		return res;
 	}
 
 	void builtin_print(Object ...items) throws ExecutionError {
@@ -1295,9 +1377,71 @@ public class MiniPython {
 	}
 
 	// instance methods
+	boolean instance_str_endswith(String s, String suffix) {
+		return s.endsWith(suffix);
+	}
+
+	@SuppressWarnings("rawtypes")
+	String instance_str_join(String s, List items) {
+		StringBuilder sb=new StringBuilder();
+		for(Object item : items) {
+			if(sb.length()>0) {
+				sb.append(s);
+			}
+			sb.append(toPyString(item));
+		}
+		return sb.toString();
+	}
+
+	String instance_str_lower(String s) {
+		return s.toLowerCase();
+	}
+
+	String instance_str_replace(String s, String target, String replacement) {
+		return s.replace(target, replacement);
+	}
+
+	@SuppressWarnings("rawtypes")
+	List instance_str_split(String s, Object ...args) throws ExecutionError {
+		int maxsplit=0;
+		String sep=null;
+
+		switch(args.length)
+		{
+		default:
+			internalError("TypeError", "Too many arguments to str.split (at most 2 taken)");
+		case 2:
+			if(!(args[1] instanceof Integer)) {
+				internalError("TypeError", "maxsplit should be an integer");
+			}
+			maxsplit=(Integer)args[1];
+		case 1:
+			if(!(args[0] instanceof String)) {
+				internalError("TypeError", "sep should be an integer");
+			}
+			sep=(String)args[0];
+		case 0:
+		}
+		String[] splits=s.split((sep!=null)? Pattern.quote(sep) : "\\s+", maxsplit);
+		ArrayList<String> res=new ArrayList<String>(splits.length);
+		for(String str : splits) {
+			res.add(str);
+		}
+		return res;
+	}
+
+	boolean instance_str_startswith(String s, String prefix) {
+		return s.startsWith(prefix);
+	}
+
+	String instance_str_strip(String s) {
+		return s.trim();
+	}
+
 	String instance_str_upper(String s) {
 		return s.toUpperCase();
 	}
+
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	void instance_list_append(List list, Object item) {
