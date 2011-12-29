@@ -30,6 +30,7 @@ Keywords
 * for  iterate over list members and dict keys
 * return
 * del
+* lambda
 
 Operators
 ---------
@@ -41,6 +42,7 @@ Operators
 * len (as applicable)
 * [] (list and dict indexing)
 * [from:to] list slicing (step not supported)
+* x if y else z (ternary)
 
 
 What is not supported
