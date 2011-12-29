@@ -16,6 +16,9 @@ docs: doc
 doc: javadoc
 	make -C doc html VERSION=$(VERSION) DATE=$(DATE)
 
+linkcheck:
+	make -C doc linkcheck VERSION=$(VERSION) DATE=$(DATE)
+
 publish: doc
 	rsync -av --delete --exclude=.hg doc/_build/html/ ../jmp-doc/
 	cd ../jmp-doc && hg status
