@@ -37,21 +37,32 @@ class Compiler(ast.NodeVisitor):
         ast.Sub: "SUB",
         ast.Mult: "MULT",
         ast.Div: "DIV",
+        ast.FloorDiv: "DIV",
         ast.Mod: "MOD",
 
-        ast.Gt: "GT",
         ast.Lt: "LT",
+        ast.LtE: "LTE",
         ast.Eq: "EQ",
         ast.NotEq: "NOT_EQ",
+        ast.Gt: "GT",
+        ast.GtE: "GTE",
 
         ast.In: "IN",
 
         ast.UAdd: "UNARY_ADD",
         ast.USub: "UNARY_NEG",
+        ast.Not: "NOT",
 
         ast.And: "AND",
         ast.Or: "OR",
         }
+
+    def get_op(self, node, *op):
+        op=op[0] if op else node.op
+        try:
+            return self._opmap[op.__class__]
+        except KeyError:
+            raise self.Error(node, op.__class__.__name__+" not supported")
 
     class Error(Exception):
         def __init__(self, node, message):
@@ -271,6 +282,9 @@ class Compiler(ast.NodeVisitor):
             yield None
 
     def visit_Expr(self, node):
+        # docstrings etc
+        if isinstance(node.value, (ast.Str, ast.Num)):
+            return
         for x in self.visit(node.value):
             yield x
         yield node, "POP_TOP"
@@ -281,13 +295,13 @@ class Compiler(ast.NodeVisitor):
             for x in self.visit(v):
                 yield x
             if i!=len(node.values)-1:
-                yield node, (self._opmap[node.op.__class__], end)
+                yield node, (self.get_op(node), end)
         yield None, end
 
     def visit_UnaryOp(self, node):
         for x in self.visit(node.operand):
             yield x
-        yield node, self._opmap[node.op.__class__]
+        yield node, self.get_op(node)
 
     def visit_BinOp(self, node):
         assert len(node.op._fields)==0
@@ -295,7 +309,7 @@ class Compiler(ast.NodeVisitor):
             yield x
         for x in self.visit(node.right):
             yield x
-        yield node, self._opmap[node.op.__class__]
+        yield node, self.get_op(node)
 
     def visit_Compare(self, node):
         if len(node.ops)!=1:
@@ -304,9 +318,15 @@ class Compiler(ast.NodeVisitor):
             yield x
         for x in self.visit(node.comparators[0]):
             yield x
-        yield node, self._opmap[node.ops[0].__class__]
+        if isinstance(node.ops[0], ast.NotIn):
+            yield node, "IN"
+            yield node, "NOT"
+        else:
+            yield node, self.get_op(node, node.ops[0])
 
     def visit_Num(self, node):
+        if not isinstance(node.n, int):
+            raise self.Error(node, "Only integers are supported")
         if node.n>0x7fffffff or node.n<-0x80000000:
             raise self.Error(node, "Value is too large")
         yield node, ("PUSH_INT", node.n)
@@ -411,6 +431,20 @@ class Compiler(ast.NodeVisitor):
                 yield x
             yield node, "ASSIGN_INDEX"
 
+    def visit_IfExp(self, node):
+        falsearm=Label()
+        end=Label()
+        for x in self.visit(node.test):
+            yield x
+        yield node, ("IF_FALSE", falsearm)
+        for x in self.visit(node.body):
+            yield x
+        yield None, ("GOTO", end)
+        yield None, falsearm
+        for x in self.visit(node.orelse):
+            yield x
+        yield None, end
+
     def visit_If(self, node):
         for x in self.visit(node.test):
             yield x
@@ -492,20 +526,22 @@ class Compiler(ast.NodeVisitor):
         yield node, "PRINT"
 
     def visit_FunctionDef(self, node):
+        # this serves both functions and lamdba
         self.bcstack.append(None)
-        if node.decorator_list:
+        if getattr(node, "decorator_list", None):
             raise self.Error(node, "Decorators are not supported")
         args=node.args
-        if args.defaults:
+        if getattr(args, "defaults", None):
             raise self.Error(node, "Default arguments are not supported")
-        if args.kwarg:
+        if getattr(args, "kwarg", None):
             raise self.Error(node, "Keyword arguments are not supported")
-        if args.vararg:
+        if getattr(args, "vararg", None):
             raise self.Error(node, "Varargs (*args) are not supported")
         body=Label()
         end=Label()
-        yield node, ("PUSH_STR", node.name)
-        yield node, ("SET_METHOD", body)
+        yield node, ("MAKE_METHOD", body)
+        if not isinstance(node, ast.Lambda):
+            yield node, ("STORE_NAME", node.name)
         yield node, ("GOTO", end)
         yield node, body
         for i, n in enumerate(args.args):
@@ -516,15 +552,22 @@ class Compiler(ast.NodeVisitor):
         for n in reversed(args.args):
             yield n, ("STORE_NAME", n.id)
         last=None
-        for x in node.body:
-            for y in self.visit(x):
-                last=y[1]
-                yield y
-        if last!="RETURN":
-            yield None, "PUSH_NONE"
+        if isinstance(node, ast.Lambda):
+            for x in self.visit(node.body):
+                yield x
             yield None, "RETURN"
+        else:
+            for x in node.body:
+                for y in self.visit(x):
+                    last=y[1]
+                    yield y
+            if last!="RETURN":
+                yield None, "PUSH_NONE"
+                yield None, "RETURN"
         yield node, end
         self.bcstack.pop()
+
+    visit_Lambda=visit_FunctionDef
 
     def visit_Call(self, node):
         if node.starargs:
@@ -684,8 +727,14 @@ def java_maintenance(javafile):
         print >> sys.stderr, "Special markers not identified in", javafile
         sys.exit(3)
 
-    with open(javafile, "wt") as java:
-        java.write("".join(out))
+    out="".join(out)
+    with open(javafile, "rtU") as java:
+        current=java.read()
+
+    if current!=out:
+        with open(javafile, "wt") as java:
+            java.write(out)
+        print "Updated", javafile
                     
             
 
@@ -718,16 +767,19 @@ opcode_map={
     "PUSH_TRUE": 21,
     "PUSH_FALSE": 22,
     "PRINT": 23,
+    "NOT": 24,
     "ITER": 25,
     "NOT_EQ": 26,
     "SUB": 27,
     "DEL_INDEX": 28,
     "DEL_SLICE": 29,
     "MOD": 30,
+    "GTE": 31,
+    "LTE": 32,
 
     ### All the following take two byte int value
     # code position
-    "SET_METHOD": 128,
+    "MAKE_METHOD": 128,
     "GOTO": 129,
     "IF_FALSE": 130,
     "NEXT": 131,
