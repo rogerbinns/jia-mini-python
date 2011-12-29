@@ -6,27 +6,31 @@ Quirks and differences
 :index:`Comparisons`
 --------------------
 
-Comparisons that have order (<, > etc) only work when the values have
-the same type.  You get a TypeError otherwise.  This is the same
-behaviour as Python 3.  (In Python 2 there is absolute ordering
-between types: for example lists come after dictionaries.)
+Comparisons will always succeed.  Where the items being compared are
+the same type then the logical comparison is performed.  When the
+types differ then there is still an absolute ordering (eg all lists
+come after all dicts).  This matches the behaviour of Python 2,
+although the ordering of unrelated types may differ (the type name is
+used for the comparison).  In Python 3 comparing unrelated types
+results in an exception.
 
-This also applies to lists where member by member comparisons are
-made.  For example this will give an error::
+.. _tuples:
 
-   [ 3 ] < [ "4" ]
+Tuples
+------
 
-However this will not give an error as the second elements are not
-compared::
-
-   [ 3 ] < [ 3, "5" ]
+Tuples are not supported.  Where they are encountered in your source
+they are treated as though you specified a list.  This means you can
+also mutate them unlike regular Python.
 
 Dictionary keys
 ---------------
 
 Python only allows immutable types as keys, for example string,
-numbers and tuples.  This implementation will also let you use mutable
-lists as the key.
+numbers and tuples.  This implementation will let you use any type
+including mutable lists, dicts etc as the key.  Note that altering a
+list/dict after using it as a key will make it impossible to find the key
+again (the hash code will have changed) and could lead to exceptions.
 
 .. _booleans:
 
@@ -43,4 +47,20 @@ places::
    >>> True>-1
    True
 
-It is currently an error in Java Mini Python to do so.
+It is currently an error in Java Mini Python to do so.  You can use
+:func:`int` to convert a bool to 1/0.
+
+Concurrent container modification/iteration
+-------------------------------------------
+
+It is generally a bad idea to modify lists or dicts while iterating
+over them.  (This is true of regular Python too.)
+
+String format
+-------------
+
+The `str % list` (% operator) just calls :jdoc:`String.format
+<java/lang/String.html#format(java.lang.String, java.lang.Object...)>`
+which uses different rules than Python's equivalent.  For example
+Python will complain if too many arguments are provided while
+String.format doesn't.

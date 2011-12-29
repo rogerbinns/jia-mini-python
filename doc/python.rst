@@ -16,6 +16,11 @@ list type
 
    Adds item to end of list (modify in place)
 
+.. method:: index(item)
+
+   Returns position of item in list or -1 if not found.  Calls
+   :jdoc:`List.indexOf <java/util/List.html#indexOf(java.lang.Object)>`
+
 .. method:: sort(cmp=None, key=None, reverse=False)
  
    You can omit some or all of the arguments.  Since keyword arguments
@@ -37,9 +42,55 @@ list type
 str type
 --------
 
+.. method:: endswith(suffix)
+
+   Returns True if the string ends with the specified suffix.  Calls
+   :jdoc:`String.endsWith <java/lang/String.html#endsWith(java.lang.String)>`.
+
+.. method:: join(list)
+
+   Return a string which is the concatenation of the strings in the
+   list, separated by this string.
+
+.. method:: lower()
+
+   Returns lower case version of string by calling
+   :jdoc:`String.toLowerCase <java/lang/String.html#toLowerCase()>`.
+
+.. method:: replace(target, replacement)
+
+   Replaces all occurrences of `target` with `replacement` by calling
+   :jdoc:`String.replace
+   <java/lang/String.html#replace(java.lang.CharSequence, java.lang.CharSequence)>`.
+
+.. method:: split(sep, maxsplits)
+
+   :param str sep: Separator to use.  If not specified then whitespace
+      is used.
+   :param int maxsplits: Stop splitting when this many have been found
+      with the last item being the remainder of the string.  If not
+      specified then all possible splits are found.
+   :returns: List of substrings (each not including the separator)
+
+   Splits string into a list of substrings around `sep` stopping when
+   maxsplits have been found.  Calls :jdoc:`String.split
+   <java/lang/String.html#split(java.lang.String, int)>` ensuring
+   `sep` is not treated as a regex.
+
+.. method:: startswith(prefix)
+
+   Returns True is the string starts with prefix.  Calls
+   :jdoc:`String.startsWith <java/lang/String.html#startsWith(java.lang.String)>`.
+
+.. method:: strip()
+
+   Returns new string omitting leading and trailing whitespace.  Calls
+   :jdoc:`String.trim <java/lang/String.html#trim()>`.
+
 .. method:: upper()
 
-   Returns upper case version of string.
+   Returns upper case version of string by calling
+   :jdoc:`String.toUpperCase <java/lang/String.html#toUpperCase()>`.
 
 Global functions
 ----------------
@@ -79,10 +130,21 @@ Global functions
    :jdoc:`System.getIdentityHashcode()
    <java/lang/System.html#identityHashCode(java.lang.Object)>`.
 
+.. function: int(item)
+
+   Returns integer of item.  int items are returned as is, bools as
+   0/1 for False/True and strings are parsed.  Note that this
+   implementation does not take a base/radix argument.
+
 .. function:: len(item)
 
    Returns length of item such as number of characters for a str,
    members in a list/dict.
+
+.. function:: map(function, list)
+
+   Returns a new list consisting of function applied to each list
+   member.  Use this an alternate to list comprehensions.
 
 .. function:: print(*items)
 

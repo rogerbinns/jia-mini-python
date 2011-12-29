@@ -29,8 +29,8 @@ Where possible types are mapped directly from Python to Java.
 Note that tuples are mutable and treated as lists.
 
 Your added methods can return types other than the above without
-error.  However there will be type errors if you try to operations on
-them (eg use them as an `if` expression or add them).
+error.  However there will be type errors if you try to perform
+operations on them (eg use them as an `if` expression or add them).
 
 .. _adding_methods:
 
@@ -164,6 +164,8 @@ You can also read API information in `javadoc format <_static/javadoc/index.html
 
       This method is useful for generating error messages and
       diagnostics.
+
+   .. _executionerror:
 
    .. class:: ExecutionError
   
