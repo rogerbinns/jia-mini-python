@@ -383,12 +383,12 @@ class Compiler(ast.NodeVisitor):
             debug_here()
             raise self.Error(node, "Steps not supported in slices")
         if node.lower is None:
-            yield None, ("PUSH_INT", 0)
+            yield None, "PUSH_NONE"
         else:
             for x in self.visit(node.lower):
                 yield x
         if node.upper is None:
-            yield None, ("PUSH_INT", -1)
+            yield None, "PUSH_NONE"
         else:
             for x in self.visit(node.upper):
                 yield x
@@ -418,16 +418,18 @@ class Compiler(ast.NodeVisitor):
         target=node.targets[0]
         if not isinstance(target, (ast.Name, ast.Subscript)):
             raise self.Error(target, "That kind of assignment is not supported")
-        for x in self.visit(node.value):
-            yield x
         if isinstance(target, ast.Name):
+            for x in self.visit(node.value):
+                yield x
             yield node, ("STORE_NAME", target.id)
         else:
             if not isinstance(target.slice, ast.Index):
                 raise self.Error(node, "Only simple array/list subscript assignment supported")
+            for x in self.visit(target.value):
+                yield x
             for x in self.visit(target.slice.value):
                 yield x
-            for x in self.visit(target.value):
+            for x in self.visit(node.value):
                 yield x
             yield node, "ASSIGN_INDEX"
 
@@ -776,6 +778,7 @@ opcode_map={
     "MOD": 30,
     "GTE": 31,
     "LTE": 32,
+    "ASSIGN_INDEX": 33,
 
     ### All the following take two byte int value
     # code position
