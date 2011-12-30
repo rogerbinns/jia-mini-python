@@ -9,17 +9,37 @@ attributes (eg functions) do not exist.  For example in Python
 integers have 64 different attributes while they have none in this
 implementation.
 
+dict type
+---------
+
+.. method:: update(other)
+
+   Copies all items from other into this dict.
+
 list type
 ---------
 
 .. method:: append(item)
 
-   Adds item to end of list (modify in place)
+   Adds item to end of this list
+
+.. method:: extend(list)
+
+   Appends every member of list to this list
 
 .. method:: index(item)
 
    Returns position of item in list or -1 if not found.  Calls
    :jdoc:`List.indexOf <java/util/List.html#indexOf(java.lang.Object)>`
+
+.. method:: reverse()
+
+   Reverses the order of the elements in the list by calling
+   :jdoc:`java/util/Collections.html#reverse(java.util.List)`.
+
+.. method:: pop()
+
+   Removes the last item in the list and returns it
 
 .. method:: sort(cmp=None, key=None, reverse=False)
  

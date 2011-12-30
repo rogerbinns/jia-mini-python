@@ -20,6 +20,8 @@ Types
 * bool (:ref:`note <booleans>`)
 * None
 * tuple (note: :ref:`treated as list and mutable <tuples>`)
+* functions (you can nest them, assign to variables, pass then around,
+  invoke, :func:`apply`)
 
 Keywords
 --------

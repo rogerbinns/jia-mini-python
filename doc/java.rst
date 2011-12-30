@@ -113,6 +113,12 @@ You can also read API information in `javadoc format <_static/javadoc/index.html
       Makes methods on the methods Object available to the Python.
       See `Adding methods`_ for more details.
 
+   .. method:: void clear()
+
+      Removes all internal state.  This ensures that garbage
+      collection is easier.  You can reuse this instance by calling
+      `addModule` to reregister modules and `setCode` to run new code.
+
    .. method:: void setCode(InputStream stream)
 
       Reads the code from the supplied stream.  The stream is not
