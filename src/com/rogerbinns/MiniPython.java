@@ -66,7 +66,7 @@ public class MiniPython {
 
 		try {
 			stacktop=-1;
-			mainLoop(root);
+			mainLoop();
 			if(PARANOIDSTACK) {
 				if(stacktop!=-1) {
 					internalError("StackLeak", "Buggy code has led to a leak on the stack");
@@ -243,9 +243,10 @@ public class MiniPython {
 	Object call(Callable meth, Object ...args) throws ExecutionError {
 		int savedsp=stacktop;
 		int savedpc=pc;
+		Context savedcontext=current;
 		try {
 			int sp=stacktop;
-			while(sp+4+args.length>=stack.length) {
+			while(sp+5+args.length>=stack.length) {
 				extendStack();
 			}
 			for(int i=0; i<args.length; i++) {
@@ -255,9 +256,10 @@ public class MiniPython {
 			if(meth instanceof TMethod) {
 				TMethod tmeth=(TMethod)meth;
 				Context c=new Context(tmeth.context);
-				stack[++stacktop]=-1; // returnpc
+				stack[++stacktop]=current; // return context
+				stack[++stacktop]=-1;      // returnpc
 				pc=tmeth.addr;
-				Object retval=mainLoop(c);
+				Object retval=mainLoop();
 				if(PARANOIDSTACK) {
 					if(stacktop!=savedsp) {
 						internalError("StackLeak", "Buggy code has led to a leak on the stack");
@@ -281,16 +283,6 @@ public class MiniPython {
 		} finally {
 			stacktop=savedsp;
 			pc=savedpc;
-		}
-	}
-
-	// execution
-	private final Object mainLoop(Context context) throws ExecutionError {
-		Context savedcontext=current;
-		current=context;
-		try {
-			return _mainLoop();
-		} finally {
 			current=savedcontext;
 		}
 	}
@@ -299,7 +291,7 @@ public class MiniPython {
 	// Java's generics are poor and it whines about conversions even when the generic types are Object
 	// so this turns off the whining as there is nothing we can do about it.
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private final Object _mainLoop() throws ExecutionError {
+	private final Object mainLoop() throws ExecutionError {
 		int op, val=-1;
 		opcodeswitch:
 			while(true) {
@@ -826,9 +818,13 @@ public class MiniPython {
 					if(!(stack[stacktop] instanceof TMethod)) {
 						internalError("TypeError", toPyString(stack[stacktop])+" is not callable");
 					}
+					while(stacktop+2>stack.length) {
+						extendStack();
+					}
 					TMethod meth=(TMethod)stack[stacktop--];
+					stack[++stacktop]=current;  // return context
+					stack[++stacktop]=pc;       // return address
 					current=new Context(meth.context);
-					stack[++stacktop]=pc; // return address
 					pc=meth.addr;
 					continue;
 				}
@@ -836,13 +832,15 @@ public class MiniPython {
 				{
 					int argsexpected=(Integer)stack[stacktop--];
 					int returnpc=(Integer)stack[stacktop--];
+					Context returncontext=(Context)stack[stacktop--];
 					int argsprovided=(Integer)stack[stacktop--];
 					if(argsexpected!=argsprovided) {
 						internalError("TypeError", String.format("Method takes exactly %d arguments (%d given)", argsexpected, argsprovided));
 					}
-					// we need to insert the returnpc before the args
-					stacktop++;
-					System.arraycopy(stack, stacktop-argsprovided, stack, stacktop-argsprovided+1, argsprovided);
+					// we need to insert the returncontext/pc before the args
+					stacktop+=2;
+					System.arraycopy(stack, stacktop-argsprovided-1, stack, stacktop-argsprovided+1, argsprovided);
+					stack[stacktop-argsprovided-1]=returncontext;
 					stack[stacktop-argsprovided]=returnpc;
 					continue;
 				}
@@ -854,7 +852,7 @@ public class MiniPython {
 
 					Object retval=stack[stacktop--];
 					int returnpc=(Integer)stack[stacktop--];
-					current=current.parent;
+					current=(Context)stack[stacktop--];
 					if(returnpc<0)
 						return retval;
 					pc=returnpc;
