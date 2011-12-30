@@ -35,15 +35,25 @@ public class MiniPython {
 	// This catches code that doesn't extend the stack as necessary.
 	boolean PARANOIDSTACK=true;
 
-	MiniPython() {
-		root=current=new Context(null);
+	public void clear() {
+		root=current=null;
+		stack=null;
+		strings=null;
+		linenumbers=null;
+		code=null;
+		mTheClient=null;
+	}
+
+	public void setCode(InputStream is) throws IOException, ExecutionError {
+		if(root==null) {
+			root=new Context(null);
+		}
+		current=root;
 		stack=new Object[PARANOIDSTACK?0:256];
 		stacktop=-1;
 		pc=0;
 		addBuiltins();
-	}
 
-	public void setCode(InputStream is) throws IOException, ExecutionError {
 		// string table
 		int stablen=get16(is);
 		strings=new String[stablen];
@@ -125,6 +135,10 @@ public class MiniPython {
 		public String toString() {
 			return String.format("<method at %d>", addr);
 		}
+		@Override
+		public boolean equals(Object other) {
+			return other instanceof TMethod && this.addr==((TMethod)other).addr;
+		}
 	}
 
 	private static final class TModule {
@@ -165,6 +179,12 @@ public class MiniPython {
 		@Override
 		public Object[] getPrefixArgs() { return prefixargs; }
 
+		@Override
+		public boolean equals(Object other) {
+			return other instanceof TBuiltinInstanceMethod && this.prettyname.equals(((TBuiltinInstanceMethod)other).prettyname) && this.prefixargs.equals(((TBuiltinInstanceMethod)other).prefixargs);
+		}
+
+		@Override
 		public String toString() { return String.format("<instance method %s.%s>", toPyTypeString(prefixargs[0]), prettyname); }
 	}
 
@@ -197,6 +217,12 @@ public class MiniPython {
 			this.name=name;
 		}
 
+		@Override
+		public boolean equals(Object other) {
+			return other instanceof TModuleNativeMethod && this.name.equals(((TModuleNativeMethod)other).name) && this.mod.o.equals(((TModuleNativeMethod)other).mod.o);
+		}
+
+		@Override
 		public String toString() {
 			return String.format("<native method %s.%s>", mod.name, name);
 		}
@@ -259,6 +285,7 @@ public class MiniPython {
 				stack[++stacktop]=current; // return context
 				stack[++stacktop]=-1;      // returnpc
 				pc=tmeth.addr;
+				current=c;
 				Object retval=mainLoop();
 				if(PARANOIDSTACK) {
 					if(stacktop!=savedsp) {
@@ -597,6 +624,20 @@ public class MiniPython {
 							continue;
 						}
 						internalError("KeyError", toPyString(key));
+					} else if (obj instanceof String) {
+						if(!(key instanceof Integer)) {
+							internalError("TypeError", "str indices must be integers: "+toPyString(key));
+						}
+						int ikey=(Integer)key;
+						if(ikey<0) {
+							ikey+=((String)obj).length();
+						}
+						try{
+							stack[++stacktop]=((String)obj).substring(ikey, ikey+1);
+							continue;
+						} catch(IndexOutOfBoundsException e) {
+							internalError("IndexError", "string index out of range");
+						}
 					}
 					internalError("TypeError","object is not subscriptable "+toPyString(obj));
 				}
@@ -604,27 +645,78 @@ public class MiniPython {
 				{
 					Object to=stack[stacktop--];
 					Object from=stack[stacktop--];
-					Object inlist=stack[stacktop--];
-					if(!(inlist instanceof List)) {
-						internalError("TypeError", "you can only slice lists not "+toPyTypeString(inlist));
+					Object obj=stack[stacktop--];
+					if(!((to==null || to instanceof Integer) && (from==null || from instanceof Integer))) {
+						internalError("TypeError", String.format("slice indices must both be integers: supplied %s and %s", toPyTypeString(from), toPyTypeString(to)));
 					}
-					if(to instanceof Integer && from instanceof Integer) {
-						int ifrom=(Integer)from;
-						int ito=(Integer)to;
-						List thelist=(List)inlist;
+					if(obj instanceof List) {
+						List thelist=(List)obj;
+						int ifrom=(from==null)?0:(Integer)from;
+						int ito=(to==null)?thelist.size():(Integer)to;
 						if(ifrom<0) {
-							ifrom=thelist.size()+ifrom;
+							ifrom+=thelist.size();
+							if(ifrom<0) {
+								ifrom=0;
+							}
 						}
 						if(ito<0) {
-							ito=thelist.size()+ito;
+							ito+=thelist.size();
 						}
 						List result=new ArrayList();
 						for(int i=ifrom; i<ito && i<thelist.size(); i++) {
 							result.add(thelist.get(i));
 						}
 						stack[++stacktop]=result;
+						continue;
+					} else if(obj instanceof String) {
+						String str=(String)obj;
+						int ifrom=(from==null)?0:(Integer)from;
+						int ito=(to==null)?str.length():(Integer)to;
+						if(ifrom<0) {
+							ifrom+=str.length();
+						}
+						if(ito<0) {
+							ito+=str.length();
+						}
+						// python allows the indices to be out of range
+						if( (ifrom>=str.length()) || ito<=ifrom ) {
+							stack[++stacktop]="";
+						} else {
+							if(ito>str.length()) {
+								ito=str.length();
+							}
+							if(ifrom<0) {
+								ifrom=0;
+							}
+							stack[++stacktop]=str.substring(ifrom, ito);
+						}
+						continue;
+					}
+					internalError("TypeError", "you can only slice lists and strings, not "+toPyTypeString(obj));
+					continue;
+				}
+				case 33: // ASSIGN_INDEX
+				{
+					Object value=stack[stacktop--];
+					Object index=stack[stacktop--];
+					Object obj=stack[stacktop--];
+					if(obj instanceof Map) {
+						((Map)obj).put(index, value);
+					} else if (obj instanceof List) {
+						if(!(index instanceof Integer)) {
+							internalError("TypeError", "list indices must be integers, not "+toPyTypeString(index));
+						}
+						int iindex=(Integer)index;
+						List list=(List)obj;
+						if(iindex<list.size()) {
+							iindex+=list.size();
+						}
+						if(iindex<0 || iindex>=list.size()) {
+							internalError("IndexError", "list assignment index out of range");
+						}
+						list.set(iindex, value);
 					} else {
-						internalError("TypeError", String.format("slice indices must both be integers: supplied %s and %s", toPyTypeString(from), toPyTypeString(to)));
+						internalError("TypeError", toPyTypeString(obj)+" does not support item assignment");
 					}
 					continue;
 				}
@@ -1224,6 +1316,9 @@ public class MiniPython {
 	}
 
 	public void addModule(String name, Object object) {
+		if(root==null) {
+			root=new Context(null);
+		}
 		root.variables.put(name, new TModule(object, name));
 	}
 
@@ -1399,8 +1494,7 @@ public class MiniPython {
 		return s.replace(target, replacement);
 	}
 
-	@SuppressWarnings("rawtypes")
-	List instance_str_split(String s, Object ...args) throws ExecutionError {
+	List<String> instance_str_split(String s, Object ...args) throws ExecutionError {
 		int maxsplit=0;
 		String sep=null;
 
@@ -1440,10 +1534,40 @@ public class MiniPython {
 		return s.toUpperCase();
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	void instance_dict_update(Map map, Map other) {
+		Iterator<Map.Entry> it=other.entrySet().iterator();
+		while(it.hasNext()) {
+			Map.Entry m=it.next();
+			map.put(m.getKey(), m.getValue());
+		}
+	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	void instance_list_append(List list, Object item) {
 		list.add(item);
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	void instance_list_extend(List list, List other) {
+		for(Object i : other) {
+			list.add(i);
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	Object instance_list_pop(List list) throws ExecutionError {
+		if(list.size()==0) {
+			internalError("IndexError", "pop from empty list");
+		}
+		Object res=list.get(list.size()-1);
+		list.remove(list.size()-1);
+		return res;
+	}
+
+	@SuppressWarnings("rawtypes")
+	void instance_list_reverse(List list) {
+		Collections.reverse(list);
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
