@@ -19,6 +19,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+/**
+ * Encapsulates running a Python syntax file
+ * 
+ * <p>The source should have been transformed using jmp-compile. The class
+ * is not threadsafe and calls should only be made in the same thread. There is
+ * no shared state between instances.</p>
+ */
 public class MiniPython {
 
 	String[] strings;
@@ -31,74 +38,91 @@ public class MiniPython {
 	int stacktop; // top occupied slot on stack
 	int pc;
 
-	// If true then the stack is resized on every instruction to be as short as possible.
+	// If true then the stack is resized on every instruction to be as short as
+	// possible.
 	// This catches code that doesn't extend the stack as necessary.
-	boolean PARANOIDSTACK=true;
+	boolean PARANOIDSTACK = true;
 
+	/**
+	 * Removes all internal state.
+	 * 
+	 * This ensures that garbage collection is easier. You can reuse this
+	 * instance by calling addModule to reregister modules and
+	 * setCode to run new code.
+	 */
 	public void clear() {
-		root=current=null;
-		stack=null;
-		strings=null;
-		linenumbers=null;
-		code=null;
-		mTheClient=null;
+		root = current = null;
+		stack = null;
+		strings = null;
+		linenumbers = null;
+		code = null;
+		mTheClient = null;
 	}
 
-	public void setCode(InputStream is) throws IOException, ExecutionError {
-		if(root==null) {
-			root=new Context(null);
+	/**
+	 * Reads and executes code from the supplied stream
+	 * 
+	 * @param stream  The stream is not closed and you can have additional content after the jmp.
+	 * @throws IOException      Passed on from read() calls on the stream
+	 * @throws EOFException     When the stream is truncated
+	 * @throws ExecutionError   Any issues from executing the code
+	 */
+	public void setCode(InputStream stream) throws IOException, ExecutionError {
+		if (root == null) {
+			root = new Context(null);
 		}
-		current=root;
-		stack=new Object[PARANOIDSTACK?0:256];
-		stacktop=-1;
-		pc=0;
+		current = root;
+		stack = new Object[PARANOIDSTACK ? 0 : 256];
+		stacktop = -1;
+		pc = 0;
 		addBuiltins();
 
 		// string table
-		int stablen=get16(is);
-		strings=new String[stablen];
-		for(int i=0; i<stablen; i++) {
-			strings[i]=getUTF(is, get16(is));
+		int stablen = get16(stream);
+		strings = new String[stablen];
+		for (int i = 0; i < stablen; i++) {
+			strings[i] = getUTF(stream, get16(stream));
 		}
 		// line numbers
-		int ltablen=get16(is);
-		linenumbers=new int[ltablen][2];
-		for(int i=0; i<ltablen; i++) {
-			linenumbers[i][0]=get16(is);
-			linenumbers[i][1]=get16(is);
+		int ltablen = get16(stream);
+		linenumbers = new int[ltablen][2];
+		for (int i = 0; i < ltablen; i++) {
+			linenumbers[i][0] = get16(stream);
+			linenumbers[i][1] = get16(stream);
 		}
 		// code
-		int codelen=get16(is);
-		code=new byte[codelen];
+		int codelen = get16(stream);
+		code = new byte[codelen];
 		// ::TODO:: read in chunks
-		if(is.read(code)!=codelen)
+		if (stream.read(code) != codelen)
 			throw new EOFException();
 
 		try {
-			stacktop=-1;
+			stacktop = -1;
 			mainLoop();
-			if(PARANOIDSTACK) {
-				if(stacktop!=-1) {
-					internalError("StackLeak", "Buggy code has led to a leak on the stack");
+			if (PARANOIDSTACK) {
+				if (stacktop != -1) {
+					internalError("StackLeak",
+							"Buggy code has led to a leak on the stack");
 				}
 			}
 		} finally {
-			stacktop=-1;
+			stacktop = -1;
 		}
 	}
 
 	private static final int get16(InputStream is) throws IOException {
-		int a=is.read(),
-				b=is.read();
-		if(a<0 || b<0)
+		int a = is.read(), b = is.read();
+		if (a < 0 || b < 0)
 			throw new EOFException();
-		return a+(b<<8);
+		return a + (b << 8);
 	}
 
-	private static final String getUTF(InputStream is, int byteslen) throws IOException {
-		byte[] b=new byte[byteslen];
+	private static final String getUTF(InputStream is, int byteslen)
+			throws IOException {
+		byte[] b = new byte[byteslen];
 		// ::TODO:: while loop dealing with incomplete reads
-		if(is.read(b)!=byteslen)
+		if (is.read(b) != byteslen)
 			throw new EOFException();
 		return new String(b, "UTF8");
 	}
@@ -106,38 +130,45 @@ public class MiniPython {
 	// this encapsulates the current stack frame
 	private static final class Context {
 		Context parent; // used for variable lookups
-		Map<String,Object> variables;
+		Map<String, Object> variables;
 		Set<String> globals; // only initialized if needed
+
 		Context(Context parent) {
-			this.parent=parent;
-			variables=new HashMap<String,Object>();
+			this.parent = parent;
+			variables = new HashMap<String, Object>();
 		}
+
 		void addGlobal(String s) {
-			if(globals==null) {
-				globals=new HashSet<String>(1);
+			if (globals == null) {
+				globals = new HashSet<String>(1);
 			}
 			globals.add(s);
 		}
 	}
 
-	// Our internal types.  We use Java native types wherever possible
+	// Our internal types. We use Java native types wherever possible
 
-	private static interface Callable {}
+	private static interface Callable {
+	}
 
-	private static final class TMethod implements Callable{
+	private static final class TMethod implements Callable {
 		// address of method in bytecode
 		int addr;
 		Context context;
+
 		TMethod(int addr, Context context) {
-			this.addr=addr;
-			this.context=context;
+			this.addr = addr;
+			this.context = context;
 		}
+
 		public String toString() {
 			return String.format("<method at %d>", addr);
 		}
+
 		@Override
 		public boolean equals(Object other) {
-			return other instanceof TMethod && this.addr==((TMethod)other).addr;
+			return other instanceof TMethod
+					&& this.addr == ((TMethod) other).addr;
 		}
 	}
 
@@ -146,9 +177,10 @@ public class MiniPython {
 		Object o;
 
 		TModule(Object o, String name) {
-			this.o=o;
-			this.name=name;
+			this.o = o;
+			this.name = name;
 		}
+
 		public String toString() {
 			return String.format("<module %s>", name);
 		}
@@ -156,7 +188,9 @@ public class MiniPython {
 
 	private interface TNativeMethod extends Callable {
 		Method getMethod();
+
 		Object getThis();
+
 		Object[] getPrefixArgs();
 	}
 
@@ -166,26 +200,40 @@ public class MiniPython {
 		Method method;
 
 		TBuiltinInstanceMethod(Object[] prefixargs, Method m, String prettyname) {
-			this.prefixargs=prefixargs;
-			this.prettyname=prettyname;
-			method=m;
+			this.prefixargs = prefixargs;
+			this.prettyname = prettyname;
+			method = m;
 		}
-		@Override
-		public Object getThis() { return MiniPython.this; }
 
 		@Override
-		public Method getMethod() { return method; }
+		public Object getThis() {
+			return MiniPython.this;
+		}
 
 		@Override
-		public Object[] getPrefixArgs() { return prefixargs; }
+		public Method getMethod() {
+			return method;
+		}
+
+		@Override
+		public Object[] getPrefixArgs() {
+			return prefixargs;
+		}
 
 		@Override
 		public boolean equals(Object other) {
-			return other instanceof TBuiltinInstanceMethod && this.prettyname.equals(((TBuiltinInstanceMethod)other).prettyname) && this.prefixargs.equals(((TBuiltinInstanceMethod)other).prefixargs);
+			return other instanceof TBuiltinInstanceMethod
+					&& this.prettyname
+					.equals(((TBuiltinInstanceMethod) other).prettyname)
+					&& this.prefixargs
+					.equals(((TBuiltinInstanceMethod) other).prefixargs);
 		}
 
 		@Override
-		public String toString() { return String.format("<instance method %s.%s>", toPyTypeString(prefixargs[0]), prettyname); }
+		public String toString() {
+			return String.format("<instance method %s.%s>",
+					toPyTypeString(prefixargs[0]), prettyname);
+		}
 	}
 
 	private final class TModuleNativeMethod implements TNativeMethod {
@@ -194,32 +242,34 @@ public class MiniPython {
 		Method nativeMethod;
 
 		TModuleNativeMethod(TModule mod, String name) throws ExecutionError {
-			this.mod=mod;
-			this.name=name;
-			for(Method m : mod.o.getClass().getDeclaredMethods()) {
+			this.mod = mod;
+			this.name = name;
+			for (Method m : mod.o.getClass().getDeclaredMethods()) {
 				// we only want public methods
-				if((m.getModifiers()&Modifier.PUBLIC)==0) {
+				if ((m.getModifiers() & Modifier.PUBLIC) == 0) {
 					continue;
 				}
-				if(m.getName().equals(name)) {
-					nativeMethod=m;
+				if (m.getName().equals(name)) {
+					nativeMethod = m;
 					break;
 				}
 			}
-			if(nativeMethod==null) {
-				internalError("AttributeError", "No method named "+name);
+			if (nativeMethod == null) {
+				internalError("AttributeError", "No method named " + name);
 			}
 		}
 
 		TModuleNativeMethod(TModule mod, Method meth, String name) {
-			this.mod=mod;
-			this.nativeMethod=meth;
-			this.name=name;
+			this.mod = mod;
+			this.nativeMethod = meth;
+			this.name = name;
 		}
 
 		@Override
 		public boolean equals(Object other) {
-			return other instanceof TModuleNativeMethod && this.name.equals(((TModuleNativeMethod)other).name) && this.mod.o.equals(((TModuleNativeMethod)other).mod.o);
+			return other instanceof TModuleNativeMethod
+					&& this.name.equals(((TModuleNativeMethod) other).name)
+					&& this.mod.o.equals(((TModuleNativeMethod) other).mod.o);
 		}
 
 		@Override
@@ -244,983 +294,1059 @@ public class MiniPython {
 	}
 
 	private final void addBuiltins() {
-		TModule tm=new TModule(this, "__builtins__");
-		for(Method m : this.getClass().getDeclaredMethods()) {
-			if(m.getName().startsWith("builtin_")) {
-				String name=m.getName().substring("builtin_".length());
-				TModuleNativeMethod tn=new TModuleNativeMethod(tm, m, name);
+		TModule tm = new TModule(this, "__builtins__");
+		for (Method m : this.getClass().getDeclaredMethods()) {
+			if (m.getName().startsWith("builtin_")) {
+				String name = m.getName().substring("builtin_".length());
+				TModuleNativeMethod tn = new TModuleNativeMethod(tm, m, name);
 				root.variables.put(name, tn);
 			}
 		}
 	}
 
-
-	public Object callMethod(String name, Object ...args) throws ExecutionError {
-		Object meth=root.variables.get(name);
-		if(meth==null) {
-			internalError("NameError", name+" is not defined");
+	public Object callMethod(String name, Object... args) throws ExecutionError {
+		Object meth = root.variables.get(name);
+		if (meth == null) {
+			internalError("NameError", name + " is not defined");
 		}
-		if(!(meth instanceof Callable)) {
-			internalError("TypeError", toPyString(meth)+" is not callable");
+		if (!(meth instanceof Callable)) {
+			internalError("TypeError", toPyString(meth) + " is not callable");
 		}
-		return call((Callable)meth, args);
+		return call((Callable) meth, args);
 	}
 
-	Object call(Callable meth, Object ...args) throws ExecutionError {
-		int savedsp=stacktop;
-		int savedpc=pc;
-		Context savedcontext=current;
+	Object call(Callable meth, Object... args) throws ExecutionError {
+		int savedsp = stacktop;
+		int savedpc = pc;
+		Context savedcontext = current;
 		try {
-			int sp=stacktop;
-			while(sp+5+args.length>=stack.length) {
+			int sp = stacktop;
+			while (sp + 5 + args.length >= stack.length) {
 				extendStack();
 			}
-			for(int i=0; i<args.length; i++) {
-				stack[++stacktop]=args[i];
+			for (int i = 0; i < args.length; i++) {
+				stack[++stacktop] = args[i];
 			}
-			stack[++stacktop]=args.length;
-			if(meth instanceof TMethod) {
-				TMethod tmeth=(TMethod)meth;
-				Context c=new Context(tmeth.context);
-				stack[++stacktop]=current; // return context
-				stack[++stacktop]=-1;      // returnpc
-				pc=tmeth.addr;
-				current=c;
-				Object retval=mainLoop();
-				if(PARANOIDSTACK) {
-					if(stacktop!=savedsp) {
-						internalError("StackLeak", "Buggy code has led to a leak on the stack");
+			stack[++stacktop] = args.length;
+			if (meth instanceof TMethod) {
+				TMethod tmeth = (TMethod) meth;
+				Context c = new Context(tmeth.context);
+				stack[++stacktop] = current; // return context
+				stack[++stacktop] = -1; // returnpc
+				pc = tmeth.addr;
+				current = c;
+				Object retval = mainLoop();
+				if (PARANOIDSTACK) {
+					if (stacktop != savedsp) {
+						internalError("StackLeak",
+								"Buggy code has led to a leak on the stack");
 					}
 				}
 				return retval;
 			} else if (meth instanceof TNativeMethod) {
-				stack[++stacktop]=meth;
+				stack[++stacktop] = meth;
 				nativeCall();
-				Object retval=stack[stacktop--];
-				if(PARANOIDSTACK) {
-					if(stacktop!=savedsp) {
-						internalError("StackLeak", "Buggy code has led to a leak on the stack");
+				Object retval = stack[stacktop--];
+				if (PARANOIDSTACK) {
+					if (stacktop != savedsp) {
+						internalError("StackLeak",
+								"Buggy code has led to a leak on the stack");
 					}
 				}
 				return retval;
 			} else {
-				internalError("TypeError", toPyTypeString(meth)+" is not callable");
+				internalError("TypeError", toPyTypeString(meth)
+						+ " is not callable");
 				return null;
 			}
 		} finally {
-			stacktop=savedsp;
-			pc=savedpc;
-			current=savedcontext;
+			stacktop = savedsp;
+			pc = savedpc;
+			current = savedcontext;
 		}
 	}
 
 	// The virtual cpu execution loop.
-	// Java's generics are poor and it whines about conversions even when the generic types are Object
+	// Java's generics are poor and it whines about conversions even when the
+	// generic types are Object
 	// so this turns off the whining as there is nothing we can do about it.
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private final Object mainLoop() throws ExecutionError {
-		int op, val=-1;
-		opcodeswitch:
-			while(true) {
-				if(PARANOIDSTACK) {
-					if(stacktop+1<stack.length)
-					{
-						Object[] newstack=new Object[stacktop+1];
-						System.arraycopy(stack, 0, newstack, 0, newstack.length);
-						stack=newstack;
-					}
-				}
-				op=code[pc++] & 0xff;
-				if(op>=128) {
-					val=(code[pc]&0xff)+((code[pc+1]&0xff)<<8);
-					pc+=2;
-				}
-				switch(op) {
-				// -- check start : marker used by tool
-
-				// Control flow codes
-				case 19: // EXIT_LOOP
-				{
-					return null;
-				}
-				case 129: // GOTO
-				{
-					pc=val;
-					continue;
-				}
-				case 130: // IF_FALSE
-				{
-					if(builtin_bool(stack[stacktop--])==false) {
-						pc=val;
-					}
-					continue;
-				}
-				case 131: // NEXT
-				{
-					Iterator it=(Iterator)stack[stacktop];
-					if(it.hasNext()) {
-						if(stacktop+1==stack.length) {
-							extendStack();
-						}
-						stack[++stacktop]=it.next();
-					} else {
-						pc=val;
-					}
-					continue;
-				}
-				case 132: // AND
-				case 133: // OR
-				{
-					if(builtin_bool(stack[stacktop])==(op==133)) {
-						// on true (OR) or false (AND), goto end
-						pc=val;
-					} else {
-						// clear top value so next one can be tested
-						stacktop--;
-					}
-					continue;
-				}
-
-				// Mostly harmless/lightweight codes
-				case 11: // POP_TOP
-				{
-					stacktop--;
-					continue;
-				}
-				// Codes that make the stack bigger
-				case 200: // PUSH_INT
-				{
-					while(true) {
-						try {
-							stack[++stacktop]=val;
-							continue opcodeswitch;
-						} catch(ArrayIndexOutOfBoundsException e) {
-							extendStack();
-							stacktop--;
-						}
-					}
-				}
-				case 201: // PUSH_INT_HI
-				{
-					stack[stacktop]=((Integer)stack[stacktop])|(val<<16);
-					continue;
-				}
-				case 162: // PUSH_STR
-				{
-					while(true) {
-						try {
-							stack[++stacktop]=strings[val];
-							continue opcodeswitch;
-						} catch(ArrayIndexOutOfBoundsException e) {
-							extendStack();
-							stacktop--;
-						}
-					}
-				}
-				case 18: // PUSH_NONE
-				case 21: // PUSH_TRUE
-				case 22: // PUSH_FALSE
-				{
-					while(true) {
-						try {
-							stack[++stacktop]=(op==18)?null:(op==21);
-							continue opcodeswitch;
-						} catch(ArrayIndexOutOfBoundsException e) {
-							extendStack();
-							stacktop--;
-						}
-					}
-				}
-				case 160: // LOAD_NAME
-				{
-					while(true) {
-						try {
-							Context c=current;
-							String key=strings[val];
-							while(c!=null) {
-								if(c.variables.containsKey(key)) {
-									stack[++stacktop]=c.variables.get(key);
-									continue opcodeswitch;
-								}
-								c=c.parent;
-							}
-							internalError("NameError", String.format("name '%s' is not defined", key));
-						} catch(ArrayIndexOutOfBoundsException e) {
-							extendStack();
-							stacktop--;
-						}
-					}
-				}
-				case 17: // LIST
-				{
-					int nitems=(Integer)stack[stacktop--];
-					List<Object> l=new ArrayList<Object>(nitems);
-					stacktop-=nitems;
-					for(int i=0; i<nitems; i++) {
-						l.add(stack[stacktop+1+i]);
-					}
-					stack[++stacktop]=l;
-					continue;
-				}
-				case 16: // DICT
-				{
-					int nitems=(Integer)stack[stacktop--];
-					Map<Object,Object> m=new HashMap<Object, Object>(nitems);
-					stacktop-=nitems*2;
-					for(int i=0; i<nitems; i++) {
-						Object k=stack[stacktop+1+i*2+1];
-						Object v=stack[stacktop+1+i*2];
-						m.put(k, v);
-					}
-					stack[++stacktop]=m;
-					continue;
-				}
-
-				// Binary operations
-				case 2: // MULT
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-					if(left instanceof Integer && right instanceof Integer) {
-						stack[++stacktop]=(Integer)left*(Integer)right;
-						continue;
-					}
-					if((left instanceof String && right instanceof Integer) ||
-							(right instanceof String && left instanceof Integer)) {
-						String s=(left instanceof String)?(String)left:(String)right;
-						Integer ii=(left instanceof Integer)?(Integer)left:(Integer)right;
-						StringBuilder sb=new StringBuilder(s.length()*ii);
-						for(int i=0; i<ii; i++) {
-							sb.append(s);
-						}
-						stack[++stacktop]=sb.toString();
-						continue;
-					}
-					internalErrorBinaryOp("TypeError", "*", left, right);
-				}
-				case 1: // ADD
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-					if ((left==null || right==null) || !right.getClass().equals(left.getClass())) {
-						internalErrorBinaryOp("TypeError", "+", left, right);
-					}
-					// both are the same type
-					if(left instanceof Integer) {
-						stack[++stacktop]=(Integer)left+(Integer)right;
-					} else 	if(left instanceof String) {
-						stack[++stacktop]=(String)left+(String)right;
-					} else if(left instanceof List) {
-						List<Object> m=new ArrayList<Object>(((List)left).size()+((List)right).size());
-						m.addAll((List)left);
-						m.addAll((List)right);
-						stack[++stacktop]=m;
-					} else {
-						internalErrorBinaryOp("TypeError", "+", left, right);
-					}
-					continue;
-				}
-				case 27: // SUB
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-					if(left instanceof Integer && right instanceof Integer) {
-						stack[++stacktop]=(Integer)left-(Integer)right;
-					} else {
-						internalErrorBinaryOp("TypeError", "+", left, right);
-					}
-					continue;
-				}
-				case 3: // DIV
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-					if(left instanceof Integer && right instanceof Integer) {
-						stack[++stacktop]=(Integer)left / (Integer)right;
-					} else {
-						internalErrorBinaryOp("TypeError", "/", left, right);
-					}
-					continue;
-				}
-				case 30: // MOD
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-					if(left instanceof Integer && right instanceof Integer) {
-						stack[++stacktop]=(Integer)left % (Integer)right;
-					} else if (left instanceof String && right instanceof List) {
-						try {
-							stack[++stacktop]=String.format((String) left, ((List)right).toArray());
-						} catch(IllegalFormatException e) {
-							internalError("TypeError", "String.format - "+e.toString());
-						}
-					} else {
-						internalErrorBinaryOp("TypeError", "%", left, right);
-					}
-					continue;
-				}
-				// comparisons
-				case 5: // LT
-				case 4: // GT
-				case 31: // GTE
-				case 32: // LTE
-				case 6: // EQ
-				case 26: // NOT_EQ
-				{
-					Object right=stack[stacktop--],
-							left=stack[stacktop--];
-
-					int cmp=builtin_cmp(left, right);
-					boolean res=false;
-
-					switch(op) {
-					case 5: // < LT
-						res= cmp<0;	break;
-					case 32: // <= LTE
-						res= cmp<=0; break;
-					case 4: // > GT
-						res= cmp>0; break;
-					case 31: // >= GTE
-						res= cmp>=0; break;
-					case 6: // = EQ
-						res= cmp==0; break;
-					case 26: // != NOT_EQ
-						res= cmp!=0; break;
-					default:
-						internalError("RuntimeError", "Unhandled comparison operator");
-					}
-					stack[++stacktop]=res;
-					continue;
-				}
-				case 12: // ATTR
-				{
-					Object o=stack[stacktop--];
-					String name=(String)stack[stacktop--];
-					stack[++stacktop]=getAttr(o, name);
-					continue;
-				}
-				case 14: // SUBSCRIPT
-				{
-					Object key=stack[stacktop--];
-					Object obj=stack[stacktop--];
-					if(obj instanceof List) {
-						if(!(key instanceof Integer)) {
-							internalError("TypeError", "list indices must be integers: "+toPyString(key));
-						}
-						int index=(Integer)key;
-						List<Object> l=(List<Object>)obj;
-						if(index<0) {
-							index=l.size()+index;
-						}
-						if(index<0 || index>=l.size()) {
-							internalError("IndexError", "list index out of range");
-						}
-						stack[++stacktop]=l.get(index);
-						continue;
-					} else if (obj instanceof Map) {
-						Map<Object,Object> m=(Map<Object, Object>) obj;
-						if(m.containsKey(key)) {
-							stack[++stacktop]=m.get(key);
-							continue;
-						}
-						internalError("KeyError", toPyString(key));
-					} else if (obj instanceof String) {
-						if(!(key instanceof Integer)) {
-							internalError("TypeError", "str indices must be integers: "+toPyString(key));
-						}
-						int ikey=(Integer)key;
-						if(ikey<0) {
-							ikey+=((String)obj).length();
-						}
-						try{
-							stack[++stacktop]=((String)obj).substring(ikey, ikey+1);
-							continue;
-						} catch(IndexOutOfBoundsException e) {
-							internalError("IndexError", "string index out of range");
-						}
-					}
-					internalError("TypeError","object is not subscriptable "+toPyString(obj));
-				}
-				case 15: // SUBSCRIPT_SLICE
-				{
-					Object to=stack[stacktop--];
-					Object from=stack[stacktop--];
-					Object obj=stack[stacktop--];
-					if(!((to==null || to instanceof Integer) && (from==null || from instanceof Integer))) {
-						internalError("TypeError", String.format("slice indices must both be integers: supplied %s and %s", toPyTypeString(from), toPyTypeString(to)));
-					}
-					if(obj instanceof List) {
-						List thelist=(List)obj;
-						int ifrom=(from==null)?0:(Integer)from;
-						int ito=(to==null)?thelist.size():(Integer)to;
-						if(ifrom<0) {
-							ifrom+=thelist.size();
-							if(ifrom<0) {
-								ifrom=0;
-							}
-						}
-						if(ito<0) {
-							ito+=thelist.size();
-						}
-						List result=new ArrayList();
-						for(int i=ifrom; i<ito && i<thelist.size(); i++) {
-							result.add(thelist.get(i));
-						}
-						stack[++stacktop]=result;
-						continue;
-					} else if(obj instanceof String) {
-						String str=(String)obj;
-						int ifrom=(from==null)?0:(Integer)from;
-						int ito=(to==null)?str.length():(Integer)to;
-						if(ifrom<0) {
-							ifrom+=str.length();
-						}
-						if(ito<0) {
-							ito+=str.length();
-						}
-						// python allows the indices to be out of range
-						if( (ifrom>=str.length()) || ito<=ifrom ) {
-							stack[++stacktop]="";
-						} else {
-							if(ito>str.length()) {
-								ito=str.length();
-							}
-							if(ifrom<0) {
-								ifrom=0;
-							}
-							stack[++stacktop]=str.substring(ifrom, ito);
-						}
-						continue;
-					}
-					internalError("TypeError", "you can only slice lists and strings, not "+toPyTypeString(obj));
-					continue;
-				}
-				case 33: // ASSIGN_INDEX
-				{
-					Object value=stack[stacktop--];
-					Object index=stack[stacktop--];
-					Object obj=stack[stacktop--];
-					if(obj instanceof Map) {
-						((Map)obj).put(index, value);
-					} else if (obj instanceof List) {
-						if(!(index instanceof Integer)) {
-							internalError("TypeError", "list indices must be integers, not "+toPyTypeString(index));
-						}
-						int iindex=(Integer)index;
-						List list=(List)obj;
-						if(iindex<list.size()) {
-							iindex+=list.size();
-						}
-						if(iindex<0 || iindex>=list.size()) {
-							internalError("IndexError", "list assignment index out of range");
-						}
-						list.set(iindex, value);
-					} else {
-						internalError("TypeError", toPyTypeString(obj)+" does not support item assignment");
-					}
-					continue;
-				}
-				case 28: // DEL_INDEX
-				{
-					Object item=stack[stacktop--];
-					Object container=stack[stacktop--];
-					if(container instanceof List) {
-						if(!(item instanceof Integer)) {
-							internalError("TypeError", "Can only use integers to index list not "+toPyTypeString(item));
-						}
-						int i=(Integer)item;
-						if(i<0) {
-							i=((List)container).size()+i;
-						}
-						if(i<0 || i>= ((List)container).size()) {
-							internalError("IndexError", "list index out of bounds");
-						}
-						((List)container).remove(i);
-					} else if (container instanceof Map) {
-						Object found=((Map)container).remove(item);
-						if(item!=null && found==null) {
-							internalError("KeyError", toPyString(item));
-						}
-					} else {
-						internalError("TypeError", "Can't delete item of "+toPyTypeString(container));
-					}
-					continue;
-				}
-				case 29: // DEL_SLICE
-				{
-					Object to=stack[stacktop--];
-					Object from=stack[stacktop--];
-					Object inlist=stack[stacktop--];
-					if(!(inlist instanceof List)) {
-						internalError("TypeError", "you can only slice lists not "+toPyTypeString(inlist));
-					}
-					if(to instanceof Integer && from instanceof Integer) {
-						int ifrom=(Integer)from;
-						int ito=(Integer)to;
-						List thelist=(List)inlist;
-						if(ifrom<0) {
-							ifrom=thelist.size()+ifrom;
-						}
-						if(ito<0) {
-							ito=thelist.size()+ito;
-						}
-						// List only lets you delete one item at a time.  We have to start from the end so we don't
-						// peturb index values while deleting
-						if(ito>ifrom) {
-							for(int i=ito-1; i>=0 && i>=ifrom; i--) {
-								// python allows out of range list indices
-								if(i<thelist.size()) {
-									thelist.remove(i);
-								}
-							}
-						}
-					} else {
-						internalError("TypeError", String.format("slice indices must both be integers: supplied %s and %s", toPyTypeString(from), toPyTypeString(to)));
-					}
-					continue;
-				}
-				case 164: // DEL_NAME
-				{
-					String name=strings[val];
-					// Python allows del of globals but ignores the del!
-					if(current.globals!=null && current.globals.contains(name)) {
-						continue;
-					}
-					// we have to test for membership since we can't tell from remove if the
-					// key existed or had a null value
-					if(current.variables.containsKey(name)) {
-						current.variables.remove(name);
-					} else {
-						internalError("NameError", String.format("name '%s' is not defined", name));
-					}
-					continue;
-				}
-				case 7: // IN
-				{
-					Object collection=stack[stacktop--];
-					Object key=stack[stacktop--];
-					if(collection instanceof Map) {
-						stack[++stacktop]=((Map)collection).containsKey(key);
-						continue;
-					} else if (collection instanceof List) {
-						stack[++stacktop]=((List)collection).contains(key);
-						continue;
-					}
-					internalError("TypeError", "can't do 'in' in "+toPyString(collection));
-				}
-
-				// Unary operations
-				case 13: // UNARY_NEG
-				{
-					if(stack[stacktop] instanceof Integer) {
-						stack[stacktop]=-(Integer)stack[stacktop];
-						continue;
-					} else {
-						internalError("TypeError", "Can't negate "+toPyTypeString(stack[stacktop]));
-					}
-				}
-				case 8: // UNARY_ADD
-				{
-					if(stack[stacktop] instanceof Integer) {
-					} else {
-						internalError("TypeError", "Can't unary plus "+toPyTypeString(stack[stacktop]));
-					}
-					continue;
-				}
-				case 24: // NOT
-				{
-					stack[stacktop]=!builtin_bool(stack[stacktop]);
-					continue;
-				}
-				case 20: // STR
-				{
-					stack[stacktop]=toPyString(stack[stacktop]);
-					continue;
-				}
-				case 25: // ITER
-				{
-					Object o=stack[stacktop];
-					if(o instanceof List) {
-						stack[stacktop]=((List)o).iterator();
-					} else if (o instanceof Map) {
-						stack[stacktop]=((Map)o).keySet().iterator();
-					} else {
-						internalError("TypeError", toPyString(o)+" is not iterable");
-					}
-					continue;
-				}
-
-				// More heavyweight stuff
-				case 23: // PRINT
-				{
-					StringBuilder sb=new StringBuilder();
-					int nargs=(Integer)stack[stacktop--];
-					boolean nl=(Boolean)stack[stacktop--];
-					stacktop-=nargs;
-					for(int i=0; i<nargs; i++) {
-						if(i!=0) {
-							sb.append(" ");
-						}
-						sb.append(toPyString(stack[stacktop+i+1]));
-					}
-					sb.append(nl?"\n":" ");
-					if(mTheClient!=null) {
-						mTheClient.print(sb.toString());
-					}
-					continue;
-				}
-				case 161: // STORE_NAME
-				{
-					// is it a global?
-					Context c=current;
-					if(current.globals!=null && current.globals.contains(strings[val])) {
-						c=root;
-					}
-					c.variables.put(strings[val], stack[stacktop--]);
-					continue;
-				}
-				case 163: // GLOBAL
-				{
-					if(current!=root && current.variables.containsKey(strings[val])) {
-						internalError("SyntaxError", String.format("Name '%s' is assigned to before 'global' declaration", strings[val]));
-					}
-					current.addGlobal(strings[val]);
-					continue;
-				}
-
-				// Function call related
-				case 128: // MAKE_METHOD
-				{
-					while(true) {
-						try {
-							stack[++stacktop]=new TMethod(val, current);
-							continue opcodeswitch;
-						} catch(ArrayIndexOutOfBoundsException e) {
-							extendStack();
-							stacktop--;
-						}
-					}
-				}
-				case 10: // CALL
-				{
-					if(stack[stacktop] instanceof TNativeMethod) {
-						nativeCall();
-						continue;
-					}
-					if(!(stack[stacktop] instanceof TMethod)) {
-						internalError("TypeError", toPyString(stack[stacktop])+" is not callable");
-					}
-					while(stacktop+2>stack.length) {
-						extendStack();
-					}
-					TMethod meth=(TMethod)stack[stacktop--];
-					stack[++stacktop]=current;  // return context
-					stack[++stacktop]=pc;       // return address
-					current=new Context(meth.context);
-					pc=meth.addr;
-					continue;
-				}
-				case 0: // FUNCTION_PROLOG
-				{
-					int argsexpected=(Integer)stack[stacktop--];
-					int returnpc=(Integer)stack[stacktop--];
-					Context returncontext=(Context)stack[stacktop--];
-					int argsprovided=(Integer)stack[stacktop--];
-					if(argsexpected!=argsprovided) {
-						internalError("TypeError", String.format("Method takes exactly %d arguments (%d given)", argsexpected, argsprovided));
-					}
-					// we need to insert the returncontext/pc before the args
-					stacktop+=2;
-					System.arraycopy(stack, stacktop-argsprovided-1, stack, stacktop-argsprovided+1, argsprovided);
-					stack[stacktop-argsprovided-1]=returncontext;
-					stack[stacktop-argsprovided]=returnpc;
-					continue;
-				}
-				case 9: // RETURN
-				{
-					if(current.parent==null) {
-						internalError("SyntaxError", "'return' outside function");
-					}
-
-					Object retval=stack[stacktop--];
-					int returnpc=(Integer)stack[stacktop--];
-					current=(Context)stack[stacktop--];
-					if(returnpc<0)
-						return retval;
-					pc=returnpc;
-					stack[++stacktop]=retval;
-					continue;
-				}
-				// -- check end : marker used by tool
-				default:
-					internalError("RuntimeError", String.format("Unknown/unimplemented opcode: %d", op));
+		int op, val = -1;
+		opcodeswitch: while (true) {
+			if (PARANOIDSTACK) {
+				if (stacktop + 1 < stack.length) {
+					Object[] newstack = new Object[stacktop + 1];
+					System.arraycopy(stack, 0, newstack, 0, newstack.length);
+					stack = newstack;
 				}
 			}
+			op = code[pc++] & 0xff;
+			if (op >= 128) {
+				val = (code[pc] & 0xff) + ((code[pc + 1] & 0xff) << 8);
+				pc += 2;
+			}
+			switch (op) {
+			// -- check start : marker used by tool
+
+			// Control flow codes
+			case 19: // EXIT_LOOP
+			{
+				return null;
+			}
+			case 129: // GOTO
+			{
+				pc = val;
+				continue;
+			}
+			case 130: // IF_FALSE
+			{
+				if (builtin_bool(stack[stacktop--]) == false) {
+					pc = val;
+				}
+				continue;
+			}
+			case 131: // NEXT
+			{
+				Iterator it = (Iterator) stack[stacktop];
+				if (it.hasNext()) {
+					if (stacktop + 1 == stack.length) {
+						extendStack();
+					}
+					stack[++stacktop] = it.next();
+				} else {
+					pc = val;
+				}
+				continue;
+			}
+			case 132: // AND
+			case 133: // OR
+			{
+				if (builtin_bool(stack[stacktop]) == (op == 133)) {
+					// on true (OR) or false (AND), goto end
+					pc = val;
+				} else {
+					// clear top value so next one can be tested
+					stacktop--;
+				}
+				continue;
+			}
+
+			// Mostly harmless/lightweight codes
+			case 11: // POP_TOP
+			{
+				stacktop--;
+				continue;
+			}
+			// Codes that make the stack bigger
+			case 200: // PUSH_INT
+			{
+				while (true) {
+					try {
+						stack[++stacktop] = val;
+						continue opcodeswitch;
+					} catch (ArrayIndexOutOfBoundsException e) {
+						extendStack();
+						stacktop--;
+					}
+				}
+			}
+			case 201: // PUSH_INT_HI
+			{
+				stack[stacktop] = ((Integer) stack[stacktop]) | (val << 16);
+				continue;
+			}
+			case 162: // PUSH_STR
+			{
+				while (true) {
+					try {
+						stack[++stacktop] = strings[val];
+						continue opcodeswitch;
+					} catch (ArrayIndexOutOfBoundsException e) {
+						extendStack();
+						stacktop--;
+					}
+				}
+			}
+			case 18: // PUSH_NONE
+			case 21: // PUSH_TRUE
+			case 22: // PUSH_FALSE
+			{
+				while (true) {
+					try {
+						stack[++stacktop] = (op == 18) ? null : (op == 21);
+						continue opcodeswitch;
+					} catch (ArrayIndexOutOfBoundsException e) {
+						extendStack();
+						stacktop--;
+					}
+				}
+			}
+			case 160: // LOAD_NAME
+			{
+				while (true) {
+					try {
+						Context c = current;
+						String key = strings[val];
+						while (c != null) {
+							if (c.variables.containsKey(key)) {
+								stack[++stacktop] = c.variables.get(key);
+								continue opcodeswitch;
+							}
+							c = c.parent;
+						}
+						internalError("NameError",
+								String.format("name '%s' is not defined", key));
+					} catch (ArrayIndexOutOfBoundsException e) {
+						extendStack();
+						stacktop--;
+					}
+				}
+			}
+			case 17: // LIST
+			{
+				int nitems = (Integer) stack[stacktop--];
+				List<Object> l = new ArrayList<Object>(nitems);
+				stacktop -= nitems;
+				for (int i = 0; i < nitems; i++) {
+					l.add(stack[stacktop + 1 + i]);
+				}
+				stack[++stacktop] = l;
+				continue;
+			}
+			case 16: // DICT
+			{
+				int nitems = (Integer) stack[stacktop--];
+				Map<Object, Object> m = new HashMap<Object, Object>(nitems);
+				stacktop -= nitems * 2;
+				for (int i = 0; i < nitems; i++) {
+					Object k = stack[stacktop + 1 + i * 2 + 1];
+					Object v = stack[stacktop + 1 + i * 2];
+					m.put(k, v);
+				}
+				stack[++stacktop] = m;
+				continue;
+			}
+
+			// Binary operations
+			case 2: // MULT
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+				if (left instanceof Integer && right instanceof Integer) {
+					stack[++stacktop] = (Integer) left * (Integer) right;
+					continue;
+				}
+				if ((left instanceof String && right instanceof Integer)
+						|| (right instanceof String && left instanceof Integer)) {
+					String s = (left instanceof String) ? (String) left
+							: (String) right;
+					Integer ii = (left instanceof Integer) ? (Integer) left
+							: (Integer) right;
+					StringBuilder sb = new StringBuilder(s.length() * ii);
+					for (int i = 0; i < ii; i++) {
+						sb.append(s);
+					}
+					stack[++stacktop] = sb.toString();
+					continue;
+				}
+				internalErrorBinaryOp("TypeError", "*", left, right);
+			}
+			case 1: // ADD
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+				if ((left == null || right == null)
+						|| !right.getClass().equals(left.getClass())) {
+					internalErrorBinaryOp("TypeError", "+", left, right);
+				}
+				// both are the same type
+				if (left instanceof Integer) {
+					stack[++stacktop] = (Integer) left + (Integer) right;
+				} else if (left instanceof String) {
+					stack[++stacktop] = (String) left + (String) right;
+				} else if (left instanceof List) {
+					List<Object> m = new ArrayList<Object>(((List) left).size()
+							+ ((List) right).size());
+					m.addAll((List) left);
+					m.addAll((List) right);
+					stack[++stacktop] = m;
+				} else {
+					internalErrorBinaryOp("TypeError", "+", left, right);
+				}
+				continue;
+			}
+			case 27: // SUB
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+				if (left instanceof Integer && right instanceof Integer) {
+					stack[++stacktop] = (Integer) left - (Integer) right;
+				} else {
+					internalErrorBinaryOp("TypeError", "+", left, right);
+				}
+				continue;
+			}
+			case 3: // DIV
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+				if (left instanceof Integer && right instanceof Integer) {
+					stack[++stacktop] = (Integer) left / (Integer) right;
+				} else {
+					internalErrorBinaryOp("TypeError", "/", left, right);
+				}
+				continue;
+			}
+			case 30: // MOD
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+				if (left instanceof Integer && right instanceof Integer) {
+					stack[++stacktop] = (Integer) left % (Integer) right;
+				} else if (left instanceof String && right instanceof List) {
+					try {
+						stack[++stacktop] = String.format((String) left,
+								((List) right).toArray());
+					} catch (IllegalFormatException e) {
+						internalError("TypeError",
+								"String.format - " + e.toString());
+					}
+				} else {
+					internalErrorBinaryOp("TypeError", "%", left, right);
+				}
+				continue;
+			}
+			// comparisons
+			case 5: // LT
+			case 4: // GT
+			case 31: // GTE
+			case 32: // LTE
+			case 6: // EQ
+			case 26: // NOT_EQ
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+
+				int cmp = builtin_cmp(left, right);
+				boolean res = false;
+
+				switch (op) {
+				case 5: // < LT
+					res = cmp < 0;
+					break;
+				case 32: // <= LTE
+					res = cmp <= 0;
+					break;
+				case 4: // > GT
+					res = cmp > 0;
+					break;
+				case 31: // >= GTE
+					res = cmp >= 0;
+					break;
+				case 6: // = EQ
+					res = cmp == 0;
+					break;
+				case 26: // != NOT_EQ
+					res = cmp != 0;
+					break;
+				default:
+					internalError("RuntimeError",
+							"Unhandled comparison operator");
+				}
+				stack[++stacktop] = res;
+				continue;
+			}
+			case 12: // ATTR
+			{
+				Object o = stack[stacktop--];
+				String name = (String) stack[stacktop--];
+				stack[++stacktop] = getAttr(o, name);
+				continue;
+			}
+			case 14: // SUBSCRIPT
+			{
+				Object key = stack[stacktop--];
+				Object obj = stack[stacktop--];
+				if (obj instanceof List) {
+					if (!(key instanceof Integer)) {
+						internalError("TypeError",
+								"list indices must be integers: "
+										+ toPyString(key));
+					}
+					int index = (Integer) key;
+					List<Object> l = (List<Object>) obj;
+					if (index < 0) {
+						index = l.size() + index;
+					}
+					if (index < 0 || index >= l.size()) {
+						internalError("IndexError", "list index out of range");
+					}
+					stack[++stacktop] = l.get(index);
+					continue;
+				} else if (obj instanceof Map) {
+					Map<Object, Object> m = (Map<Object, Object>) obj;
+					if (m.containsKey(key)) {
+						stack[++stacktop] = m.get(key);
+						continue;
+					}
+					internalError("KeyError", toPyString(key));
+				} else if (obj instanceof String) {
+					if (!(key instanceof Integer)) {
+						internalError("TypeError",
+								"str indices must be integers: "
+										+ toPyString(key));
+					}
+					int ikey = (Integer) key;
+					if (ikey < 0) {
+						ikey += ((String) obj).length();
+					}
+					try {
+						stack[++stacktop] = ((String) obj).substring(ikey,
+								ikey + 1);
+						continue;
+					} catch (IndexOutOfBoundsException e) {
+						internalError("IndexError", "string index out of range");
+					}
+				}
+				internalError("TypeError", "object is not subscriptable "
+						+ toPyString(obj));
+			}
+			case 15: // SUBSCRIPT_SLICE
+			{
+				Object to = stack[stacktop--];
+				Object from = stack[stacktop--];
+				Object obj = stack[stacktop--];
+				if (!((to == null || to instanceof Integer) && (from == null || from instanceof Integer))) {
+					internalError(
+							"TypeError",
+							String.format(
+									"slice indices must both be integers: supplied %s and %s",
+									toPyTypeString(from), toPyTypeString(to)));
+				}
+				if (obj instanceof List) {
+					List thelist = (List) obj;
+					int ifrom = (from == null) ? 0 : (Integer) from;
+					int ito = (to == null) ? thelist.size() : (Integer) to;
+					if (ifrom < 0) {
+						ifrom += thelist.size();
+						if (ifrom < 0) {
+							ifrom = 0;
+						}
+					}
+					if (ito < 0) {
+						ito += thelist.size();
+					}
+					List result = new ArrayList();
+					for (int i = ifrom; i < ito && i < thelist.size(); i++) {
+						result.add(thelist.get(i));
+					}
+					stack[++stacktop] = result;
+					continue;
+				} else if (obj instanceof String) {
+					String str = (String) obj;
+					int ifrom = (from == null) ? 0 : (Integer) from;
+					int ito = (to == null) ? str.length() : (Integer) to;
+					if (ifrom < 0) {
+						ifrom += str.length();
+					}
+					if (ito < 0) {
+						ito += str.length();
+					}
+					// python allows the indices to be out of range
+					if ((ifrom >= str.length()) || ito <= ifrom) {
+						stack[++stacktop] = "";
+					} else {
+						if (ito > str.length()) {
+							ito = str.length();
+						}
+						if (ifrom < 0) {
+							ifrom = 0;
+						}
+						stack[++stacktop] = str.substring(ifrom, ito);
+					}
+					continue;
+				}
+				internalError("TypeError",
+						"you can only slice lists and strings, not "
+								+ toPyTypeString(obj));
+				continue;
+			}
+			case 33: // ASSIGN_INDEX
+			{
+				Object value = stack[stacktop--];
+				Object index = stack[stacktop--];
+				Object obj = stack[stacktop--];
+				if (obj instanceof Map) {
+					((Map) obj).put(index, value);
+				} else if (obj instanceof List) {
+					if (!(index instanceof Integer)) {
+						internalError("TypeError",
+								"list indices must be integers, not "
+										+ toPyTypeString(index));
+					}
+					int iindex = (Integer) index;
+					List list = (List) obj;
+					if (iindex < list.size()) {
+						iindex += list.size();
+					}
+					if (iindex < 0 || iindex >= list.size()) {
+						internalError("IndexError",
+								"list assignment index out of range");
+					}
+					list.set(iindex, value);
+				} else {
+					internalError("TypeError", toPyTypeString(obj)
+							+ " does not support item assignment");
+				}
+				continue;
+			}
+			case 28: // DEL_INDEX
+			{
+				Object item = stack[stacktop--];
+				Object container = stack[stacktop--];
+				if (container instanceof List) {
+					if (!(item instanceof Integer)) {
+						internalError("TypeError",
+								"Can only use integers to index list not "
+										+ toPyTypeString(item));
+					}
+					int i = (Integer) item;
+					if (i < 0) {
+						i = ((List) container).size() + i;
+					}
+					if (i < 0 || i >= ((List) container).size()) {
+						internalError("IndexError", "list index out of bounds");
+					}
+					((List) container).remove(i);
+				} else if (container instanceof Map) {
+					Object found = ((Map) container).remove(item);
+					if (item != null && found == null) {
+						internalError("KeyError", toPyString(item));
+					}
+				} else {
+					internalError("TypeError", "Can't delete item of "
+							+ toPyTypeString(container));
+				}
+				continue;
+			}
+			case 29: // DEL_SLICE
+			{
+				Object to = stack[stacktop--];
+				Object from = stack[stacktop--];
+				Object inlist = stack[stacktop--];
+				if (!(inlist instanceof List)) {
+					internalError("TypeError", "you can only slice lists not "
+							+ toPyTypeString(inlist));
+				}
+				if (to instanceof Integer && from instanceof Integer) {
+					int ifrom = (Integer) from;
+					int ito = (Integer) to;
+					List thelist = (List) inlist;
+					if (ifrom < 0) {
+						ifrom = thelist.size() + ifrom;
+					}
+					if (ito < 0) {
+						ito = thelist.size() + ito;
+					}
+					// List only lets you delete one item at a time. We have to
+					// start from the end so we don't
+					// peturb index values while deleting
+					if (ito > ifrom) {
+						for (int i = ito - 1; i >= 0 && i >= ifrom; i--) {
+							// python allows out of range list indices
+							if (i < thelist.size()) {
+								thelist.remove(i);
+							}
+						}
+					}
+				} else {
+					internalError(
+							"TypeError",
+							String.format(
+									"slice indices must both be integers: supplied %s and %s",
+									toPyTypeString(from), toPyTypeString(to)));
+				}
+				continue;
+			}
+			case 164: // DEL_NAME
+			{
+				String name = strings[val];
+				// Python allows del of globals but ignores the del!
+				if (current.globals != null && current.globals.contains(name)) {
+					continue;
+				}
+				// we have to test for membership since we can't tell from
+				// remove if the
+				// key existed or had a null value
+				if (current.variables.containsKey(name)) {
+					current.variables.remove(name);
+				} else {
+					internalError("NameError",
+							String.format("name '%s' is not defined", name));
+				}
+				continue;
+			}
+			case 7: // IN
+			{
+				Object collection = stack[stacktop--];
+				Object key = stack[stacktop--];
+				if (collection instanceof Map) {
+					stack[++stacktop] = ((Map) collection).containsKey(key);
+					continue;
+				} else if (collection instanceof List) {
+					stack[++stacktop] = ((List) collection).contains(key);
+					continue;
+				}
+				internalError("TypeError", "can't do 'in' in "
+						+ toPyString(collection));
+			}
+
+			// Unary operations
+			case 13: // UNARY_NEG
+			{
+				if (stack[stacktop] instanceof Integer) {
+					stack[stacktop] = -(Integer) stack[stacktop];
+					continue;
+				} else {
+					internalError("TypeError", "Can't negate "
+							+ toPyTypeString(stack[stacktop]));
+				}
+			}
+			case 8: // UNARY_ADD
+			{
+				if (stack[stacktop] instanceof Integer) {
+				} else {
+					internalError("TypeError", "Can't unary plus "
+							+ toPyTypeString(stack[stacktop]));
+				}
+				continue;
+			}
+			case 24: // NOT
+			{
+				stack[stacktop] = !builtin_bool(stack[stacktop]);
+				continue;
+			}
+			case 20: // STR
+			{
+				stack[stacktop] = toPyString(stack[stacktop]);
+				continue;
+			}
+			case 25: // ITER
+			{
+				Object o = stack[stacktop];
+				if (o instanceof List) {
+					stack[stacktop] = ((List) o).iterator();
+				} else if (o instanceof Map) {
+					stack[stacktop] = ((Map) o).keySet().iterator();
+				} else {
+					internalError("TypeError", toPyString(o)
+							+ " is not iterable");
+				}
+				continue;
+			}
+
+			// More heavyweight stuff
+			case 23: // PRINT
+			{
+				StringBuilder sb = new StringBuilder();
+				int nargs = (Integer) stack[stacktop--];
+				boolean nl = (Boolean) stack[stacktop--];
+				stacktop -= nargs;
+				for (int i = 0; i < nargs; i++) {
+					if (i != 0) {
+						sb.append(" ");
+					}
+					sb.append(toPyString(stack[stacktop + i + 1]));
+				}
+				sb.append(nl ? "\n" : " ");
+				if (mTheClient != null) {
+					mTheClient.print(sb.toString());
+				}
+				continue;
+			}
+			case 161: // STORE_NAME
+			{
+				// is it a global?
+				Context c = current;
+				if (current.globals != null
+						&& current.globals.contains(strings[val])) {
+					c = root;
+				}
+				c.variables.put(strings[val], stack[stacktop--]);
+				continue;
+			}
+			case 163: // GLOBAL
+			{
+				if (current != root
+						&& current.variables.containsKey(strings[val])) {
+					internalError(
+							"SyntaxError",
+							String.format(
+									"Name '%s' is assigned to before 'global' declaration",
+									strings[val]));
+				}
+				current.addGlobal(strings[val]);
+				continue;
+			}
+
+			// Function call related
+			case 128: // MAKE_METHOD
+			{
+				while (true) {
+					try {
+						stack[++stacktop] = new TMethod(val, current);
+						continue opcodeswitch;
+					} catch (ArrayIndexOutOfBoundsException e) {
+						extendStack();
+						stacktop--;
+					}
+				}
+			}
+			case 10: // CALL
+			{
+				if (stack[stacktop] instanceof TNativeMethod) {
+					nativeCall();
+					continue;
+				}
+				if (!(stack[stacktop] instanceof TMethod)) {
+					internalError("TypeError", toPyString(stack[stacktop])
+							+ " is not callable");
+				}
+				while (stacktop + 2 > stack.length) {
+					extendStack();
+				}
+				TMethod meth = (TMethod) stack[stacktop--];
+				stack[++stacktop] = current; // return context
+				stack[++stacktop] = pc; // return address
+				current = new Context(meth.context);
+				pc = meth.addr;
+				continue;
+			}
+			case 0: // FUNCTION_PROLOG
+			{
+				int argsexpected = (Integer) stack[stacktop--];
+				int returnpc = (Integer) stack[stacktop--];
+				Context returncontext = (Context) stack[stacktop--];
+				int argsprovided = (Integer) stack[stacktop--];
+				if (argsexpected != argsprovided) {
+					internalError("TypeError", String.format(
+							"Method takes exactly %d arguments (%d given)",
+							argsexpected, argsprovided));
+				}
+				// we need to insert the returncontext/pc before the args
+				stacktop += 2;
+				System.arraycopy(stack, stacktop - argsprovided - 1, stack,
+						stacktop - argsprovided + 1, argsprovided);
+				stack[stacktop - argsprovided - 1] = returncontext;
+				stack[stacktop - argsprovided] = returnpc;
+				continue;
+			}
+			case 9: // RETURN
+			{
+				if (current.parent == null) {
+					internalError("SyntaxError", "'return' outside function");
+				}
+
+				Object retval = stack[stacktop--];
+				int returnpc = (Integer) stack[stacktop--];
+				current = (Context) stack[stacktop--];
+				if (returnpc < 0)
+					return retval;
+				pc = returnpc;
+				stack[++stacktop] = retval;
+				continue;
+			}
+			// -- check end : marker used by tool
+			default:
+				internalError("RuntimeError",
+						String.format("Unknown/unimplemented opcode: %d", op));
+			}
+		}
 	}
 
 	private void extendStack() throws ExecutionError {
-		int newsize=stack.length+(PARANOIDSTACK?1:512);
-		if(newsize>8192) {
+		int newsize = stack.length + (PARANOIDSTACK ? 1 : 512);
+		if (newsize > 8192) {
 			internalError("RuntimeError", "Maximum stack depth exceeded");
 		}
-		Object[] newstack=new Object[newsize];
+		Object[] newstack = new Object[newsize];
 		System.arraycopy(stack, 0, newstack, 0, stack.length);
-		stack=newstack;
+		stack = newstack;
 	}
-
 
 	static final private boolean checkTypeCompatible(Class<?> type, Object val) {
-		if(val==null)
+		if (val == null)
 			return !type.isPrimitive();
-		if(type.isAssignableFrom(val.getClass()))
+		if (type.isAssignableFrom(val.getClass()))
 			return true;
-		if(!type.isPrimitive())
+		if (!type.isPrimitive())
 			return false;
 
-		// type could be 'int' while val is 'Integer' - work out if that is the case
+		// type could be 'int' while val is 'Integer' - work out if that is the
+		// case
 		// as autoboxing will make them compatible
-		Class<?>vc=val.getClass();
-		return (vc==Integer.class && type==Integer.TYPE) ||
-				(vc==Boolean.class && type==Boolean.TYPE);
+		Class<?> vc = val.getClass();
+		return (vc == Integer.class && type == Integer.TYPE)
+				|| (vc == Boolean.class && type == Boolean.TYPE);
 
 	}
 
-
 	private void nativeCall() throws ExecutionError {
-		// It requires a heroic amount of code to call the single invoke method, and get decent error message
-		// such as wrong parameter types.  Varargs is even more comical.
-		TNativeMethod tm=(TNativeMethod)stack[stacktop--];
+		// It requires a heroic amount of code to call the single invoke method,
+		// and get decent error message
+		// such as wrong parameter types. Varargs is even more comical.
+		TNativeMethod tm = (TNativeMethod) stack[stacktop--];
 
-		int suppliedargs=(Integer)stack[stacktop--];
-		stacktop-=suppliedargs;
+		int suppliedargs = (Integer) stack[stacktop--];
+		stacktop -= suppliedargs;
 		Object[] args;
-		Object[] prefixargs=tm.getPrefixArgs();
-		int lpargs=(prefixargs!=null)?prefixargs.length:0;
-		suppliedargs+=lpargs;
+		Object[] prefixargs = tm.getPrefixArgs();
+		int lpargs = (prefixargs != null) ? prefixargs.length : 0;
+		suppliedargs += lpargs;
 
-		Method method=tm.getMethod();
-		Class<?>[] parameterTypes=method.getParameterTypes();
+		Method method = tm.getMethod();
+		Class<?>[] parameterTypes = method.getParameterTypes();
 
-		int badarg=-1;
-		Object badval=null;
+		int badarg = -1;
+		Object badval = null;
 
-		boolean varargs=method.isVarArgs();
-		if(varargs) {
-			int varargsindex=method.getGenericParameterTypes().length-1;
-			Class<?> vatype=parameterTypes[varargsindex].getComponentType();
-			Object varargsdata=Array.newInstance(vatype, suppliedargs-varargsindex);
-			args=new Object[varargsindex+1];
+		boolean varargs = method.isVarArgs();
+		if (varargs) {
+			int varargsindex = method.getGenericParameterTypes().length - 1;
+			Class<?> vatype = parameterTypes[varargsindex].getComponentType();
+			Object varargsdata = Array.newInstance(vatype, suppliedargs
+					- varargsindex);
+			args = new Object[varargsindex + 1];
 
-			args[varargsindex]=varargsdata;
+			args[varargsindex] = varargsdata;
 
-			for(int i=0;i<suppliedargs;i++) {
-				Object val=(i<lpargs) ? prefixargs[i] : stack[stacktop+i-lpargs+1];
+			for (int i = 0; i < suppliedargs; i++) {
+				Object val = (i < lpargs) ? prefixargs[i] : stack[stacktop + i
+				                                                  - lpargs + 1];
 
-				if(i<varargsindex) {
-					if(!checkTypeCompatible(parameterTypes[i], val)) {
-						badarg=i; badval=val;
+				if (i < varargsindex) {
+					if (!checkTypeCompatible(parameterTypes[i], val)) {
+						badarg = i;
+						badval = val;
 						break;
 					}
-					args[i]=val;
+					args[i] = val;
 				} else {
-					if(!checkTypeCompatible(vatype, val)) {
-						badarg=i; badval=val;
+					if (!checkTypeCompatible(vatype, val)) {
+						badarg = i;
+						badval = val;
 						break;
 					}
-					Array.set(varargsdata, i-varargsindex, val);
+					Array.set(varargsdata, i - varargsindex, val);
 				}
 			}
 		} else {
-			args=new Object[suppliedargs];
-			for(int i=0;i<suppliedargs;i++) {
-				Object val=(i<lpargs) ? prefixargs[i] : stack[stacktop+i-lpargs+1];
+			args = new Object[suppliedargs];
+			for (int i = 0; i < suppliedargs; i++) {
+				Object val = (i < lpargs) ? prefixargs[i] : stack[stacktop + i
+				                                                  - lpargs + 1];
 
-				if(!checkTypeCompatible(parameterTypes[i], val)) {
-					badarg=i; badval=val;
+				if (!checkTypeCompatible(parameterTypes[i], val)) {
+					badarg = i;
+					badval = val;
 					break;
 				}
-				args[i]=val;
+				args[i] = val;
 			}
 		}
 
-		if(badarg>=0) {
-			Class<?> expecting=null;
-			if(varargs && badarg>=parameterTypes.length-1) {
-				expecting=parameterTypes[parameterTypes.length-1].getComponentType();
+		if (badarg >= 0) {
+			Class<?> expecting = null;
+			if (varargs && badarg >= parameterTypes.length - 1) {
+				expecting = parameterTypes[parameterTypes.length - 1]
+						.getComponentType();
 			} else {
-				expecting=parameterTypes[badarg];
+				expecting = parameterTypes[badarg];
 			}
 
-			internalError("TypeError", String.format("Calling %s - bad argument #%d - got %s, expecting %s",
-					tm,
-					badarg+1-lpargs,
-					toPyTypeString(badval),
+			internalError("TypeError", String.format(
+					"Calling %s - bad argument #%d - got %s, expecting %s", tm,
+					badarg + 1 - lpargs, toPyTypeString(badval),
 					toPyTypeString(expecting)));
 		}
 
-		if(args.length!=parameterTypes.length) {
-			String msg=String.format("Call to %s.  Takes %d%s args, %d provided", tm,
-					method.getGenericParameterTypes().length+(varargs?-1:0)-lpargs,
-					varargs?"+":"", suppliedargs-lpargs);
+		if (args.length != parameterTypes.length) {
+			String msg = String.format(
+					"Call to %s.  Takes %d%s args, %d provided", tm,
+					method.getGenericParameterTypes().length
+					+ (varargs ? -1 : 0) - lpargs, varargs ? "+" : "",
+							suppliedargs - lpargs);
 			internalError("TypeError", msg);
 		}
 
-		Object result=null;
+		Object result = null;
 		try {
-			result=method.invoke(tm.getThis(), args);
+			result = method.invoke(tm.getThis(), args);
 		} catch (IllegalArgumentException e) {
 			// this shouldn't be possible since we checked arg typing
-			internalError("RuntimeError", String.format("Illegal arguments to native method %s: %s", tm, e));
+			internalError("RuntimeError", String.format(
+					"Illegal arguments to native method %s: %s", tm, e));
 		} catch (IllegalAccessException e) {
 			// this shouldn't be possible since we checked it is public
-			internalError("RuntimeError", String.format("Illegal access to native method %s: %s", tm, e));
+			internalError("RuntimeError", String.format(
+					"Illegal access to native method %s: %s", tm, e));
 		} catch (InvocationTargetException e) {
-			Object cause=e.getCause();
-			if(cause instanceof ExecutionError)
-				throw (ExecutionError)cause;
-			internalError(cause.getClass().getSimpleName(), String.format("%s: %s", tm, cause));
+			Object cause = e.getCause();
+			if (cause instanceof ExecutionError)
+				throw (ExecutionError) cause;
+			internalError(cause.getClass().getSimpleName(),
+					String.format("%s: %s", tm, cause));
 		}
-		stack[++stacktop]=result;
+		stack[++stacktop] = result;
 	}
 
-	private void internalError(String exctype, String message) throws ExecutionError {
+	private void internalError(String exctype, String message)
+			throws ExecutionError {
 		// need to know current context
-		ExecutionError e=new ExecutionError();
-		e.type=exctype;
-		e.message=message;
-		e.context=current;
-		e.pc=pc;
+		ExecutionError e = new ExecutionError();
+		e.type = exctype;
+		e.message = message;
+		e.context = current;
+		e.pc = pc;
 		throw e;
 	}
 
-	private void internalErrorBinaryOp(String exctype, String op, Object left, Object right) throws ExecutionError {
-		internalError(exctype, String.format("Can't do binary op: %s %s %s", toPyTypeString(left), op, toPyTypeString(right)));
+	private void internalErrorBinaryOp(String exctype, String op, Object left,
+			Object right) throws ExecutionError {
+		internalError(exctype, String.format("Can't do binary op: %s %s %s",
+				toPyTypeString(left), op, toPyTypeString(right)));
 	}
 
-	public void signalError(String exctype, String message) throws ExecutionError {
+	public void signalError(String exctype, String message)
+			throws ExecutionError {
 		internalError(exctype, message);
 	}
 
 	Object getAttr(Object o, String name) throws ExecutionError {
-		if(o instanceof TModule)
-			return new TModuleNativeMethod((TModule)o, name);
+		if (o instanceof TModule)
+			return new TModuleNativeMethod((TModule) o, name);
 
 		// find an instance method
-		String target="instance_"+toPyTypeString(o)+"_"+name;
-		for(Method meth : this.getClass().getDeclaredMethods()) {
-			if(meth.getName().equals(target))
-				return new TBuiltinInstanceMethod(new Object[]{o}, meth, name);
+		String target = "instance_" + toPyTypeString(o) + "_" + name;
+		for (Method meth : this.getClass().getDeclaredMethods()) {
+			if (meth.getName().equals(target))
+				return new TBuiltinInstanceMethod(new Object[] { o }, meth,
+						name);
 		}
 
-		internalError("AttributeError", String.format("No attribute '%s' of %s", name, toPyString(o)));
+		internalError("AttributeError",
+				String.format("No attribute '%s' of %s", name, toPyString(o)));
 		return null;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private final int compareTo(Object left, Object right) throws ExecutionError {
-		if(left==null || right==null) {
-			if(left==right)
+	private final int compareTo(Object left, Object right)
+			throws ExecutionError {
+		if (left == null || right == null) {
+			if (left == right)
 				return 0;
 			return compareTo(toPyTypeString(left), toPyTypeString(right));
 		}
 
 		try {
 			// ignore any exceptions this throws
-			if(left.equals(right))
+			if (left.equals(right))
 				return 0;
-		} catch(ClassCastException e) {}
+		} catch (ClassCastException e) {
+		}
 
-		if(left.getClass()!=right.getClass())
+		if (left.getClass() != right.getClass())
 			return compareTo(toPyTypeString(left), toPyTypeString(right));
 
 		// from here on they are the same type and neither is null
-		if(left instanceof Integer) {
-			int l=(Integer)left, r=(Integer)right;
-			if(l==r)
+		if (left instanceof Integer) {
+			int l = (Integer) left, r = (Integer) right;
+			if (l == r)
 				return 0;
-			if(l<r)
+			if (l < r)
 				return -1;
 			return +1;
 		}
 
-		if(left instanceof String) {
-			int cmp=((String)left).compareTo((String)right);
-			if(cmp<0) return -1;
-			if(cmp==0) return 0;
+		if (left instanceof String) {
+			int cmp = ((String) left).compareTo((String) right);
+			if (cmp < 0)
+				return -1;
+			if (cmp == 0)
+				return 0;
 			return +1;
 		}
-		if(left instanceof List) {
-			Iterator li=((List)left).iterator();
-			Iterator ri=((List)right).iterator();
-			while(true) {
+		if (left instanceof List) {
+			Iterator li = ((List) left).iterator();
+			Iterator ri = ((List) right).iterator();
+			while (true) {
 				// both ended at same place
-				if(!li.hasNext() && !ri.hasNext()) {
+				if (!li.hasNext() && !ri.hasNext()) {
 					break;
 				}
 				// one ends before the other
-				if(!li.hasNext())
+				if (!li.hasNext())
 					return -1;
-				if(!ri.hasNext())
+				if (!ri.hasNext())
 					return +1;
-				int cmp=compareTo(li.next(), ri.next());
-				if(cmp!=0)
+				int cmp = compareTo(li.next(), ri.next());
+				if (cmp != 0)
 					return cmp;
 			}
 			return 0;
 		}
-		if(left instanceof Map) {
-			Map mleft=(Map)left;
-			Map mright=(Map)right;
-			if(mleft.size() != mright.size())
+		if (left instanceof Map) {
+			Map mleft = (Map) left;
+			Map mright = (Map) right;
+			if (mleft.size() != mright.size())
 				return compareTo(mleft.size(), mright.size());
-			Iterator<Map.Entry> li=mleft.entrySet().iterator();
-			Iterator<Map.Entry> ri=mright.entrySet().iterator();
-			while(true) {
-				if(!li.hasNext())
+			Iterator<Map.Entry> li = mleft.entrySet().iterator();
+			Iterator<Map.Entry> ri = mright.entrySet().iterator();
+			while (true) {
+				if (!li.hasNext())
 					return 0;
-				Map.Entry lme=li.next();
-				Map.Entry rme=ri.next();
+				Map.Entry lme = li.next();
+				Map.Entry rme = ri.next();
 
-				int cmp=compareTo(lme.getKey(), rme.getKey());
-				if(cmp!=0) return cmp;
-				cmp=compareTo(lme.getValue(), rme.getValue());
-				if(cmp!=0) return cmp;
+				int cmp = compareTo(lme.getKey(), rme.getKey());
+				if (cmp != 0)
+					return cmp;
+				cmp = compareTo(lme.getValue(), rme.getValue());
+				if (cmp != 0)
+					return cmp;
 			}
 		}
-		if(left instanceof Boolean)
+		if (left instanceof Boolean)
 			return compareTo(builtin_int(left), builtin_int(right));
 		return compareTo(left.toString(), right.toString());
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private String _toPyString(Object o, boolean quotestrings, Set<Integer> seencontainers) {
-		if(o==null)
+	private String _toPyString(Object o, boolean quotestrings,
+			Set<Integer> seencontainers) {
+		if (o == null)
 			return "None";
-		if(o instanceof Boolean)
-			return ((Boolean)o)?"True":"False";
-		if(o instanceof String) {
-			String s=(String)o;
-			if(quotestrings)
-				return "\""+s.replace("\\", "\\\\").replace("\"", "\\\"")+"\"";
+		if (o instanceof Boolean)
+			return ((Boolean) o) ? "True" : "False";
+		if (o instanceof String) {
+			String s = (String) o;
+			if (quotestrings)
+				return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+						+ "\"";
 			return s;
 		}
-		if(o instanceof Map || o instanceof List) {
-			if(seencontainers==null) {
-				seencontainers=new HashSet<Integer>();
+		if (o instanceof Map || o instanceof List) {
+			if (seencontainers == null) {
+				seencontainers = new HashSet<Integer>();
 			}
 
-			Integer id=System.identityHashCode(o);
-			StringBuilder sb=new StringBuilder();
-			if(o instanceof List) {
+			Integer id = System.identityHashCode(o);
+			StringBuilder sb = new StringBuilder();
+			if (o instanceof List) {
 				sb.append("[");
-				if(seencontainers.contains(id)) {
+				if (seencontainers.contains(id)) {
 					sb.append("...");
 				} else {
 					seencontainers.add(id);
-					boolean first=true;
-					for(Object item : (List)o) {
-						if(first) {
-							first=false;
+					boolean first = true;
+					for (Object item : (List) o) {
+						if (first) {
+							first = false;
 						} else {
 							sb.append(", ");
 						}
@@ -1230,22 +1356,24 @@ public class MiniPython {
 				sb.append("]");
 			} else {
 				sb.append("{");
-				if(seencontainers.contains(id)) {
+				if (seencontainers.contains(id)) {
 					sb.append("...");
 				} else {
 					seencontainers.add(id);
-					boolean first=true;
-					Set<Map.Entry> items=((Map)o).entrySet();
-					for(Map.Entry item : items) {
-						if(first) {
-							first=false;
+					boolean first = true;
+					Set<Map.Entry> items = ((Map) o).entrySet();
+					for (Map.Entry item : items) {
+						if (first) {
+							first = false;
 						} else {
 							sb.append(", ");
 						}
-						// it would rather silly to use a container as the key, but go ahead (hence null passed in)
+						// it would rather silly to use a container as the key,
+						// but go ahead (hence null passed in)
 						sb.append(_toPyString(item.getKey(), true, null));
 						sb.append(": ");
-						sb.append(_toPyString(item.getValue(), true, seencontainers));
+						sb.append(_toPyString(item.getValue(), true,
+								seencontainers));
 					}
 				}
 				sb.append("}");
@@ -1260,96 +1388,112 @@ public class MiniPython {
 	}
 
 	public static String toPyTypeString(Object o) {
-		if(o==null)
+		if (o == null)
 			return "NoneType";
-		if(o instanceof Boolean || o==Boolean.TYPE || o==Boolean.class)
+		if (o instanceof Boolean || o == Boolean.TYPE || o == Boolean.class)
 			return "bool";
-		if(o instanceof Map || o==Map.class)
+		if (o instanceof Map || o == Map.class)
 			return "dict";
-		if(o instanceof List || o==List.class)
+		if (o instanceof List || o == List.class)
 			return "list";
-		if(o instanceof Integer || o==Integer.TYPE || o==Integer.class)
+		if (o instanceof Integer || o == Integer.TYPE || o == Integer.class)
 			return "int";
-		if(o instanceof String)
+		if (o instanceof String)
 			return "str";
-		if(o instanceof Callable)
+		if (o instanceof Callable)
 			return "callable";
-		if(o instanceof Class<?>)
-			return ((Class<?>)o).getSimpleName();
+		if (o instanceof Class<?>)
+			return ((Class<?>) o).getSimpleName();
 		return toPyTypeString(o.getClass());
 	}
 
 	public class ExecutionError extends Exception {
 		private static final long serialVersionUID = -4271385191079964823L;
-		String type,message;
+		String type, message;
 		Context context;
 		int pc;
+
 		public String toString() {
-			return type+": "+message;
+			return type + ": " + message;
 		}
+
 		public String getType() {
 			return type;
 		}
+
 		public int linenumber() {
-			// note that context.pc points to the instruction after the one being executed
-			int lastline=-1;
-			for(int i=0;i<linenumbers.length;i++) {
-				if(linenumbers[i][0]>=pc) {
+			// note that context.pc points to the instruction after the one
+			// being executed
+			int lastline = -1;
+			for (int i = 0; i < linenumbers.length; i++) {
+				if (linenumbers[i][0] >= pc) {
 					break;
 				}
-				lastline=linenumbers[i][1];
+				lastline = linenumbers[i][1];
 			}
 			return lastline;
 		}
+
 		public int pc() {
 			return this.pc;
 		}
 	}
 
+	/**
+	 * Provide platform behaviour
+	 */
 	public interface Client {
+		/**
+		 * Request to print a string
+		 * 
+		 * @param s  String to print.  May or may not contain a trailing newline depending on code
+		 * @throws ExecutionError  Throw this if you experience any issues
+		 */
 		public void print(String s) throws ExecutionError;
 	}
 
 	Client mTheClient;
+
 	public void setClient(Client client) {
-		mTheClient=client;
+		mTheClient = client;
 	}
 
 	public void addModule(String name, Object object) {
-		if(root==null) {
-			root=new Context(null);
+		if (root == null) {
+			root = new Context(null);
 		}
 		root.variables.put(name, new TModule(object, name));
 	}
 
 	// builtin methods
-	Object builtin_apply(Callable meth, List<Object> args) throws ExecutionError {
+	Object builtin_apply(Callable meth, List<Object> args)
+			throws ExecutionError {
 		return call(meth, args.toArray());
 	}
 
 	@SuppressWarnings("rawtypes")
 	boolean builtin_bool(Object o) throws ExecutionError {
-		if(o instanceof Boolean)
-			return (Boolean)o;
-		if(o instanceof String)
-			return ((String)o).length()!=0;
-		if(o instanceof Integer)
-			return ((Integer)o)!=0;
-		if(o==null)
+		if (o instanceof Boolean)
+			return (Boolean) o;
+		if (o instanceof String)
+			return ((String) o).length() != 0;
+		if (o instanceof Integer)
+			return ((Integer) o) != 0;
+		if (o == null)
 			return false;
-		if(o instanceof List)
-			return ((List)o).size()>0;
+		if (o instanceof List)
+			return ((List) o).size() > 0;
 
 			// Eclipse is retarded and screws up indentation from here on
-			if(o instanceof Map)
-				return ((Map)o).size()>0;
+			if (o instanceof Map)
+				return ((Map) o).size() > 0;
 
-				internalError("TypeError", "Can't 'bool' "+toPyString(o));
+				internalError("TypeError", "Can't 'bool' " + toPyString(o));
 				return false;
 	}
 
 	boolean builtin_callable(Object o) {
-		return o!=null && o instanceof Callable;
+		return o != null && o instanceof Callable;
 	}
 
 	int builtin_cmp(Object left, Object right) throws ExecutionError {
@@ -1358,9 +1502,9 @@ public class MiniPython {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	List builtin_filter(Callable function, List items) throws ExecutionError {
-		List res=new ArrayList();
-		for(Object item : items) {
-			if(builtin_bool(call(function, item))) {
+		List res = new ArrayList();
+		for (Object item : items) {
+			if (builtin_bool(call(function, item))) {
 				res.add(item);
 			}
 		}
@@ -1377,84 +1521,90 @@ public class MiniPython {
 	}
 
 	int builtin_int(Object o) throws ExecutionError {
-		if(o instanceof Integer)
-			return (Integer)o;
-		if(o instanceof Boolean)
-			return ((Boolean)o)?1:0;
-		if(o instanceof String) {
+		if (o instanceof Integer)
+			return (Integer) o;
+		if (o instanceof Boolean)
+			return ((Boolean) o) ? 1 : 0;
+		if (o instanceof String) {
 			try {
-				return Integer.parseInt((String)o);
-			} catch(NumberFormatException e) {
+				return Integer.parseInt((String) o);
+			} catch (NumberFormatException e) {
 				internalError("ValueError", e.toString());
 			}
 		}
-		internalError("TypeError", "int argument must be bool, string or int not "+toPyTypeString(o));
+		internalError("TypeError",
+				"int argument must be bool, string or int not "
+						+ toPyTypeString(o));
 		return 0;
 	}
 
 	@SuppressWarnings("rawtypes")
 	int builtin_len(Object item) throws ExecutionError {
-		if(item instanceof Map) return ((Map)item).size();
-		if(item instanceof List) return ((List)item).size();
-		if(item instanceof String) return ((String)item).length();
-		internalError("TypeError", "Can't get length of "+toPyString(item));
+		if (item instanceof Map)
+			return ((Map) item).size();
+		if (item instanceof List)
+			return ((List) item).size();
+		if (item instanceof String)
+			return ((String) item).length();
+		internalError("TypeError", "Can't get length of " + toPyString(item));
 		// unreachable code
 		return -1;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	List builtin_map(Callable function, List items) throws ExecutionError {
-		List res=new ArrayList(items.size());
-		for(Object item : items) {
+		List res = new ArrayList(items.size());
+		for (Object item : items) {
 			res.add(call(function, item));
 		}
 		return res;
 	}
 
-	void builtin_print(Object ...items) throws ExecutionError {
-		StringBuilder sb=new StringBuilder();
-		for(int i=0; i<items.length; i++) {
-			if(i!=0) {
+	void builtin_print(Object... items) throws ExecutionError {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < items.length; i++) {
+			if (i != 0) {
 				sb.append(" ");
 			}
 			sb.append(toPyString(items[i]));
 		}
 		sb.append("\n");
-		if(mTheClient!=null) {
+		if (mTheClient != null) {
 			mTheClient.print(sb.toString());
 		}
 	}
 
-	List<Object> builtin_range(int start, int... constraints) throws ExecutionError {
-		if(constraints.length>2) {
+	List<Object> builtin_range(int start, int... constraints)
+			throws ExecutionError {
+		if (constraints.length > 2) {
 			internalError("TypeError", "Expected at most 3 arguments");
 		}
-		int step=1;
-		int stop=1;
-		switch(constraints.length) {
+		int step = 1;
+		int stop = 1;
+		switch (constraints.length) {
 		case 0:
-			stop=start;
-			start=0;
+			stop = start;
+			start = 0;
 			break;
 		case 1:
-			stop=constraints[0];
+			stop = constraints[0];
 			break;
 		case 2:
-			stop=constraints[0];
-			step=constraints[1];
+			stop = constraints[0];
+			step = constraints[1];
 			break;
 		}
-		if(step==0) {
+		if (step == 0) {
 			internalError("ValueError", "step argument must not be zero");
 		}
-		List<Object> res=new ArrayList<Object>();
+		List<Object> res = new ArrayList<Object>();
 
-		if(step<0 && stop<start) {
-			for(int i=start; i>stop; i+=step) {
+		if (step < 0 && stop < start) {
+			for (int i = start; i > stop; i += step) {
 				res.add(i);
 			}
 		} else {
-			for(int i=start; i<stop; i+=step) {
+			for (int i = start; i < stop; i += step) {
 				res.add(i);
 			}
 		}
@@ -1476,9 +1626,9 @@ public class MiniPython {
 
 	@SuppressWarnings("rawtypes")
 	String instance_str_join(String s, List items) {
-		StringBuilder sb=new StringBuilder();
-		for(Object item : items) {
-			if(sb.length()>0) {
+		StringBuilder sb = new StringBuilder();
+		for (Object item : items) {
+			if (sb.length() > 0) {
 				sb.append(s);
 			}
 			sb.append(toPyString(item));
@@ -1494,29 +1644,31 @@ public class MiniPython {
 		return s.replace(target, replacement);
 	}
 
-	List<String> instance_str_split(String s, Object ...args) throws ExecutionError {
-		int maxsplit=0;
-		String sep=null;
+	List<String> instance_str_split(String s, Object... args)
+			throws ExecutionError {
+		int maxsplit = 0;
+		String sep = null;
 
-		switch(args.length)
-		{
+		switch (args.length) {
 		default:
-			internalError("TypeError", "Too many arguments to str.split (at most 2 taken)");
+			internalError("TypeError",
+					"Too many arguments to str.split (at most 2 taken)");
 		case 2:
-			if(!(args[1] instanceof Integer)) {
+			if (!(args[1] instanceof Integer)) {
 				internalError("TypeError", "maxsplit should be an integer");
 			}
-			maxsplit=(Integer)args[1];
+			maxsplit = (Integer) args[1];
 		case 1:
-			if(!(args[0] instanceof String)) {
+			if (!(args[0] instanceof String)) {
 				internalError("TypeError", "sep should be an integer");
 			}
-			sep=(String)args[0];
+			sep = (String) args[0];
 		case 0:
 		}
-		String[] splits=s.split((sep!=null)? Pattern.quote(sep) : "\\s+", maxsplit);
-		ArrayList<String> res=new ArrayList<String>(splits.length);
-		for(String str : splits) {
+		String[] splits = s.split((sep != null) ? Pattern.quote(sep) : "\\s+",
+				maxsplit);
+		ArrayList<String> res = new ArrayList<String>(splits.length);
+		for (String str : splits) {
 			res.add(str);
 		}
 		return res;
@@ -1536,9 +1688,9 @@ public class MiniPython {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	void instance_dict_update(Map map, Map other) {
-		Iterator<Map.Entry> it=other.entrySet().iterator();
-		while(it.hasNext()) {
-			Map.Entry m=it.next();
+		Iterator<Map.Entry> it = other.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry m = it.next();
 			map.put(m.getKey(), m.getValue());
 		}
 	}
@@ -1550,18 +1702,18 @@ public class MiniPython {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	void instance_list_extend(List list, List other) {
-		for(Object i : other) {
+		for (Object i : other) {
 			list.add(i);
 		}
 	}
 
 	@SuppressWarnings("rawtypes")
 	Object instance_list_pop(List list) throws ExecutionError {
-		if(list.size()==0) {
+		if (list.size() == 0) {
 			internalError("IndexError", "pop from empty list");
 		}
-		Object res=list.get(list.size()-1);
-		list.remove(list.size()-1);
+		Object res = list.get(list.size() - 1);
+		list.remove(list.size() - 1);
 		return res;
 	}
 
@@ -1572,36 +1724,40 @@ public class MiniPython {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	void instance_list_sort(List list, Object... args) throws ExecutionError {
-		Callable cmp=null;
-		Callable key=null;
-		boolean reverse=false;
+		Callable cmp = null;
+		Callable key = null;
+		boolean reverse = false;
 
-		switch(args.length) {
+		switch (args.length) {
 		default:
-			internalError("TypeError", String.format("list.sort() takes most 3 arguments (%d given)", args.length));
+			internalError("TypeError", String.format(
+					"list.sort() takes most 3 arguments (%d given)",
+					args.length));
 		case 3:
-			if(args[2]!=null) {
-				if(!(args[2] instanceof Boolean)) {
-					internalError("TypeError", "list.sort reverse parameter should be boolean not "+toPyTypeString(args[2]));
+			if (args[2] != null) {
+				if (!(args[2] instanceof Boolean)) {
+					internalError("TypeError",
+							"list.sort reverse parameter should be boolean not "
+									+ toPyTypeString(args[2]));
 				}
-				reverse=(Boolean)args[2];
+				reverse = (Boolean) args[2];
 			}
-		case 2:
-		{
-			if(args[1]!=null) {
-				if(!builtin_callable(args[1])) {
-					internalError("ValueError", "list.sort key parameter must be callable");
+		case 2: {
+			if (args[1] != null) {
+				if (!builtin_callable(args[1])) {
+					internalError("ValueError",
+							"list.sort key parameter must be callable");
 				}
-				key=(Callable)args[1];
+				key = (Callable) args[1];
 			}
 		}
-		case 1:
-		{
-			if(args[0]!=null) {
-				if(!builtin_callable(args[0])) {
-					internalError("ValueError", "list.sort cmp parameter must be callable");
+		case 1: {
+			if (args[0] != null) {
+				if (!builtin_callable(args[0])) {
+					internalError("ValueError",
+							"list.sort cmp parameter must be callable");
 				}
-				cmp=(Callable)args[0];
+				cmp = (Callable) args[0];
 			}
 		}
 		case 0:
@@ -1609,34 +1765,34 @@ public class MiniPython {
 		}
 
 		// and this is why we like using real programming languages ...
-		final Callable javasucks=cmp;
-		final Callable javareallysucks=key;
-		final ExecutionError[] didimentionsuckage=new ExecutionError[1];
+		final Callable javasucks = cmp;
+		final Callable javareallysucks = key;
+		final ExecutionError[] didimentionsuckage = new ExecutionError[1];
 
-		Comparator comparator=new Comparator() {
+		Comparator comparator = new Comparator() {
 			@Override
 			public int compare(Object left, Object right) {
 				try {
-					if(javareallysucks!=null)
-					{
-						left=call(javareallysucks, left);
-						right=call(javareallysucks, right);
+					if (javareallysucks != null) {
+						left = call(javareallysucks, left);
+						right = call(javareallysucks, right);
 					}
 
-					return (javasucks==null)?builtin_cmp(left, right):(Integer)call(javasucks, left, right);
+					return (javasucks == null) ? builtin_cmp(left, right)
+							: (Integer) call(javasucks, left, right);
 				} catch (ExecutionError e) {
-					didimentionsuckage[0]=e;
+					didimentionsuckage[0] = e;
 					throw new ClassCastException();
 				}
 			}
 		};
-		if(reverse) {
-			comparator=Collections.reverseOrder(comparator);
+		if (reverse) {
+			comparator = Collections.reverseOrder(comparator);
 		}
 		try {
 			Collections.sort(list, comparator);
-		} catch(ClassCastException e) {
-			if(didimentionsuckage[0]!=null)
+		} catch (ClassCastException e) {
+			if (didimentionsuckage[0] != null)
 				throw didimentionsuckage[0];
 			throw e;
 		}
