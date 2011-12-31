@@ -37,4 +37,4 @@ JAVADOCDIR="doc/_build/javadoc"
 javadoc:
 	@rm -rf $(JAVADOCDIR)
 	@mkdir -p $(JAVADOCDIR)
-	javadoc -notimestamp -quiet -nodeprecatedlist -use -notree -nohelp -sourcepath src -d $(JAVADOCDIR)/javadoc -link http://docs.oracle.com/javase/6/docs/api/  src/com/rogerbinns/MiniPython.java
+	javadoc -notimestamp -quiet -nodeprecatedlist -use -notree -nohelp -sourcepath src -d $(JAVADOCDIR)/javadoc -link http://docs.oracle.com/javase/7/docs/api/  src/com/rogerbinns/MiniPython.java
