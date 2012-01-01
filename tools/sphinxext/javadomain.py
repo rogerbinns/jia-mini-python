@@ -76,6 +76,8 @@ class JavaMethodDescription(ObjectDescription):
     """ Description of a Java method. """
 
     def _parse_type(self, type_name, node):
+        if type_name.endswith("..."):
+            type_name=type_name[:-3]
         if type_name in primitives:
             node += addnodes.desc_type(type_name, type_name)
         else:
