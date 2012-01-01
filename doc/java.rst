@@ -105,66 +105,88 @@ class MiniPython
 .. class:: MiniPython
 
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.html>`__)
-   Encapsulates running a Python syntax file
+   Encapsulates running a Python syntax file.
 
-   The source should have been transformed using jmp-compile. The class
-   is not threadsafe and calls should only be made in the same thread. There is
-   no shared state between instances.
+   The source should have been transformed using jmp-compile. The class is not
+   threadsafe and calls should only be made in the same thread. There is no
+   shared state between instances.
 
-   .. method:: Object callMethod(String name, Object ...args)
+   .. method:: void addModule(String name, Object object)
+
+      Makes methods on the methods Object available to the Python
+
+      :param name:  Module name in the Python environment
+      :param object:  Object to introspect looking for methods
+
+      .. seealso:: `Adding methods <../../../../java.html#id1>`__
+
+   .. method:: Object callMethod(String name, Object... args)
 
       Calls a method in Python and returns the result
-      :param name: Global method name
-      :param args: Variable list of arguments that it takes
-      :raises ExecutionError: On any issues encountered
+
+      :param name:  Global method name
+      :param args:  Variable list of arguments that it takes
+      :raises ExecutionError:  On any issues encountered
 
    .. method:: void clear()
 
       Removes all internal state.
 
       This ensures that garbage collection is easier. You can reuse this
-      instance by calling addModule to reregister modules and
-      setCode to run new code.
+      instance by calling addModule to reregister modules and setCode to run
+      new code.
+
+   .. method:: void setClient(Client client)
+
+      Callbacks to use for specific behaviour
+
+      :param client:  Replaces existing client with this one
 
    .. method:: void setCode(InputStream stream)
 
       Reads and executes code from the supplied stream
 
-      :param stream: The stream is not closed and you can have additional content after the jmp.
-      :raises IOException: Passed on from read() calls on the stream
-      :raises EOFException: When the stream is truncated
-      :raises ExecutionError: Any issues from executing the code
+      :param stream:  The stream is not closed and you can have additional content
+                 after the jmp.
+      :raises IOException:  Passed on from read() calls on the stream
+      :raises EOFException:  When the stream is truncated
+      :raises ExecutionError:  Any issues from executing the code
 
    .. method:: void signalError(String exctype, String message)
 
-      Call this method when your callbacks need to halt execution due to an error
+      Call this method when your callbacks need to halt execution due to an
+      error
 
-      This method will do the internal bookkeeping necessary in order
-      to provide diagnostics to the original caller and then throw an
+      This method will do the internal bookkeeping necessary in order to
+      provide diagnostics to the original caller and then throw an
       ExecutionError which you should not catch.
 
-      :param exctype: Best practise is to use the name of a Python exception (eg "TypeError")
-      :param message: Text describing the error.
-      :raises ExecutionError: Always thrown
+      :param exctype:  Best practise is to use the name of a Python exception (eg
+                 "TypeError")
+      :param message:  Text describing the error.
+      :raises ExecutionError:  Always thrown
 
    .. method:: String toPyString(Object o)
 
-      Returns a string representing the object using Python nomenclature where possible
+      Returns a string representing the object using Python nomenclature where
+      possible
 
-      For example `null` is returned as `None`, `true` as `True` etc.  Container types like dict/Map
-      and list/List will include the items.
+      For example `null` is returned as `None`, `true` as `True` etc. Container
+      types like dict/Map and list/List will include the items.
 
-      :param o: Object to stringify.  Can be null.
+      :param o:  Object to stringify. Can be null.
 
    .. method:: static String toPyTypeString(Object o)
 
-      Returns a string representing the type of the object using Python nomenclature where possible
+      Returns a string representing the type of the object using Python
+      nomenclature where possible
 
-      For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as `dict` etc.  You can
-      also pass in Class objects as well as instances.  Note that primitives (eg `int`) and the
-      corresponding boxed type (eg `Integer`) will both be returned as the same string (`int` in
-      this case).
-      :param o: Object whose type to stringify, or a Class or null
+      For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as
+      `dict` etc. You can also pass in Class objects as well as instances. Note
+      that primitives (eg `int`) and the corresponding boxed type (eg
+      `Integer`) will both be returned as the same string (`int` in this case).
+
+      :param o:  Object whose type to stringify, or a Class or null
 
 .. _Client:
 
@@ -176,27 +198,13 @@ interface MiniPython.Client
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.Client.html>`__)
    Provide platform behaviour
 
-   .. method:: void addModule(String name, Object object)
-
-      Makes methods on the methods Object available to the Python
-
-      :param name: Module name in the Python environment
-      :param object: Object to introspect looking for methods
-
-      .. seealso:: `Adding methods <../../../../java.html#id1>`__
-
    .. method:: void print(String s)
 
       Request to print a string
 
-      :param s: String to print.  May or may not contain a trailing newline depending on code
-      :raises ExecutionError: Throw this if you experience any issues
-
-   .. method:: void setClient(Client client)
-
-      Callbacks to use for specific behaviour
-
-      :param client: Replaces existing client with this one
+      :param s:  String to print. May or may not contain a trailing newline
+                 depending on code
+      :raises ExecutionError:  Throw this if you experience any issues
 
 .. _ExecutionError:
 
@@ -215,11 +223,13 @@ class MiniPython.ExecutionError
 
       Returns the type of the error.
 
-      This typically corresponds to a Python exception (eg `TypeError` or `IndexError`)
+      This typically corresponds to a Python exception (eg `TypeError` or
+      `IndexError`)
 
    .. method:: int linenumber()
 
-      Returns the line number which was being executed when the error happened.
+      Returns the line number which was being executed when the error
+      happened.
 
       If you omitted line numbers then -1 is returned.
 
@@ -227,9 +237,8 @@ class MiniPython.ExecutionError
 
       Returns program counter when error occurred.
 
-      Note that due to internal implementation details this is
-      the next instruction to be executed, not the currently
-      executing one.
+      Note that due to internal implementation details this is the next
+      instruction to be executed, not the currently executing one.
 
    .. method:: String toString()
 

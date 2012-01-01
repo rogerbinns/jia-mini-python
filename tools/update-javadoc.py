@@ -97,7 +97,10 @@ def update_doc(data):
             res.append(indent()+".. method:: "+meth["signature"])
             res.append("")
             indentlevel+=1
-            for line in meth["comment-text"].split("\n"):
+            lines=meth["comment-text"].split("\n")
+            pos=0
+            while pos<len(lines):
+                line=lines[pos]
                 if line.strip():
                     line=fixup(line) 
                 if not isinstance(line, tuple):
@@ -107,6 +110,11 @@ def update_doc(data):
                         res.append(indent()+l)
                     else:
                         res.append("")
+                if res[-1].rstrip().endswith(":"):
+                    # append next line to it
+                    res[-1]=res[-1]+" "+lines[pos+1].strip()
+                    pos+=1
+                pos+=1
             indentlevel-=1
               
         res.append("")
@@ -128,18 +136,12 @@ def unhtml(line):
 def fixup(line):
     # turn javadoc @stuff into sphinx
     x=line.split(None, 2)
+    while len(x)<3:
+        x.append("")
     if x[0]=="@param":
-        try:
-            return ":param %s: %s" % (x[1], x[2])
-        except IndexError:
-            print "No param descrioption in", line
-            raise
+        return ":param %s: %s" % (x[1], x[2])
     elif x[0]=="@throws":
-        try:
-            return ":raises %s: %s" % (x[1], x[2])
-        except IndexError:
-            print "No throws text in", line
-            raise
+        return ":raises %s: %s" % (x[1], x[2])
     elif x[0]=="@see":
         x=line.split(None, 1)
         return ("", ".. seealso:: "+x[1])

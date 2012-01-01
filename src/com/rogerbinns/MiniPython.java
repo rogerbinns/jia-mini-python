@@ -20,11 +20,11 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Encapsulates running a Python syntax file
+ * Encapsulates running a Python syntax file.
  * 
- * <p>The source should have been transformed using jmp-compile. The class
- * is not threadsafe and calls should only be made in the same thread. There is
- * no shared state between instances.</p>
+ * The source should have been transformed using jmp-compile. The class is not
+ * threadsafe and calls should only be made in the same thread. There is no
+ * shared state between instances.
  */
 public class MiniPython {
 
@@ -47,8 +47,8 @@ public class MiniPython {
 	 * Removes all internal state.
 	 * 
 	 * This ensures that garbage collection is easier. You can reuse this
-	 * instance by calling addModule to reregister modules and
-	 * setCode to run new code.
+	 * instance by calling addModule to reregister modules and setCode to run
+	 * new code.
 	 */
 	public void clear() {
 		root = current = null;
@@ -62,10 +62,15 @@ public class MiniPython {
 	/**
 	 * Reads and executes code from the supplied stream
 	 * 
-	 * @param stream  The stream is not closed and you can have additional content after the jmp.
-	 * @throws IOException      Passed on from read() calls on the stream
-	 * @throws EOFException     When the stream is truncated
-	 * @throws ExecutionError   Any issues from executing the code
+	 * @param stream
+	 *            The stream is not closed and you can have additional content
+	 *            after the jmp.
+	 * @throws IOException
+	 *             Passed on from read() calls on the stream
+	 * @throws EOFException
+	 *             When the stream is truncated
+	 * @throws ExecutionError
+	 *             Any issues from executing the code
 	 */
 	public void setCode(InputStream stream) throws IOException, ExecutionError {
 		if (root == null) {
@@ -306,11 +311,15 @@ public class MiniPython {
 
 	/**
 	 * Calls a method in Python and returns the result
-	 * @param name Global method name
-	 * @param args Variable list of arguments that it takes
-	 * @throws ExecutionError On any issues encountered
+	 * 
+	 * @param name
+	 *            Global method name
+	 * @param args
+	 *            Variable list of arguments that it takes
+	 * @throws ExecutionError
+	 *             On any issues encountered
 	 */
-	public Object callMethod(String name, Object ...args) throws ExecutionError {
+	public Object callMethod(String name, Object... args) throws ExecutionError {
 		Object meth = root.variables.get(name);
 		if (meth == null) {
 			internalError("NameError", name + " is not defined");
@@ -1219,15 +1228,20 @@ public class MiniPython {
 	}
 
 	/**
-	 * Call this method when your callbacks need to halt execution due to an error
+	 * Call this method when your callbacks need to halt execution due to an
+	 * error
 	 * 
-	 * This method will do the internal bookkeeping necessary in order
-	 * to provide diagnostics to the original caller and then throw an
+	 * This method will do the internal bookkeeping necessary in order to
+	 * provide diagnostics to the original caller and then throw an
 	 * ExecutionError which you should not catch.
 	 * 
-	 * @param exctype Best practise is to use the name of a Python exception (eg "TypeError")
-	 * @param message  Text describing the error.
-	 * @throws ExecutionError Always thrown
+	 * @param exctype
+	 *            Best practise is to use the name of a Python exception (eg
+	 *            "TypeError")
+	 * @param message
+	 *            Text describing the error.
+	 * @throws ExecutionError
+	 *             Always thrown
 	 */
 	public void signalError(String exctype, String message)
 			throws ExecutionError {
@@ -1401,25 +1415,30 @@ public class MiniPython {
 	}
 
 	/**
-	 * Returns a string representing the object using Python nomenclature where possible
+	 * Returns a string representing the object using Python nomenclature where
+	 * possible
 	 * 
-	 * For example `null` is returned as `None`, `true` as `True` etc.  Container types like dict/Map
-	 * and list/List will include the items.
-	 *
-	 * @param o  Object to stringify.  Can be null.
+	 * For example `null` is returned as `None`, `true` as `True` etc. Container
+	 * types like dict/Map and list/List will include the items.
+	 * 
+	 * @param o
+	 *            Object to stringify. Can be null.
 	 */
 	public String toPyString(Object o) {
 		return _toPyString(o, false, null);
 	}
 
 	/**
-	 * Returns a string representing the type of the object using Python nomenclature where possible
+	 * Returns a string representing the type of the object using Python
+	 * nomenclature where possible
 	 * 
-	 * For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as `dict` etc.  You can
-	 * also pass in Class objects as well as instances.  Note that primitives (eg `int`) and the
-	 * corresponding boxed type (eg `Integer`) will both be returned as the same string (`int` in
-	 * this case).
-	 * @param o  Object whose type to stringify, or a Class or null
+	 * For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as
+	 * `dict` etc. You can also pass in Class objects as well as instances. Note
+	 * that primitives (eg `int`) and the corresponding boxed type (eg
+	 * `Integer`) will both be returned as the same string (`int` in this case).
+	 * 
+	 * @param o
+	 *            Object whose type to stringify, or a Class or null
 	 */
 	public static String toPyTypeString(Object o) {
 		if (o == null)
@@ -1441,86 +1460,13 @@ public class MiniPython {
 		return toPyTypeString(o.getClass());
 	}
 
-	/**
-	 * Encapsulates what would be an Exception in Python.
-	 * 
-	 * Do not instantiate one directly - call signalError instead.
-	 *
-	 */
-	public class ExecutionError extends Exception {
-		private static final long serialVersionUID = -4271385191079964823L;
-		String type, message;
-		Context context;
-		int pc;
-
-		private ExecutionError() {}
-
-		@Override
-		/**
-		 * Returns "type: message" for the error
-		 */
-		public String toString() {
-			return type + ": " + message;
-		}
-
-		/**
-		 * Returns the type of the error.
-		 * 
-		 * This typically corresponds to a Python exception (eg `TypeError` or `IndexError`)
-		 */
-		public String getType() {
-			return type;
-		}
-
-		/**
-		 * Returns the line number which was being executed when the error happened.
-		 * 
-		 * If you omitted line numbers then -1 is returned.
-		 */
-		public int linenumber() {
-			// note that context.pc points to the instruction after the one
-			// being executed
-			int lastline = -1;
-			for (int i = 0; i < linenumbers.length; i++) {
-				if (linenumbers[i][0] >= pc) {
-					break;
-				}
-				lastline = linenumbers[i][1];
-			}
-			return lastline;
-		}
-
-		/**
-		 * Returns program counter when error occurred.
-		 * 
-		 * Note that due to internal implementation details this is
-		 * the next instruction to be executed, not the currently
-		 * executing one.
-		 */
-		public int pc() {
-			return this.pc;
-		}
-	}
-
-	/**
-	 * Provide platform behaviour
-	 */
-	public interface Client {
-		/**
-		 * Request to print a string
-		 * 
-		 * @param s  String to print.  May or may not contain a trailing newline depending on code
-		 * @throws ExecutionError  Throw this if you experience any issues
-		 */
-		public void print(String s) throws ExecutionError;
-	}
-
 	Client mTheClient;
 
 	/**
 	 * Callbacks to use for specific behaviour
 	 * 
-	 * @param client Replaces existing client with this one
+	 * @param client
+	 *            Replaces existing client with this one
 	 */
 	public void setClient(Client client) {
 		mTheClient = client;
@@ -1529,8 +1475,10 @@ public class MiniPython {
 	/**
 	 * Makes methods on the methods Object available to the Python
 	 * 
-	 * @param name    Module name in the Python environment
-	 * @param object  Object to introspect looking for methods
+	 * @param name
+	 *            Module name in the Python environment
+	 * @param object
+	 *            Object to introspect looking for methods
 	 * @see <a href="../../../../java.html#id1">Adding methods</a>
 	 */
 	public void addModule(String name, Object object) {
@@ -1873,4 +1821,82 @@ public class MiniPython {
 		}
 	}
 
+	/**
+	 * Provide platform behaviour
+	 */
+	public interface Client {
+		/**
+		 * Request to print a string
+		 * 
+		 * @param s
+		 *            String to print. May or may not contain a trailing newline
+		 *            depending on code
+		 * @throws ExecutionError
+		 *             Throw this if you experience any issues
+		 */
+		public void print(String s) throws ExecutionError;
+	}
+
+	/**
+	 * Encapsulates what would be an Exception in Python.
+	 * 
+	 * Do not instantiate one directly - call signalError instead.
+	 * 
+	 */
+	public class ExecutionError extends Exception {
+		private static final long serialVersionUID = -4271385191079964823L;
+		String type, message;
+		Context context;
+		int pc;
+
+		private ExecutionError() {
+		}
+
+		@Override
+		/**
+		 * Returns "type: message" for the error
+		 */
+		public String toString() {
+			return type + ": " + message;
+		}
+
+		/**
+		 * Returns the type of the error.
+		 * 
+		 * This typically corresponds to a Python exception (eg `TypeError` or
+		 * `IndexError`)
+		 */
+		public String getType() {
+			return type;
+		}
+
+		/**
+		 * Returns the line number which was being executed when the error
+		 * happened.
+		 * 
+		 * If you omitted line numbers then -1 is returned.
+		 */
+		public int linenumber() {
+			// note that context.pc points to the instruction after the one
+			// being executed
+			int lastline = -1;
+			for (int i = 0; i < linenumbers.length; i++) {
+				if (linenumbers[i][0] >= pc) {
+					break;
+				}
+				lastline = linenumbers[i][1];
+			}
+			return lastline;
+		}
+
+		/**
+		 * Returns program counter when error occurred.
+		 * 
+		 * Note that due to internal implementation details this is the next
+		 * instruction to be executed, not the currently executing one.
+		 */
+		public int pc() {
+			return this.pc;
+		}
+	}
 }
