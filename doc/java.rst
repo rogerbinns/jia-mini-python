@@ -111,6 +111,13 @@ class MiniPython
    is not threadsafe and calls should only be made in the same thread. There is
    no shared state between instances.
 
+   .. method:: Object callMethod(String name, Object ...args)
+
+      Calls a method in Python and returns the result
+      :param name: Global method name
+      :param args: Variable list of arguments that it takes
+      :raises ExecutionError: On any issues encountered
+
    .. method:: void clear()
 
       Removes all internal state.
@@ -199,24 +206,26 @@ class MiniPython.ExecutionError
 .. class:: MiniPython.ExecutionError
 
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.ExecutionError.html>`__)
-   Encapsulates what would be an Exception in Python
+   Encapsulates what would be an Exception in Python.
+
+   Do not instantiate one directly - call signalError instead.
 
 
    .. method:: String getType()
 
-      Returns the type of the error
+      Returns the type of the error.
 
       This typically corresponds to a Python exception (eg `TypeError` or `IndexError`)
 
    .. method:: int linenumber()
 
-      Returns the line number which was being executed when the error happened
+      Returns the line number which was being executed when the error happened.
 
       If you omitted line numbers then -1 is returned.
 
    .. method:: int pc()
 
-      Returns program counter when error occurred
+      Returns program counter when error occurred.
 
       Note that due to internal implementation details this is
       the next instruction to be executed, not the currently

@@ -304,7 +304,13 @@ public class MiniPython {
 		}
 	}
 
-	public Object callMethod(String name, Object... args) throws ExecutionError {
+	/**
+	 * Calls a method in Python and returns the result
+	 * @param name Global method name
+	 * @param args Variable list of arguments that it takes
+	 * @throws ExecutionError On any issues encountered
+	 */
+	public Object callMethod(String name, Object ...args) throws ExecutionError {
 		Object meth = root.variables.get(name);
 		if (meth == null) {
 			internalError("NameError", name + " is not defined");
@@ -1436,7 +1442,9 @@ public class MiniPython {
 	}
 
 	/**
-	 * Encapsulates what would be an Exception in Python
+	 * Encapsulates what would be an Exception in Python.
+	 * 
+	 * Do not instantiate one directly - call signalError instead.
 	 *
 	 */
 	public class ExecutionError extends Exception {
@@ -1444,6 +1452,8 @@ public class MiniPython {
 		String type, message;
 		Context context;
 		int pc;
+
+		private ExecutionError() {}
 
 		@Override
 		/**
@@ -1454,7 +1464,7 @@ public class MiniPython {
 		}
 
 		/**
-		 * Returns the type of the error
+		 * Returns the type of the error.
 		 * 
 		 * This typically corresponds to a Python exception (eg `TypeError` or `IndexError`)
 		 */
@@ -1463,7 +1473,7 @@ public class MiniPython {
 		}
 
 		/**
-		 * Returns the line number which was being executed when the error happened
+		 * Returns the line number which was being executed when the error happened.
 		 * 
 		 * If you omitted line numbers then -1 is returned.
 		 */
@@ -1481,7 +1491,7 @@ public class MiniPython {
 		}
 
 		/**
-		 * Returns program counter when error occurred
+		 * Returns program counter when error occurred.
 		 * 
 		 * Note that due to internal implementation details this is
 		 * the next instruction to be executed, not the currently
