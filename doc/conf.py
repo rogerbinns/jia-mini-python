@@ -2,9 +2,11 @@
 
 import sys, os
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tools", "sphinxext")))
+
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.extlinks']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.extlinks', 'javadomain']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -87,6 +89,3 @@ epub_title = u'Java Mini Python'
 epub_author = u'Roger Binns'
 epub_publisher = u'Roger Binns'
 epub_copyright = u'2011, Roger Binns'
-
-
-extensions.append('sphinxcontrib.javadomain')
