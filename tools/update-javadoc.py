@@ -77,13 +77,16 @@ def update_doc(data):
         return indentlevel*"   "
 
     for klass,doc in sorted(data["packages"]["com.rogerbinns"]["classes"].items()):
+        res.append(".. _"+klass.split(".")[-1]+":")
+        res.append("")
         res.append("%s %s" % (doc["type"], klass))
         res.append("-"*len(res[-1]))
         res.append("")
         savedindent=indentlevel
         res.append(indent()+".. class:: "+klass)
+        res.append("")
         indentlevel+=1
-        res.append(indent()+"(`javadoc for %s <_static/javadoc/com/rogerbinns/%s.html>`__)" % (klass, klass))
+        res.append(indent()+"(`javadoc <_static/javadoc/com/rogerbinns/%s.html>`__)" % (klass,))
         for line in doc["comment-text"].split("\n"):
             if(line):
                 res.append(indent()+line)
@@ -92,33 +95,54 @@ def update_doc(data):
         for name, meth in sorted(doc["methods"].items()):
             res.append("")
             res.append(indent()+".. method:: "+meth["signature"])
+            res.append("")
             indentlevel+=1
             for line in meth["comment-text"].split("\n"):
-                if(line.strip()):
-                    res.append(indent()+fixup(line))
-                else:
-                    res.append("")
+                if line.strip():
+                    line=fixup(line) 
+                if not isinstance(line, tuple):
+                    line=(line,)
+                for l in line:
+                    if(l.strip()):
+                        res.append(indent()+l)
+                    else:
+                        res.append("")
             indentlevel-=1
               
         res.append("")
         indentlevel=savedindent
 
-    print "\n".join(res)
+    return "\n".join(res)
 
 def unhtml(line):
     # strip/replace html tags we use with rst
-    return (line
-       .replace("<p>", "")
-       .replace("</p>", "")   
-    )
+    line=line.replace("<p>", "").replace("</p>", "") 
+    
+    line=re.sub(r'<a.*?\bhref="(?P<addr>[^"]+?)".*?>(?P<text>.*?)</a>', 
+                r'`\g<text> <\g<addr>>`__',
+                line)
+
+    assert "/>" not in line
+    return line
 
 def fixup(line):
     # turn javadoc @stuff into sphinx
     x=line.split(None, 2)
     if x[0]=="@param":
-        return ":param %s: %s" % (x[1], x[2])
+        try:
+            return ":param %s: %s" % (x[1], x[2])
+        except IndexError:
+            print "No param descrioption in", line
+            raise
     elif x[0]=="@throws":
-        return ":raises %s: %s" % (x[1], x[2])
+        try:
+            return ":raises %s: %s" % (x[1], x[2])
+        except IndexError:
+            print "No throws text in", line
+            raise
+    elif x[0]=="@see":
+        x=line.split(None, 1)
+        return ("", ".. seealso:: "+x[1])
     elif x[0].startswith("@"):
         import pdb ; pdb.set_trace()
         pass
@@ -127,6 +151,30 @@ def fixup(line):
         pass
     return line
 
+def update_file(name, content):
+    res=[]
+    found=False
+    with open(name, "rtU") as f:
+        for line in f:
+            if line.strip()==".. Rest of file is generated from Javadoc - do not edit":
+                res.append(line+"\n")
+                res.append(content)
+                res="".join(res)
+                found=True
+                break
+            res.append(line)
+
+    if not found:
+        raise Exception("Comment marker not found in file")
+    with open(name, "rtU") as f:
+        existing=f.read()
+    if existing!=res:
+        print "Updating",name,"from Javadoc"
+        with open(name, "wt") as f:
+            f.write(res)
+
 if __name__=='__main__':
-    data=genjson("src/com/rogerbinns/MiniPython.java")
-    update_doc(data)
+    data=genjson(opj(topdir, "src", "com", "rogerbinns", "MiniPython.java"))
+    res=update_doc(data)
+    update_file(opj(topdir, "doc", "java.rst"), res)
+    

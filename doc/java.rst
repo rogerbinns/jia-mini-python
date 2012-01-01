@@ -95,118 +95,133 @@ not being an integer in the sum_all method above) then you should call
 ExecutionError after performing internal bookkeeping (eg tracking line
 numbers) and not return.
 
-MiniPython Class
+.. Rest of file is generated from Javadoc - do not edit
+
+.. _MiniPython:
+
+class MiniPython
 ----------------
-
-.. index:: javadoc
-
-You can also read API information in `javadoc format <_static/javadoc/index.html>`__
 
 .. class:: MiniPython
 
-   (`javadoc for MiniPython class
-   <_static/javadoc/com/rogerbinns/MiniPython.html>`__) This class
-   implements the MiniPython environment.
+   (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.html>`__)
+   Encapsulates running a Python syntax file
 
-   .. method:: void addModule(String name, Object methods)
-
-      Makes methods on the methods Object available to the Python.
-      See `Adding methods`_ for more details.
+   The source should have been transformed using jmp-compile. The class
+   is not threadsafe and calls should only be made in the same thread. There is
+   no shared state between instances.
 
    .. method:: void clear()
 
-      Removes all internal state.  This ensures that garbage
-      collection is easier.  You can reuse this instance by calling
-      `addModule` to reregister modules and `setCode` to run new code.
+      Removes all internal state.
+
+      This ensures that garbage collection is easier. You can reuse this
+      instance by calling addModule to reregister modules and
+      setCode to run new code.
 
    .. method:: void setCode(InputStream stream)
 
-      Reads the code from the supplied stream.  The stream is not
-      closed and you can have additional content after the jmp.
-   
-      :raises EOFException: When the stream is truncated
+      Reads and executes code from the supplied stream
+
+      :param stream: The stream is not closed and you can have additional content after the jmp.
       :raises IOException: Passed on from read() calls on the stream
+      :raises EOFException: When the stream is truncated
       :raises ExecutionError: Any issues from executing the code
-
-   .. method:: void setClient(Client client)
-
-      Sets the :class:`Client` to use for specific behaviour.
 
    .. method:: void signalError(String exctype, String message)
 
-      Call this method when your callbacks need to halt execution due
-      to an error.
-
-      :param exctype: Best practise is to use the name of a Python
-         exception (eg "TypeError")
-      :param message: Text describing the error.
+      Call this method when your callbacks need to halt execution due to an error
 
       This method will do the internal bookkeeping necessary in order
       to provide diagnostics to the original caller and then throw an
-      :class:`ExecutionError` which you should not catch.
+      ExecutionError which you should not catch.
 
+      :param exctype: Best practise is to use the name of a Python exception (eg "TypeError")
+      :param message: Text describing the error.
+      :raises ExecutionError: Always thrown
 
    .. method:: String toPyString(Object o)
 
-      Returns a string representing the object using Python
-      nomenclature where possible.  For example `null` is returned as
-      `None`, `true` as True etc.  For compound types like `dict/Map`
-      and `list/List` the string returned notes their type and how
-      many items are contained but does not include a string
-      representation of the items.
+      Returns a string representing the object using Python nomenclature where possible
 
-      This method is useful for generating error messages and
-      diagnostics.
+      For example `null` is returned as `None`, `true` as `True` etc.  Container types like dict/Map
+      and list/List will include the items.
 
-   .. method:: String toPyTypeString(Object o)
+      :param o: Object to stringify.  Can be null.
 
-      Returns a string representing the type of the object using
-      Python nomenclature where possible.  For example `null` is
-      returned as `NoneType`, `true` as `bool`, `Map` as `dict` etc.
-      You can also pass in Class objects as well as instances.  Note
-      that primitives (eg `int`) and the corresponding boxed type (eg
-      `Integer`) will both be returned as the same string (`int` in
+   .. method:: static String toPyTypeString(Object o)
+
+      Returns a string representing the type of the object using Python nomenclature where possible
+
+      For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as `dict` etc.  You can
+      also pass in Class objects as well as instances.  Note that primitives (eg `int`) and the
+      corresponding boxed type (eg `Integer`) will both be returned as the same string (`int` in
       this case).
+      :param o: Object whose type to stringify, or a Class or null
 
-      This method is useful for generating error messages and
-      diagnostics.
+.. _Client:
 
-   .. _executionerror:
+interface MiniPython.Client
+---------------------------
 
-   .. class:: ExecutionError
-  
-         (`javadoc for MiniPython.ExecutionError class
-         <_static/javadoc/com/rogerbinns/MiniPython.ExecutionError.html>`__)
-         This class extends :class:`Exception` encapsulating errors
-         found while executing code.
+.. class:: MiniPython.Client
 
-      .. method:: String getType()
+   (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.Client.html>`__)
+   Provide platform behaviour
 
-         Returns a string with the exception type.  This will usually
-         match Python - eg "TypeError"
+   .. method:: void addModule(String name, Object object)
 
-      .. method:: String toString()
+      Makes methods on the methods Object available to the Python
 
-         Returns "type: message" for the error
+      :param name: Module name in the Python environment
+      :param object: Object to introspect looking for methods
 
-      .. method:: int linenumber()
+      .. seealso:: `Adding methods <../../../../java.html#id1>`__
 
-         Returns which linenumber was being executed when the error happened.
-  
+   .. method:: void print(String s)
 
-   .. class:: Client
+      Request to print a string
 
-         (`javadoc for MiniPython.Client interface
-         <_static/javadoc/com/rogerbinns/MiniPython.Client.html>`__)
-         Implement this interface to provide behaviour, and register
-         with `MiniPython.setClient`.
+      :param s: String to print.  May or may not contain a trailing newline depending on code
+      :raises ExecutionError: Throw this if you experience any issues
 
-      .. method:: void print(String s)
+   .. method:: void setClient(Client client)
 
-       	 Print the provided string.  Note that it will have a final
-         newline if the print statement in the code did.  If the print
-         statement ended in a trailing comma then it will end in a
-         space.
+      Callbacks to use for specific behaviour
 
-	 Call `signalError` if there is an error in your print
-	 code.
+      :param client: Replaces existing client with this one
+
+.. _ExecutionError:
+
+class MiniPython.ExecutionError
+-------------------------------
+
+.. class:: MiniPython.ExecutionError
+
+   (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.ExecutionError.html>`__)
+   Encapsulates what would be an Exception in Python
+
+
+   .. method:: String getType()
+
+      Returns the type of the error
+
+      This typically corresponds to a Python exception (eg `TypeError` or `IndexError`)
+
+   .. method:: int linenumber()
+
+      Returns the line number which was being executed when the error happened
+
+      If you omitted line numbers then -1 is returned.
+
+   .. method:: int pc()
+
+      Returns program counter when error occurred
+
+      Note that due to internal implementation details this is
+      the next instruction to be executed, not the currently
+      executing one.
+
+   .. method:: String toString()
+
+      Returns "type: message" for the error

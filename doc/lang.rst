@@ -79,7 +79,7 @@ Exceptions
 
 Exceptions are not supported nor is try/except.  If you do something
 that results in an exception (eg adding a number to a string) then a
-:ref:`Java level exception <executionerror>` will be thrown.
+:ref:`Java level exception <ExecutionError>` will be thrown.
 
 If you do need to be highly dynamic then consider using the `Look
 Before You Leap <http://docs.python.org/glossary.html#term-lbyl>`__

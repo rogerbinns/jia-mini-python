@@ -19,6 +19,11 @@ If you are looking for a fuller implementation of Python then try the
 
 Java Mini Python is hosted at http://code.google.com/p/java-mini-python/
 
+Works with `Java 1.5+
+<http://en.wikipedia.org/wiki/Java_version_history#J2SE_5.0_.28September_30.2C_2004.29>`__
+and `Python 2.6+/3.1+
+<http://en.wikipedia.org/wiki/History_of_Python#Version_release_dates>`__.
+
 Contents:
 
 .. toctree::

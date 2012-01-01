@@ -1212,6 +1212,17 @@ public class MiniPython {
 				toPyTypeString(left), op, toPyTypeString(right)));
 	}
 
+	/**
+	 * Call this method when your callbacks need to halt execution due to an error
+	 * 
+	 * This method will do the internal bookkeeping necessary in order
+	 * to provide diagnostics to the original caller and then throw an
+	 * ExecutionError which you should not catch.
+	 * 
+	 * @param exctype Best practise is to use the name of a Python exception (eg "TypeError")
+	 * @param message  Text describing the error.
+	 * @throws ExecutionError Always thrown
+	 */
 	public void signalError(String exctype, String message)
 			throws ExecutionError {
 		internalError(exctype, message);
@@ -1383,10 +1394,27 @@ public class MiniPython {
 		return o.toString();
 	}
 
+	/**
+	 * Returns a string representing the object using Python nomenclature where possible
+	 * 
+	 * For example `null` is returned as `None`, `true` as `True` etc.  Container types like dict/Map
+	 * and list/List will include the items.
+	 *
+	 * @param o  Object to stringify.  Can be null.
+	 */
 	public String toPyString(Object o) {
 		return _toPyString(o, false, null);
 	}
 
+	/**
+	 * Returns a string representing the type of the object using Python nomenclature where possible
+	 * 
+	 * For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as `dict` etc.  You can
+	 * also pass in Class objects as well as instances.  Note that primitives (eg `int`) and the
+	 * corresponding boxed type (eg `Integer`) will both be returned as the same string (`int` in
+	 * this case).
+	 * @param o  Object whose type to stringify, or a Class or null
+	 */
 	public static String toPyTypeString(Object o) {
 		if (o == null)
 			return "NoneType";
@@ -1407,20 +1435,38 @@ public class MiniPython {
 		return toPyTypeString(o.getClass());
 	}
 
+	/**
+	 * Encapsulates what would be an Exception in Python
+	 *
+	 */
 	public class ExecutionError extends Exception {
 		private static final long serialVersionUID = -4271385191079964823L;
 		String type, message;
 		Context context;
 		int pc;
 
+		@Override
+		/**
+		 * Returns "type: message" for the error
+		 */
 		public String toString() {
 			return type + ": " + message;
 		}
 
+		/**
+		 * Returns the type of the error
+		 * 
+		 * This typically corresponds to a Python exception (eg `TypeError` or `IndexError`)
+		 */
 		public String getType() {
 			return type;
 		}
 
+		/**
+		 * Returns the line number which was being executed when the error happened
+		 * 
+		 * If you omitted line numbers then -1 is returned.
+		 */
 		public int linenumber() {
 			// note that context.pc points to the instruction after the one
 			// being executed
@@ -1434,6 +1480,13 @@ public class MiniPython {
 			return lastline;
 		}
 
+		/**
+		 * Returns program counter when error occurred
+		 * 
+		 * Note that due to internal implementation details this is
+		 * the next instruction to be executed, not the currently
+		 * executing one.
+		 */
 		public int pc() {
 			return this.pc;
 		}
@@ -1454,10 +1507,22 @@ public class MiniPython {
 
 	Client mTheClient;
 
+	/**
+	 * Callbacks to use for specific behaviour
+	 * 
+	 * @param client Replaces existing client with this one
+	 */
 	public void setClient(Client client) {
 		mTheClient = client;
 	}
 
+	/**
+	 * Makes methods on the methods Object available to the Python
+	 * 
+	 * @param name    Module name in the Python environment
+	 * @param object  Object to introspect looking for methods
+	 * @see <a href="../../../../java.html#id1">Adding methods</a>
+	 */
 	public void addModule(String name, Object object) {
 		if (root == null) {
 			root = new Context(null);
