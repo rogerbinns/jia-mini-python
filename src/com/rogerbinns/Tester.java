@@ -30,6 +30,13 @@ public class Tester {
 				System.out.print(s);
 				System.out.flush();
 			}
+
+			@Override
+			public void onError(ExecutionError error) {
+				System.err.println(error);
+				System.err.printf("Line %d.  pc=%d\n", error.linenumber(), error.pc());
+				System.exit(5);
+			}
 		});
 
 		@SuppressWarnings("unused") // used via reflection, why does it whine?
@@ -58,13 +65,12 @@ public class Tester {
 		try {
 			mp.setCode(is);
 			System.exit(0);
-		} catch (ExecutionError e) {
-			System.err.println(e);
-			System.err.printf("Line %d.  pc=%d\n", e.linenumber(), e.pc());
-			System.exit(5);
 		} catch (IOException e) {
 			System.err.printf("Failure: %s\n", e);
 			System.exit(1);
+		} catch (ExecutionError e) {
+			// should have been caught in the Client()
+			System.err.println("It is impossible to get here");
 		}
 	}
 

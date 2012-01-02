@@ -62,6 +62,10 @@ public class MiniPython {
 	/**
 	 * Reads and executes code from the supplied stream
 	 * 
+	 * The stream provided must satisfy reads completely (eg if 27 bytes is
+	 * asked for then that number should be returned in the read() call unless
+	 * end of file is reached.)
+	 * 
 	 * @param stream
 	 *            The stream is not closed and you can have additional content
 	 *            after the jmp.
@@ -98,7 +102,6 @@ public class MiniPython {
 		// code
 		int codelen = get16(stream);
 		code = new byte[codelen];
-		// ::TODO:: read in chunks
 		if (stream.read(code) != codelen)
 			throw new EOFException();
 
@@ -126,7 +129,6 @@ public class MiniPython {
 	private static final String getUTF(InputStream is, int byteslen)
 			throws IOException {
 		byte[] b = new byte[byteslen];
-		// ::TODO:: while loop dealing with incomplete reads
 		if (is.read(b) != byteslen)
 			throw new EOFException();
 		return new String(b, "UTF8");
@@ -555,8 +557,12 @@ public class MiniPython {
 						|| (right instanceof String && left instanceof Integer)) {
 					String s = (left instanceof String) ? (String) left
 							: (String) right;
-					Integer ii = (left instanceof Integer) ? (Integer) left
+					int ii = (left instanceof Integer) ? (Integer) left
 							: (Integer) right;
+					// python is happy with negative multiplier
+					if (ii < 0) {
+						ii = 0;
+					}
 					StringBuilder sb = new StringBuilder(s.length() * ii);
 					for (int i = 0; i < ii; i++) {
 						sb.append(s);
@@ -564,7 +570,25 @@ public class MiniPython {
 					stack[++stacktop] = sb.toString();
 					continue;
 				}
+				if ((left instanceof List && right instanceof Integer)
+						|| (right instanceof List && left instanceof Integer)) {
+					List l = (left instanceof List) ? (List) left
+							: (List) right;
+					int ii = (left instanceof Integer) ? (Integer) left
+							: (Integer) right;
+					// Python is happy with negative multiplier
+					if (ii < 0) {
+						ii = 0;
+					}
+					List res = new ArrayList(ii * l.size());
+					for (int i = 0; i < ii; i++) {
+						res.addAll(l);
+					}
+					stack[++stacktop] = res;
+					continue;
+				}
 				internalErrorBinaryOp("TypeError", "*", left, right);
+				continue;
 			}
 			case 1: // ADD
 			{
@@ -603,7 +627,19 @@ public class MiniPython {
 			{
 				Object right = stack[stacktop--], left = stack[stacktop--];
 				if (left instanceof Integer && right instanceof Integer) {
-					stack[++stacktop] = (Integer) left / (Integer) right;
+					// If one operand is negative then the answer isn't quite
+					// what you expect
+					// http://python-history.blogspot.com/2010/08/why-pythons-integer-division-floors.html
+					int l = (Integer) left, r = (Integer) right;
+					if ((l >= 0 && r >= 0) || (l < 0 && r < 0)) {
+						stack[++stacktop] = l / r;
+					} else {
+						int res = l / r;
+						if (l % r != 0) {
+							res--;
+						}
+						stack[++stacktop] = res;
+					}
 				} else {
 					internalErrorBinaryOp("TypeError", "/", left, right);
 				}
@@ -796,12 +832,13 @@ public class MiniPython {
 					}
 					int iindex = (Integer) index;
 					List list = (List) obj;
-					if (iindex < list.size()) {
+					if (iindex < 0) {
 						iindex += list.size();
 					}
 					if (iindex < 0 || iindex >= list.size()) {
-						internalError("IndexError",
-								"list assignment index out of range");
+						internalError("IndexError", String.format(
+								"list assignment index out of range: %d",
+								iindex));
 					}
 					list.set(iindex, value);
 				} else {
@@ -916,11 +953,11 @@ public class MiniPython {
 			{
 				if (stack[stacktop] instanceof Integer) {
 					stack[stacktop] = -(Integer) stack[stacktop];
-					continue;
 				} else {
 					internalError("TypeError", "Can't negate "
 							+ toPyTypeString(stack[stacktop]));
 				}
+				continue;
 			}
 			case 8: // UNARY_ADD
 			{
@@ -956,6 +993,13 @@ public class MiniPython {
 			}
 
 			// More heavyweight stuff
+			case 34: // ASSERT_FAILED
+			{
+				Object o = stack[stacktop--];
+				internalError("AssertionError", toPyString((o != null) ? o
+						: "assertion failed"));
+				continue;
+			}
 			case 23: // PRINT
 			{
 				StringBuilder sb = new StringBuilder();
@@ -1218,6 +1262,9 @@ public class MiniPython {
 		e.message = message;
 		e.context = current;
 		e.pc = pc;
+		if (mTheClient != null) {
+			mTheClient.onError(e);
+		}
 		throw e;
 	}
 
@@ -1835,6 +1882,16 @@ public class MiniPython {
 		 *             Throw this if you experience any issues
 		 */
 		public void print(String s) throws ExecutionError;
+
+		/**
+		 * Called whenever there is an ExecutionError.
+		 * 
+		 * This provides one spot where you can perform logging and other
+		 * diagnostics.
+		 * 
+		 * @param error
+		 */
+		public void onError(ExecutionError error);
 	}
 
 	/**
