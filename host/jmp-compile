@@ -72,6 +72,8 @@ class Compiler(ast.NodeVisitor):
 
     # main method to turn .py into .jmp
     def compile(self, options, inputfile, outputfile):
+        self.inputfile=inputfile
+        self.options=options
         self.bcstack=[None]
         self.counter=0
         flags=ast.PyCF_ONLY_AST
@@ -133,6 +135,8 @@ class Compiler(ast.NodeVisitor):
                 if is_string_op(opcode):
                     assert isinstance(val, (str, unicode))
                     if val not in strings:
+                        if len(val)>65535:
+                            raise self.Error(n, "String is too long: "+str(len(val)))
                         strings.append(val)
                     v=(op, strings.index(val))
                     out.append( (n, v) )
@@ -380,7 +384,6 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Slice(self, node):
         if node.step is not None:
-            debug_here()
             raise self.Error(node, "Steps not supported in slices")
         if node.lower is None:
             yield None, "PUSH_NONE"
@@ -405,6 +408,8 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Dict(self, node):
         for k,v in zip(node.keys, node.values):
+            # Note we visit the value before the key.
+            # This is to match what Python does.
             for x in self.visit(v):
                 yield x
             for x in self.visit(k):
@@ -527,6 +532,21 @@ class Compiler(ast.NodeVisitor):
         yield node, ("PUSH_INT", len(node.values))
         yield node, "PRINT"
 
+    def visit_Assert(self, node):
+        if self.options.asserts:
+            end=Label()
+            for x in self.visit(node.test):
+                yield x
+            yield node, "NOT"
+            yield node, ("IF_FALSE", end)
+            if node.msg is not None:
+                for x in self.visit(node.msg):
+                    yield x
+            else:
+                yield node, ("PUSH_STR", Printer().as_string(self.inputfile, node.test))
+            yield node, "ASSERT_FAILED"
+            yield None, end
+
     def visit_FunctionDef(self, node):
         # this serves both functions and lamdba
         self.bcstack.append(None)
@@ -604,7 +624,41 @@ class Compiler(ast.NodeVisitor):
                     yield target, "DEL_SLICE"
             else:
                 raise self.Error(target, "Unsupported item to delete")
-                
+        
+# Currently only used by assert.  Turns nodes back into pretty printed
+# text.  While we could stringify each node it would require inserting
+# lots of parentheses to keep precedence and would look ugly.
+# Fortunately we can instead keep track of line and column numbers and
+# know that asserts extend to end of line.  You could still fool this
+# with multiline strings
+class Printer(ast.NodeVisitor):
+    def as_string(self, filename, node):
+        self.linestart=1000000
+        self.colstart=100000
+        self.lineend=-1
+        self.visit(node)
+        res=[]
+        for lineno in range(self.linestart, self.lineend+1):
+            line=linecache.getline(filename, lineno)
+            if lineno==self.linestart:
+                line=line[self.colstart:]
+            res.append(line)
+        return "".join(res).strip()
+
+    def generic_visit(self, node):
+        if hasattr(node, "lineno"):
+            if node.lineno<=self.linestart:
+                self.linestart=node.lineno
+                self.colstart=min(node.col_offset, self.colstart)
+            if node.lineno>self.lineend:
+                self.lineend=node.lineno
+        for f in node._fields:
+            v=getattr(node, f, None)
+            if isinstance(v, list):
+                for x in v:
+                    self.visit(x)
+            elif isinstance(v, ast.AST):
+                self.visit(v)
 
 def dumper(options, infile):
     getline=lambda x: linecache.getline(options.dump_source, x) if options.dump_source else ""
@@ -621,8 +675,11 @@ def dumper(options, infile):
     strings=[]
     for i in range(get16()):
         slen=get16()
-        data.read(infile, slen)
-        string=data[-slen:].tostring().decode("utf8")
+        if slen>0:
+            data.read(infile, slen)
+            string=data[-slen:].tostring().decode("utf8")
+        else:
+            string=""
         strings.append(string)
 
     # line number table
@@ -779,6 +836,7 @@ opcode_map={
     "GTE": 31,
     "LTE": 32,
     "ASSIGN_INDEX": 33,
+    "ASSERT_FAILED": 34,
 
     ### All the following take two byte int value
     # code position
@@ -823,6 +881,7 @@ filename to override where the output goes.""")
 
     g.add_option("--traceback", action="store_true", default=False, help="Show detailed traceback on compile error")
     g.add_option("--print-function", action="store_true", default=sys.version_info>(3,), help="'print' is a function (Python 3 style) [%default]")
+    g.add_option("--asserts", action="store_true", default=False, help="Include asserts in the output [%default]")
     p.add_option_group(g)
 
     g=optparse.OptionGroup(p, "Dumping", """Shows the internal representation of .jmp files""")
