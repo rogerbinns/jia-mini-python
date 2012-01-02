@@ -55,6 +55,8 @@ What is not supported
   Note that methods :ref:`added via Java <adding_methods>` can take
   variable numbers of arguments.  You can call :func:`apply` to call
   a function with a list of arguments.
+* Augmented assignments (+= -= /= etc)
+* Bitwise operators (<< >> & | ^)
 * Classes
 * Decorators
 * Threads
