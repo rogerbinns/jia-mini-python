@@ -5,13 +5,25 @@ import sys
 import tempfile
 import subprocess
 import unittest
+import glob
 
 opj=os.path.join
 
 topdir=os.path.abspath(opj(os.path.dirname(__file__), ".."))
-jarfile=opj(topdir, "bin", "MiniPython.jar")
+coveragedir=opj(topdir, "coverage")
+jarfile=opj(topdir if not os.getenv("JMPCOVERAGE") else coveragedir, "bin", "MiniPython.jar")
 testfiledir=opj(topdir, "test")
 jmpcompiler=opj(topdir, "host", "jmp-compile")
+
+covoptions=[]
+if os.getenv("JMPCOVERAGE"):
+    assert os.getenv("COBERTURADIR"), "$COBERTURADIR needs to be set"
+    jars=[opj(os.getenv("COBERTURADIR"), "cobertura.jar")]
+    for f in glob.glob(opj(os.getenv("COBERTURADIR"), "lib", "*.jar")):
+        jars.append(f)
+    covoptions=["-cp", os.pathsep.join(jars),
+                "-Dnet.sourceforge.cobertura.datafile="+os.path.abspath(opj(coveragedir, "cobertura.ser"))]
+    
 
 def delfiles(files):
     for f in files:
@@ -24,10 +36,12 @@ def delfiles(files):
 class JavaMiniPython(unittest.TestCase):
 
     def jmp_compile(self, infile, outfile):
-        return self.run_external_command([jmpcompiler, infile, outfile])
+        return self.run_external_command([jmpcompiler, "--asserts", infile, outfile])
 
     def run_jar(self, filename):
-        return self.run_external_command(["java", "-jar", jarfile, filename])
+        cmd=["java"]+covoptions+["-jar", jarfile, filename]
+        print ">>>", cmd
+        return self.run_external_command(cmd)
 
     def run_external_command(self, args):
         j=subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -59,39 +73,10 @@ class JavaMiniPython(unittest.TestCase):
             delfiles(files)
 
 
-    def testSanityCheck(self):
-        "Verify basic operations work/fail as expected"
-        # we try all operations against all types that should succeed
-        testvals=[
-            "a string",
-            3423,
-            False, 
-            True,
-            None]
-
-        testops=[
-            "+", "-", "*", "/", "and", "or", "not", "<", ">", "==", "<=", ">=", "!="
-            ]
-
-        workingcombos=[]
-        failcombos=[]
-
-        for left in testvals:
-            for op in testops:
-                for right in testvals:
-                    testcase="%r %s %r" % (left, op, right)
-                    try:
-                        res=eval(testcase)
-                        workingcombos.append( (res, testcase) )
-                    except Exception,e:
-                        failcombos.append( (e, testcase) )
-
-        for res, case in workingcombos:
-            self.run_jar_success(res, "print "+case)
-
-        for res, case in failcombos:
-            self.run_jar_fail(res, "print "+case)
-
+    def testCmp(self):
+        self.jmp_compile("test/cmp.py", "test/cmp.jmp")
+        self.run_jar("test/cmp.jmp")
+        
 def main():
     # Check the jar file is present
     if not os.path.exists(jarfile):
