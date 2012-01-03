@@ -146,6 +146,10 @@ class MiniPython
 
       Reads and executes code from the supplied stream
 
+      The stream provided must satisfy reads completely (eg if 27 bytes is
+      asked for then that number should be returned in the read() call unless
+      end of file is reached.)
+
       :param stream:  The stream is not closed and you can have additional content
                  after the jmp.
       :raises IOException:  Passed on from read() calls on the stream
@@ -197,6 +201,15 @@ interface MiniPython.Client
 
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.Client.html>`__)
    Provide platform behaviour
+
+   .. method:: void onError(ExecutionError error);
+
+      Called whenever there is an ExecutionError.
+
+      This provides one spot where you can perform logging and other
+      diagnostics.
+
+      :param error: The instance that is about to be thrown
 
    .. method:: void print(String s)
 

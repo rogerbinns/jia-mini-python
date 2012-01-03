@@ -1889,7 +1889,7 @@ public class MiniPython {
 		 * This provides one spot where you can perform logging and other
 		 * diagnostics.
 		 * 
-		 * @param error
+		 * @param error The instance that is about to be thrown
 		 */
 		public void onError(ExecutionError error);
 	}
