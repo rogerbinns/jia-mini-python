@@ -720,7 +720,7 @@ public class MiniPython {
 										+ toPyString(key));
 					}
 					int index = (Integer) key;
-					List<Object> l = (List<Object>) obj;
+					List l = (List) obj;
 					if (index < 0) {
 						index = l.size() + index;
 					}
@@ -730,7 +730,7 @@ public class MiniPython {
 					stack[++stacktop] = l.get(index);
 					continue;
 				} else if (obj instanceof Map) {
-					Map<Object, Object> m = (Map<Object, Object>) obj;
+					Map m = (Map) obj;
 					if (m.containsKey(key)) {
 						stack[++stacktop] = m.get(key);
 						continue;
@@ -1889,7 +1889,8 @@ public class MiniPython {
 		 * This provides one spot where you can perform logging and other
 		 * diagnostics.
 		 * 
-		 * @param error The instance that is about to be thrown
+		 * @param error
+		 *            The instance that is about to be thrown
 		 */
 		public void onError(ExecutionError error);
 	}
