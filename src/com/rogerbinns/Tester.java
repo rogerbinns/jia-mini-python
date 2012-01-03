@@ -35,7 +35,7 @@ public class Tester {
 			public void onError(ExecutionError error) {
 				System.err.println(error);
 				System.err.printf("Line %d.  pc=%d\n", error.linenumber(), error.pc());
-				System.exit(5);
+				System.err.flush();
 			}
 		});
 
@@ -69,8 +69,8 @@ public class Tester {
 			System.err.printf("Failure: %s\n", e);
 			System.exit(1);
 		} catch (ExecutionError e) {
-			// should have been caught in the Client()
-			System.err.println("It is impossible to get here");
+			// we printed in the client
+			System.exit(7);
 		}
 	}
 
