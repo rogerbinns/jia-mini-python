@@ -38,3 +38,31 @@ assert 1 in one and 3 in two
 assert one[1]==two[1]
 
 assert len(two)==2
+
+# check assignment & nulls
+for i in "fred", 22, None, [1,"two"]:
+    two[i]=None
+    assert len(two)==3
+    assert two[i]==None
+    two[i]=1
+    assert two[i]+1==2
+
+    assert i in two
+    del two[i]
+    assert len(two)==2
+    assert i not in two
+
+# update
+two.update(one)
+two.update(empty)
+two.update({None: "x", "423432": 43324, None: "y", "fred": next, next: 77})
+assert two[None]=="y"
+assert two["fred"==next
+assert two[next]+1==78
+
+# iterators
+another={}
+for i in two:
+    another[i]=two[i]
+
+assert another==two

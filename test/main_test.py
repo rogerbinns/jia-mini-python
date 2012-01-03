@@ -15,10 +15,10 @@ jarfile=opj(topdir if not os.getenv("JMPCOVERAGE") else coveragedir, "bin", "Min
 testfiledir=opj(topdir, "test")
 jmpcompiler=opj(topdir, "host", "jmp-compile")
 
-covoptions=[]
+covoptions=["-cp", jarfile]
 if os.getenv("JMPCOVERAGE"):
     assert os.getenv("COBERTURADIR"), "$COBERTURADIR needs to be set"
-    jars=[opj(os.getenv("COBERTURADIR"), "cobertura.jar")]
+    jars=[jarfile, opj(os.getenv("COBERTURADIR"), "cobertura.jar")]
     for f in glob.glob(opj(os.getenv("COBERTURADIR"), "lib", "*.jar")):
         jars.append(f)
     covoptions=["-cp", os.pathsep.join(jars),
@@ -35,12 +35,11 @@ def delfiles(files):
 
 class JavaMiniPython(unittest.TestCase):
 
-    def jmp_compile(self, infile, outfile):
-        return self.run_external_command([jmpcompiler, "--asserts", infile, outfile])
+    def jmp_compile(self, infile, *outfile):
+        return self.run_external_command([jmpcompiler, "--asserts", infile]+list(outfile))
 
     def run_jar(self, filename):
-        cmd=["java"]+covoptions+["-jar", jarfile, filename]
-        print ">>>", cmd
+        cmd=["java"]+covoptions+["com.rogerbinns.Tester", filename]
         return self.run_external_command(cmd)
 
     def run_external_command(self, args):
@@ -51,7 +50,6 @@ class JavaMiniPython(unittest.TestCase):
         else:
             self.assertEqual(err, "")
         return out, err
-
 
     def run_jar_success(self, expect, code):
         files=[]
@@ -74,8 +72,17 @@ class JavaMiniPython(unittest.TestCase):
 
 
     def testCmp(self):
-        self.jmp_compile("test/cmp.py", "test/cmp.jmp")
-        self.run_jar("test/cmp.jmp")
+        "Test comparisons"
+        self.run_py("test/cmp.py")
+        
+    def testDict(self):
+        "Test dictionaries"
+        self.run_py("test/dict.py")
+
+    def run_py(self, name):
+        self.jmp_compile(name)
+        out,err=self.run_jar(os.path.splitext(name)[0]+".jmp")
+        self.assertEqual("", err)
         
 def main():
     # Check the jar file is present
