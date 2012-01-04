@@ -57,7 +57,7 @@ two.update(one)
 two.update(empty)
 two.update({None: "x", "423432": 43324, None: "y", "fred": next, next: 77})
 assert two[None]=="y"
-assert two["fred"==next
+assert two["fred"]==next
 assert two[next]+1==78
 
 # iterators
@@ -66,3 +66,11 @@ for i in two:
     another[i]=two[i]
 
 assert another==two
+
+# string
+
+stringed=str(two)
+for k in another:
+    assert str(k) in stringed
+    assert str(another[k]) in stringed
+

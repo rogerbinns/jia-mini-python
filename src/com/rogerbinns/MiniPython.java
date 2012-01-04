@@ -41,7 +41,7 @@ public class MiniPython {
 	// If true then the stack is resized on every instruction to be as short as
 	// possible.
 	// This catches code that doesn't extend the stack as necessary.
-	boolean PARANOIDSTACK = true;
+	final boolean PARANOIDSTACK = true;
 
 	/**
 	 * Removes all internal state.
@@ -109,11 +109,14 @@ public class MiniPython {
 			stacktop = -1;
 			mainLoop();
 			if (PARANOIDSTACK) {
-				if (stacktop != -1) {
-					internalError("StackLeak",
+				if (stacktop != -1)
+					throw internalError("StackLeak",
 							"Buggy code has led to a leak on the stack");
-				}
 			}
+		} catch(ExecutionError e) {
+			throw e;
+		} catch(Exception e) {
+			throw internalError(e);
 		} finally {
 			stacktop = -1;
 		}
@@ -261,9 +264,8 @@ public class MiniPython {
 					break;
 				}
 			}
-			if (nativeMethod == null) {
-				internalError("AttributeError", "No method named " + name);
-			}
+			if (nativeMethod == null)
+				throw internalError("AttributeError", "No method named " + name);
 		}
 
 		TModuleNativeMethod(TModule mod, Method meth, String name) {
@@ -323,12 +325,10 @@ public class MiniPython {
 	 */
 	public Object callMethod(String name, Object... args) throws ExecutionError {
 		Object meth = root.variables.get(name);
-		if (meth == null) {
-			internalError("NameError", name + " is not defined");
-		}
-		if (!(meth instanceof Callable)) {
-			internalError("TypeError", toPyString(meth) + " is not callable");
-		}
+		if (meth == null)
+			throw internalError("NameError", name + " is not defined");
+		if (!(meth instanceof Callable))
+			throw internalError("TypeError", toPyString(meth) + " is not callable");
 		return call((Callable) meth, args);
 	}
 
@@ -352,30 +352,33 @@ public class MiniPython {
 				stack[++stacktop] = -1; // returnpc
 				pc = tmeth.addr;
 				current = c;
-				Object retval = mainLoop();
-				if (PARANOIDSTACK) {
-					if (stacktop != savedsp) {
-						internalError("StackLeak",
-								"Buggy code has led to a leak on the stack");
+				Object retval;
+				try {
+					retval=mainLoop();
+					if (PARANOIDSTACK) {
+						if (stacktop != savedsp)
+							throw internalError("StackLeak",
+									"Buggy code has led to a leak on the stack");
 					}
+					return retval;
+				} catch (ExecutionError e) {
+					throw e;
+				} catch (Exception e) {
+					throw internalError(e);
 				}
-				return retval;
 			} else if (meth instanceof TNativeMethod) {
 				stack[++stacktop] = meth;
 				nativeCall();
 				Object retval = stack[stacktop--];
 				if (PARANOIDSTACK) {
-					if (stacktop != savedsp) {
-						internalError("StackLeak",
+					if (stacktop != savedsp)
+						throw internalError("StackLeak",
 								"Buggy code has led to a leak on the stack");
-					}
 				}
 				return retval;
-			} else {
-				internalError("TypeError", toPyTypeString(meth)
+			} else
+				throw internalError("TypeError", toPyTypeString(meth)
 						+ " is not callable");
-				return null;
-			}
 		} finally {
 			stacktop = savedsp;
 			pc = savedpc;
@@ -512,7 +515,7 @@ public class MiniPython {
 							}
 							c = c.parent;
 						}
-						internalError("NameError",
+						throw internalError("NameError",
 								String.format("name '%s' is not defined", key));
 					} catch (ArrayIndexOutOfBoundsException e) {
 						extendStack();
@@ -587,30 +590,27 @@ public class MiniPython {
 					stack[++stacktop] = res;
 					continue;
 				}
-				internalErrorBinaryOp("TypeError", "*", left, right);
-				continue;
+				throw internalErrorBinaryOp("TypeError", "*", left, right);
 			}
 			case 1: // ADD
 			{
 				Object right = stack[stacktop--], left = stack[stacktop--];
 				if ((left == null || right == null)
-						|| !right.getClass().equals(left.getClass())) {
-					internalErrorBinaryOp("TypeError", "+", left, right);
-				}
+						|| !right.getClass().equals(left.getClass()))
+					throw internalErrorBinaryOp("TypeError", "+", left, right);
 				// both are the same type
 				if (left instanceof Integer) {
 					stack[++stacktop] = (Integer) left + (Integer) right;
 				} else if (left instanceof String) {
 					stack[++stacktop] = (String) left + (String) right;
 				} else if (left instanceof List) {
-					List<Object> m = new ArrayList<Object>(((List) left).size()
+					List m = new ArrayList(((List) left).size()
 							+ ((List) right).size());
 					m.addAll((List) left);
 					m.addAll((List) right);
 					stack[++stacktop] = m;
-				} else {
-					internalErrorBinaryOp("TypeError", "+", left, right);
-				}
+				} else
+					throw internalErrorBinaryOp("TypeError", "+", left, right);
 				continue;
 			}
 			case 27: // SUB
@@ -618,9 +618,8 @@ public class MiniPython {
 				Object right = stack[stacktop--], left = stack[stacktop--];
 				if (left instanceof Integer && right instanceof Integer) {
 					stack[++stacktop] = (Integer) left - (Integer) right;
-				} else {
-					internalErrorBinaryOp("TypeError", "+", left, right);
-				}
+				} else
+					throw internalErrorBinaryOp("TypeError", "-", left, right);
 				continue;
 			}
 			case 3: // DIV
@@ -640,27 +639,31 @@ public class MiniPython {
 						}
 						stack[++stacktop] = res;
 					}
-				} else {
-					internalErrorBinaryOp("TypeError", "/", left, right);
-				}
+				} else
+					throw internalErrorBinaryOp("TypeError", "/", left, right);
 				continue;
 			}
 			case 30: // MOD
 			{
 				Object right = stack[stacktop--], left = stack[stacktop--];
 				if (left instanceof Integer && right instanceof Integer) {
-					stack[++stacktop] = (Integer) left % (Integer) right;
+					int l=(Integer) left, r=(Integer) right;
+					int res = l % r;
+					// in Python the result sign is same as sign of right
+					if( (res<0 && r>=0) || (res>=0 && r<0)) {
+						res=-res;
+					}
+					stack[++stacktop]=res;
 				} else if (left instanceof String && right instanceof List) {
 					try {
 						stack[++stacktop] = String.format((String) left,
 								((List) right).toArray());
 					} catch (IllegalFormatException e) {
-						internalError("TypeError",
+						throw internalError("TypeError",
 								"String.format - " + e.toString());
 					}
-				} else {
-					internalErrorBinaryOp("TypeError", "%", left, right);
-				}
+				} else
+					throw internalErrorBinaryOp("TypeError", "%", left, right);
 				continue;
 			}
 			// comparisons
@@ -695,9 +698,6 @@ public class MiniPython {
 				case 26: // != NOT_EQ
 					res = cmp != 0;
 					break;
-				default:
-					internalError("RuntimeError",
-							"Unhandled comparison operator");
 				}
 				stack[++stacktop] = res;
 				continue;
@@ -714,19 +714,17 @@ public class MiniPython {
 				Object key = stack[stacktop--];
 				Object obj = stack[stacktop--];
 				if (obj instanceof List) {
-					if (!(key instanceof Integer)) {
-						internalError("TypeError",
+					if (!(key instanceof Integer))
+						throw internalError("TypeError",
 								"list indices must be integers: "
 										+ toPyString(key));
-					}
 					int index = (Integer) key;
 					List l = (List) obj;
 					if (index < 0) {
 						index = l.size() + index;
 					}
-					if (index < 0 || index >= l.size()) {
-						internalError("IndexError", "list index out of range");
-					}
+					if (index < 0 || index >= l.size())
+						throw internalError("IndexError", "list index out of range");
 					stack[++stacktop] = l.get(index);
 					continue;
 				} else if (obj instanceof Map) {
@@ -735,13 +733,12 @@ public class MiniPython {
 						stack[++stacktop] = m.get(key);
 						continue;
 					}
-					internalError("KeyError", toPyString(key));
+					throw internalError("KeyError", toPyString(key));
 				} else if (obj instanceof String) {
-					if (!(key instanceof Integer)) {
-						internalError("TypeError",
+					if (!(key instanceof Integer))
+						throw internalError("TypeError",
 								"str indices must be integers: "
 										+ toPyString(key));
-					}
 					int ikey = (Integer) key;
 					if (ikey < 0) {
 						ikey += ((String) obj).length();
@@ -751,10 +748,10 @@ public class MiniPython {
 								ikey + 1);
 						continue;
 					} catch (IndexOutOfBoundsException e) {
-						internalError("IndexError", "string index out of range");
+						throw internalError("IndexError", "string index out of range");
 					}
 				}
-				internalError("TypeError", "object is not subscriptable "
+				throw internalError("TypeError", "object is not subscriptable "
 						+ toPyString(obj));
 			}
 			case 15: // SUBSCRIPT_SLICE
@@ -762,13 +759,12 @@ public class MiniPython {
 				Object to = stack[stacktop--];
 				Object from = stack[stacktop--];
 				Object obj = stack[stacktop--];
-				if (!((to == null || to instanceof Integer) && (from == null || from instanceof Integer))) {
-					internalError(
+				if (!((to == null || to instanceof Integer) && (from == null || from instanceof Integer)))
+					throw internalError(
 							"TypeError",
 							String.format(
 									"slice indices must both be integers: supplied %s and %s",
 									toPyTypeString(from), toPyTypeString(to)));
-				}
 				if (obj instanceof List) {
 					List thelist = (List) obj;
 					int ifrom = (from == null) ? 0 : (Integer) from;
@@ -812,10 +808,9 @@ public class MiniPython {
 					}
 					continue;
 				}
-				internalError("TypeError",
+				throw internalError("TypeError",
 						"you can only slice lists and strings, not "
 								+ toPyTypeString(obj));
-				continue;
 			}
 			case 33: // ASSIGN_INDEX
 			{
@@ -825,26 +820,23 @@ public class MiniPython {
 				if (obj instanceof Map) {
 					((Map) obj).put(index, value);
 				} else if (obj instanceof List) {
-					if (!(index instanceof Integer)) {
-						internalError("TypeError",
+					if (!(index instanceof Integer))
+						throw internalError("TypeError",
 								"list indices must be integers, not "
 										+ toPyTypeString(index));
-					}
 					int iindex = (Integer) index;
 					List list = (List) obj;
 					if (iindex < 0) {
 						iindex += list.size();
 					}
-					if (iindex < 0 || iindex >= list.size()) {
-						internalError("IndexError", String.format(
+					if (iindex < 0 || iindex >= list.size())
+						throw internalError("IndexError", String.format(
 								"list assignment index out of range: %d",
 								iindex));
-					}
 					list.set(iindex, value);
-				} else {
-					internalError("TypeError", toPyTypeString(obj)
+				} else
+					throw internalError("TypeError", toPyTypeString(obj)
 							+ " does not support item assignment");
-				}
 				continue;
 			}
 			case 28: // DEL_INDEX
@@ -852,28 +844,24 @@ public class MiniPython {
 				Object item = stack[stacktop--];
 				Object container = stack[stacktop--];
 				if (container instanceof List) {
-					if (!(item instanceof Integer)) {
-						internalError("TypeError",
+					if (!(item instanceof Integer))
+						throw internalError("TypeError",
 								"Can only use integers to index list not "
 										+ toPyTypeString(item));
-					}
 					int i = (Integer) item;
 					if (i < 0) {
 						i = ((List) container).size() + i;
 					}
-					if (i < 0 || i >= ((List) container).size()) {
-						internalError("IndexError", "list index out of bounds");
-					}
+					if (i < 0 || i >= ((List) container).size())
+						throw internalError("IndexError", "list index out of bounds");
 					((List) container).remove(i);
 				} else if (container instanceof Map) {
 					Object found = ((Map) container).remove(item);
-					if (item != null && found == null) {
-						internalError("KeyError", toPyString(item));
-					}
-				} else {
-					internalError("TypeError", "Can't delete item of "
+					if (item != null && found == null)
+						throw internalError("KeyError", toPyString(item));
+				} else
+					throw internalError("TypeError", "Can't delete item of "
 							+ toPyTypeString(container));
-				}
 				continue;
 			}
 			case 29: // DEL_SLICE
@@ -881,10 +869,9 @@ public class MiniPython {
 				Object to = stack[stacktop--];
 				Object from = stack[stacktop--];
 				Object inlist = stack[stacktop--];
-				if (!(inlist instanceof List)) {
-					internalError("TypeError", "you can only slice lists not "
+				if (!(inlist instanceof List))
+					throw internalError("TypeError", "you can only slice lists not "
 							+ toPyTypeString(inlist));
-				}
 				if (to instanceof Integer && from instanceof Integer) {
 					int ifrom = (Integer) from;
 					int ito = (Integer) to;
@@ -906,13 +893,12 @@ public class MiniPython {
 							}
 						}
 					}
-				} else {
-					internalError(
+				} else
+					throw internalError(
 							"TypeError",
 							String.format(
 									"slice indices must both be integers: supplied %s and %s",
 									toPyTypeString(from), toPyTypeString(to)));
-				}
 				continue;
 			}
 			case 164: // DEL_NAME
@@ -927,10 +913,9 @@ public class MiniPython {
 				// key existed or had a null value
 				if (current.variables.containsKey(name)) {
 					current.variables.remove(name);
-				} else {
-					internalError("NameError",
+				} else
+					throw internalError("NameError",
 							String.format("name '%s' is not defined", name));
-				}
 				continue;
 			}
 			case 7: // IN
@@ -939,13 +924,14 @@ public class MiniPython {
 				Object key = stack[stacktop--];
 				if (collection instanceof Map) {
 					stack[++stacktop] = ((Map) collection).containsKey(key);
-					continue;
 				} else if (collection instanceof List) {
 					stack[++stacktop] = ((List) collection).contains(key);
-					continue;
-				}
-				internalError("TypeError", "can't do 'in' in "
-						+ toPyString(collection));
+				} else if (key instanceof String && collection instanceof String ) {
+					stack[++stacktop]=((String)collection).contains((String)key);
+				} else
+					throw internalError("TypeError", "can't do 'in' in "
+							+ toPyString(collection));
+				continue;
 			}
 
 			// Unary operations
@@ -953,19 +939,17 @@ public class MiniPython {
 			{
 				if (stack[stacktop] instanceof Integer) {
 					stack[stacktop] = -(Integer) stack[stacktop];
-				} else {
-					internalError("TypeError", "Can't negate "
+				} else
+					throw internalError("TypeError", "Can't negate "
 							+ toPyTypeString(stack[stacktop]));
-				}
 				continue;
 			}
 			case 8: // UNARY_ADD
 			{
 				if (stack[stacktop] instanceof Integer) {
-				} else {
-					internalError("TypeError", "Can't unary plus "
+				} else
+					throw internalError("TypeError", "Can't unary plus "
 							+ toPyTypeString(stack[stacktop]));
-				}
 				continue;
 			}
 			case 24: // NOT
@@ -985,10 +969,9 @@ public class MiniPython {
 					stack[stacktop] = ((List) o).iterator();
 				} else if (o instanceof Map) {
 					stack[stacktop] = ((Map) o).keySet().iterator();
-				} else {
-					internalError("TypeError", toPyString(o)
+				} else
+					throw internalError("TypeError", toPyString(o)
 							+ " is not iterable");
-				}
 				continue;
 			}
 
@@ -996,9 +979,8 @@ public class MiniPython {
 			case 34: // ASSERT_FAILED
 			{
 				Object o = stack[stacktop--];
-				internalError("AssertionError", toPyString((o != null) ? o
+				throw internalError("AssertionError", toPyString((o != null) ? o
 						: "assertion failed"));
-				continue;
 			}
 			case 23: // PRINT
 			{
@@ -1032,13 +1014,12 @@ public class MiniPython {
 			case 163: // GLOBAL
 			{
 				if (current != root
-						&& current.variables.containsKey(strings[val])) {
-					internalError(
+						&& current.variables.containsKey(strings[val]))
+					throw internalError(
 							"SyntaxError",
 							String.format(
 									"Name '%s' is assigned to before 'global' declaration",
 									strings[val]));
-				}
 				current.addGlobal(strings[val]);
 				continue;
 			}
@@ -1062,10 +1043,9 @@ public class MiniPython {
 					nativeCall();
 					continue;
 				}
-				if (!(stack[stacktop] instanceof TMethod)) {
-					internalError("TypeError", toPyString(stack[stacktop])
+				if (!(stack[stacktop] instanceof TMethod))
+					throw internalError("TypeError", toPyString(stack[stacktop])
 							+ " is not callable");
-				}
 				while (stacktop + 2 > stack.length) {
 					extendStack();
 				}
@@ -1082,11 +1062,10 @@ public class MiniPython {
 				int returnpc = (Integer) stack[stacktop--];
 				Context returncontext = (Context) stack[stacktop--];
 				int argsprovided = (Integer) stack[stacktop--];
-				if (argsexpected != argsprovided) {
-					internalError("TypeError", String.format(
+				if (argsexpected != argsprovided)
+					throw internalError("TypeError", String.format(
 							"Method takes exactly %d arguments (%d given)",
 							argsexpected, argsprovided));
-				}
 				// we need to insert the returncontext/pc before the args
 				stacktop += 2;
 				System.arraycopy(stack, stacktop - argsprovided - 1, stack,
@@ -1097,9 +1076,8 @@ public class MiniPython {
 			}
 			case 9: // RETURN
 			{
-				if (current.parent == null) {
-					internalError("SyntaxError", "'return' outside function");
-				}
+				if (current.parent == null)
+					throw internalError("SyntaxError", "'return' outside function");
 
 				Object retval = stack[stacktop--];
 				int returnpc = (Integer) stack[stacktop--];
@@ -1112,7 +1090,7 @@ public class MiniPython {
 			}
 			// -- check end : marker used by tool
 			default:
-				internalError("RuntimeError",
+				throw internalError("RuntimeError",
 						String.format("Unknown/unimplemented opcode: %d", op));
 			}
 		}
@@ -1120,9 +1098,8 @@ public class MiniPython {
 
 	private void extendStack() throws ExecutionError {
 		int newsize = stack.length + (PARANOIDSTACK ? 1 : 512);
-		if (newsize > 8192) {
-			internalError("RuntimeError", "Maximum stack depth exceeded");
-		}
+		if (newsize > 8192)
+			throw internalError("RuntimeError", "Maximum stack depth exceeded");
 		Object[] newstack = new Object[newsize];
 		System.arraycopy(stack, 0, newstack, 0, stack.length);
 		stack = newstack;
@@ -1218,7 +1195,7 @@ public class MiniPython {
 				expecting = parameterTypes[badarg];
 			}
 
-			internalError("TypeError", String.format(
+			throw internalError("TypeError", String.format(
 					"Calling %s - bad argument #%d - got %s, expecting %s", tm,
 					badarg + 1 - lpargs, toPyTypeString(badval),
 					toPyTypeString(expecting)));
@@ -1230,7 +1207,7 @@ public class MiniPython {
 					method.getGenericParameterTypes().length
 					+ (varargs ? -1 : 0) - lpargs, varargs ? "+" : "",
 							suppliedargs - lpargs);
-			internalError("TypeError", msg);
+			throw internalError("TypeError", msg);
 		}
 
 		Object result = null;
@@ -1238,24 +1215,23 @@ public class MiniPython {
 			result = method.invoke(tm.getThis(), args);
 		} catch (IllegalArgumentException e) {
 			// this shouldn't be possible since we checked arg typing
-			internalError("RuntimeError", String.format(
+			throw internalError("RuntimeError", String.format(
 					"Illegal arguments to native method %s: %s", tm, e));
 		} catch (IllegalAccessException e) {
 			// this shouldn't be possible since we checked it is public
-			internalError("RuntimeError", String.format(
+			throw internalError("RuntimeError", String.format(
 					"Illegal access to native method %s: %s", tm, e));
 		} catch (InvocationTargetException e) {
 			Object cause = e.getCause();
 			if (cause instanceof ExecutionError)
 				throw (ExecutionError) cause;
-			internalError(cause.getClass().getSimpleName(),
+			throw internalError(cause.getClass().getSimpleName(),
 					String.format("%s: %s", tm, cause));
 		}
 		stack[++stacktop] = result;
 	}
 
-	private void internalError(String exctype, String message)
-			throws ExecutionError {
+	private ExecutionError internalError(String exctype, String message) {
 		// need to know current context
 		ExecutionError e = new ExecutionError();
 		e.type = exctype;
@@ -1265,12 +1241,17 @@ public class MiniPython {
 		if (mTheClient != null) {
 			mTheClient.onError(e);
 		}
-		throw e;
+		return e;
 	}
 
-	private void internalErrorBinaryOp(String exctype, String op, Object left,
-			Object right) throws ExecutionError {
-		internalError(exctype, String.format("Can't do binary op: %s %s %s",
+	private ExecutionError internalError(Exception e) {
+		return internalError(e.getClass().getSimpleName(), /*private - makes test happy*/
+				e.toString());
+	}
+
+	private ExecutionError internalErrorBinaryOp(String exctype, String op, Object left,
+			Object right)  {
+		return internalError(exctype, String.format("Can't do binary op: %s %s %s", /*private - this makes test happy*/
 				toPyTypeString(left), op, toPyTypeString(right)));
 	}
 
@@ -1292,7 +1273,7 @@ public class MiniPython {
 	 */
 	public void signalError(String exctype, String message)
 			throws ExecutionError {
-		internalError(exctype, message);
+		throw internalError(exctype, message);
 	}
 
 	Object getAttr(Object o, String name) throws ExecutionError {
@@ -1307,9 +1288,8 @@ public class MiniPython {
 						name);
 		}
 
-		internalError("AttributeError",
+		throw internalError("AttributeError",
 				String.format("No attribute '%s' of %s", name, toPyString(o)));
-		return null;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -1558,8 +1538,7 @@ public class MiniPython {
 			if (o instanceof Map)
 				return ((Map) o).size() > 0;
 
-				internalError("TypeError", "Can't 'bool' " + toPyString(o));
-				return false;
+				throw internalError("TypeError", "Can't 'bool' " + toPyString(o));
 	}
 
 	boolean builtin_callable(Object o) {
@@ -1599,13 +1578,12 @@ public class MiniPython {
 			try {
 				return Integer.parseInt((String) o);
 			} catch (NumberFormatException e) {
-				internalError("ValueError", e.toString());
+				throw internalError("ValueError", e.toString());
 			}
 		}
-		internalError("TypeError",
+		throw internalError("TypeError",
 				"int argument must be bool, string or int not "
 						+ toPyTypeString(o));
-		return 0;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -1616,9 +1594,7 @@ public class MiniPython {
 			return ((List) item).size();
 		if (item instanceof String)
 			return ((String) item).length();
-		internalError("TypeError", "Can't get length of " + toPyString(item));
-		// unreachable code
-		return -1;
+		throw internalError("TypeError", "Can't get length of " + toPyString(item));
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -1646,9 +1622,8 @@ public class MiniPython {
 
 	List<Object> builtin_range(int start, int... constraints)
 			throws ExecutionError {
-		if (constraints.length > 2) {
-			internalError("TypeError", "Expected at most 3 arguments");
-		}
+		if (constraints.length > 2)
+			throw internalError("TypeError", "Expected at most 3 arguments");
 		int step = 1;
 		int stop = 1;
 		switch (constraints.length) {
@@ -1664,9 +1639,8 @@ public class MiniPython {
 			step = constraints[1];
 			break;
 		}
-		if (step == 0) {
-			internalError("ValueError", "step argument must not be zero");
-		}
+		if (step == 0)
+			throw internalError("ValueError", "step argument must not be zero");
 		List<Object> res = new ArrayList<Object>();
 
 		if (step < 0 && stop < start) {
@@ -1721,17 +1695,15 @@ public class MiniPython {
 
 		switch (args.length) {
 		default:
-			internalError("TypeError",
+			throw internalError("TypeError",
 					"Too many arguments to str.split (at most 2 taken)");
 		case 2:
-			if (!(args[1] instanceof Integer)) {
-				internalError("TypeError", "maxsplit should be an integer");
-			}
+			if (!(args[1] instanceof Integer))
+				throw internalError("TypeError", "maxsplit should be an integer");
 			maxsplit = (Integer) args[1];
 		case 1:
-			if (!(args[0] instanceof String)) {
-				internalError("TypeError", "sep should be an integer");
-			}
+			if (!(args[0] instanceof String))
+				throw internalError("TypeError", "sep should be an integer");
 			sep = (String) args[0];
 		case 0:
 		}
@@ -1779,9 +1751,8 @@ public class MiniPython {
 
 	@SuppressWarnings("rawtypes")
 	Object instance_list_pop(List list) throws ExecutionError {
-		if (list.size() == 0) {
-			internalError("IndexError", "pop from empty list");
-		}
+		if (list.size() == 0)
+			throw internalError("IndexError", "pop from empty list");
 		Object res = list.get(list.size() - 1);
 		list.remove(list.size() - 1);
 		return res;
@@ -1800,33 +1771,30 @@ public class MiniPython {
 
 		switch (args.length) {
 		default:
-			internalError("TypeError", String.format(
+			throw internalError("TypeError", String.format(
 					"list.sort() takes most 3 arguments (%d given)",
 					args.length));
 		case 3:
 			if (args[2] != null) {
-				if (!(args[2] instanceof Boolean)) {
-					internalError("TypeError",
+				if (!(args[2] instanceof Boolean))
+					throw internalError("TypeError",
 							"list.sort reverse parameter should be boolean not "
 									+ toPyTypeString(args[2]));
-				}
 				reverse = (Boolean) args[2];
 			}
 		case 2: {
 			if (args[1] != null) {
-				if (!builtin_callable(args[1])) {
-					internalError("ValueError",
+				if (!builtin_callable(args[1]))
+					throw internalError("ValueError",
 							"list.sort key parameter must be callable");
-				}
 				key = (Callable) args[1];
 			}
 		}
 		case 1: {
 			if (args[0] != null) {
-				if (!builtin_callable(args[0])) {
-					internalError("ValueError",
+				if (!builtin_callable(args[0]))
+					throw internalError("ValueError",
 							"list.sort cmp parameter must be callable");
-				}
 				cmp = (Callable) args[0];
 			}
 		}

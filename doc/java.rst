@@ -209,7 +209,7 @@ interface MiniPython.Client
       This provides one spot where you can perform logging and other
       diagnostics.
 
-      :param error: The instance that is about to be thrown
+      :param error:  The instance that is about to be thrown
 
    .. method:: void print(String s)
 

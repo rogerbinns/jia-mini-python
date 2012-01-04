@@ -6,6 +6,8 @@ import tempfile
 import subprocess
 import unittest
 import glob
+import re
+import json
 
 opj=os.path.join
 
@@ -36,10 +38,14 @@ def delfiles(files):
 class JavaMiniPython(unittest.TestCase):
 
     def jmp_compile(self, infile, *outfile):
-        return self.run_external_command([jmpcompiler, "--asserts", infile]+list(outfile))
+        out,err=self.run_external_command([jmpcompiler, "--asserts", infile]+list(outfile))
+        self.assertEqual(err, "")
 
-    def run_jar(self, filename):
-        cmd=["java"]+covoptions+["com.rogerbinns.Tester", filename]
+    def run_jar(self, filename, multi=False):
+        cmd=["java"]+covoptions+["com.rogerbinns.Tester"]
+        if multi:
+            cmd.append("--multi")
+        cmd.append(filename)
         return self.run_external_command(cmd)
 
     def run_external_command(self, args):
@@ -51,26 +57,6 @@ class JavaMiniPython(unittest.TestCase):
             self.assertEqual(err, "")
         return out, err
 
-    def run_jar_success(self, expect, code):
-        files=[]
-        try:
-            f=tempfile.NamedTemporaryFile(prefix="runtest", dir=testfiledir)
-            tn=f.name+".py"
-            f.close()
-            files.append(tn)
-            with open(tn, "wt") as f:
-                f.write(code)
-            jmp=tn+".jmp"
-            files.append(jmp)
-            self.jmp_compile(tn, jmp)
-            out, err=self.run_jar(jmp)
-            self.assertEqual(err, "")
-            o=out.strip()
-            self.assertEqual(o, expect)
-        finally:
-            delfiles(files)
-
-
     def testCmp(self):
         "Test comparisons"
         self.run_py("test/cmp.py")
@@ -79,11 +65,69 @@ class JavaMiniPython(unittest.TestCase):
         "Test dictionaries"
         self.run_py("test/dict.py")
 
+    def testString(self):
+        "Test strings"
+        self.run_py("test/string.py")
+
+    def testList(self):
+        "Test lists"
+        self.run_py("test/list.py")
+
+    def testGeneral(self):
+        "Test various operations"
+        self.run_py("test/general.py")
+
     def run_py(self, name):
         self.jmp_compile(name)
         out,err=self.run_jar(os.path.splitext(name)[0]+".jmp")
         self.assertEqual("", err)
+
+    def testErrors(self):
+        "Test various operations that should result in errors"
+        # we read errors.py which has multiple stanzas starting with
+        # #> followed by a prefix or regex and then some code that
+        # should raise that error
+        tests=[]
+        code=[]
+        for lineno,line in enumerate(open("test/errors.py")):
+            lineno+=1 # we count from one for files
+            if line.startswith("#>"):
+                if code:
+                    tests.append( (linestart, pat, "".join(code)) )
+                    code=[]
+                linestart=lineno
+                pat=line[2:].strip()
+                continue
+            code.append(line)
+        if code:
+            tests.append( (linestart, pat, "".join(code)) )
+
+        with open("test/errors.jmp", "wb") as jmp:
+            for _,_, code in tests:
+                with tempfile.NamedTemporaryFile(prefix="runtest") as tmppyf, \
+                        tempfile.NamedTemporaryFile(prefix="runtest") as tmpjmpf:
+                    tmppyf.write(code)
+                    tmppyf.flush()
+                    self.jmp_compile(tmppyf.name, tmpjmpf.name)
+                    jmp.write(tmpjmpf.read())
         
+        out,err=self.run_jar("test/errors.jmp", multi=True)
+        self.assertEqual(err, "")
+        results=json.loads(out)
+        self.assertEqual(len(results), len(tests))
+        for num, (lineno, pat, _) in enumerate(tests):
+            out,err=results[num]
+            if "*" in pat:
+                self.assert_(re.match(pat, err, re.DOTALL|re.IGNORECASE), "Failed to match at line %d of errors.py\nerr = %s" % (lineno, err))
+            else:
+                self.assert_(err.startswith(pat), "Failed to prefix at line %d of errors.py\nerr = %s" % (lineno,err))
+
+    def testSource(self):
+        "Source checks"
+        for lineno,line in enumerate(open("src/com/rogerbinns/MiniPython.java", "rtU")):
+            if "internalError" in line and "private" not in line:
+                self.assert_("throw internalError" in line, "Line %d doesn't throw internalError" % (lineno+1,))
+
 def main():
     # Check the jar file is present
     if not os.path.exists(jarfile):

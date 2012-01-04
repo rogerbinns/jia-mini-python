@@ -1,21 +1,44 @@
 package com.rogerbinns;
 
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import com.rogerbinns.MiniPython.ExecutionError;
 
 public class Tester {
 
-	/**
-	 * @param args
-	 */
 	public static void main(String[] args) {
-		if (args.length!=1) {
-			System.err.print("Expected exactly one argument - .jmp file to read\n");
-			System.exit(2);
+		boolean multimode=false;
+
+		if(args.length<1) {
+			usage();
 		}
+
+		while(args.length>0 && args[0].startsWith("--")) {
+			int nargs=0;
+			if(args[0].equals("--multi")) {
+				multimode=true;
+				nargs=1;
+			} else {
+				usage();
+			}
+			// yes this awful - prune args
+			List<String> l = new ArrayList<String>(Arrays.asList(args));
+			for(int i=0; i<nargs; i++) {
+				l.remove(0);
+			}
+			args = l.toArray(new String[0]);
+		}
+
+		if (args.length!=1) {
+			usage();
+		}
+
 		InputStream is = null;
 		try {
 			is=new FileInputStream(args[0]);
@@ -24,54 +47,87 @@ public class Tester {
 			System.exit(3);
 		}
 		final MiniPython mp=new MiniPython();
+		final StringBuilder out=new StringBuilder(), err=new StringBuilder();
+		final boolean fmultimode=multimode;
+
 		mp.setClient(new MiniPython.Client() {
 			@Override
 			public void print(String s) throws ExecutionError {
-				System.out.print(s);
-				System.out.flush();
+				if(fmultimode) {
+					out.append(s);
+				} else {
+					System.out.print(s);
+				}
 			}
 
 			@Override
 			public void onError(ExecutionError error) {
-				System.err.println(error);
-				System.err.printf("Line %d.  pc=%d\n", error.linenumber(), error.pc());
-				System.err.flush();
+				if(fmultimode) {
+					err.append(error.toString()+"\n");
+					err.append(String.format("Line %d.  pc=%d\n", error.linenumber(), error.pc()));
+				} else {
+					System.err.println(error);
+					System.err.printf("Line %d.  pc=%d\n", error.linenumber(), error.pc());
+					System.err.flush();
+				}
 			}
 		});
 
-		@SuppressWarnings("unused") // used via reflection, why does it whine?
-		class TimeWrapper {
-			public int time() {
-				return (int) (System.currentTimeMillis()/1000);
-			}
-			public int add(int x, int y) {
-				return x+y;
-			}
-			private int veryprivate() {
-				return 3;
-			}
-			public void returnsvoid() {
+		mp.addModule("test1", new Test1());
 
-			}
-			public String callback(String s) throws ExecutionError {
-				return "a"+mp.callMethod("meth", s, 2)+"b";
-			}
-			public String vatest(String s, int... ints) {
-				return s+ints.toString();
-			}
+		if(multimode) {
+			System.out.print("[");
 		}
+		boolean first=true;
+		do {
+			out.setLength(0);
+			err.setLength(0);
 
-		mp.addModule("time", new TimeWrapper());
-		try {
-			mp.setCode(is);
-			System.exit(0);
-		} catch (IOException e) {
-			System.err.printf("Failure: %s\n", e);
-			System.exit(1);
-		} catch (ExecutionError e) {
-			// we printed in the client
-			System.exit(7);
-		}
+			try {
+				mp.setCode(is);
+				if(!multimode) {
+					System.exit(0);
+				}
+			} catch(EOFException e) {
+				if(multimode) {
+					System.out.println("]");
+					System.exit(0);
+				}
+				System.err.println("Unexpected end of file");
+			} catch (IOException e) {
+				System.err.printf("Failure: %s\n", e);
+				System.exit(1);
+			} catch (ExecutionError e) {
+				// we printed in the client
+				if(!multimode) {
+					System.exit(7);
+				}
+			}
+			if(first) {
+				first=false;
+			} else {
+				System.out.println(",");
+			}
+			if(multimode) {
+				System.out.print("["+toJSON(out.toString())+", "+toJSON(err.toString())+"]");
+			}
+		} while(multimode);
 	}
 
+	static void usage() {
+		System.err.println("Usage: Tester [--multi] inputfile");
+	}
+
+	static String toJSON(String s) {
+		return '"'+s.replace("\"", "\\\"")
+				.replace("\\", "\\\\")
+				.replace("\n", "\\n")
+				.replace("/", "\\/")
+				+'"';
+	}
+
+	static class Test1
+	{
+		public void retNone() {}
+	}
 }
