@@ -12,17 +12,6 @@ import linecache
 import array
 import re
 
-# Get the nicest debugger possible
-try:
-    from IPython.Debugger import Tracer
-    debug_here=Tracer()
-    del Tracer
-except ImportError:
-    import pdb
-    debug_here=pdb.set_trace
-    del pdb
-
-        
 class Label:
     "Instances used to mark locations while generating byte code"
     def __repr__(self):
@@ -822,7 +811,6 @@ opcode_map={
     "LIST": 17,
     "PUSH_NONE": 18,
     "EXIT_LOOP": 19,
-    "STR": 20,
     "PUSH_TRUE": 21,
     "PUSH_FALSE": 22,
     "PRINT": 23,
@@ -886,7 +874,7 @@ filename to override where the output goes.""")
 
     g=optparse.OptionGroup(p, "Dumping", """Shows the internal representation of .jmp files""")
     g.add_option("--dump", action="store_true", default=False, help="Enables dump mode")
-    g.add_option("--dump-source", metavar="INPUT.PY", help="Optional source file that the .jmp was compiled from.  The lines of the source will be intermingled with the output.")
+    g.add_option("--dump-source", metavar="INPUT.PY", help="Optional source file that the .jmp was compiled from.  The lines of the source will be intermingled with the output.  By default a .py file alongside the .jmp is used if present.")
     p.add_option_group(g)
 
     g=optparse.OptionGroup(p, "Internal developer")
@@ -899,9 +887,14 @@ filename to override where the output goes.""")
     if options.dump:
         if len(args)!=1:
             p.error("--dump: One argument expected")
+        if not options.dump_source:
+            fn=os.path.splitext(args[0])[0]+".py"
+            if os.path.exists(fn):
+                options.dump_source=fn
         if options.dump_source:
             if not os.path.exists(options.dump_source):
                 p.error("Source file \"%s\" not found" % (options.source,))
+            # ::TODO:: whine if source is newer than .jmp?
         dumper(options, args[0])
     elif options.java_maintenance:
         if len(args)!=1:
