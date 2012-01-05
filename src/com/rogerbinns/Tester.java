@@ -74,7 +74,8 @@ public class Tester {
 			}
 		});
 
-		mp.addModule("test1", new Test1());
+		mp.addModule("test1", new Test1(mp));
+		mp.addModule("test2", new Test1(mp));
 
 		if(multimode) {
 			System.out.print("[");
@@ -129,9 +130,19 @@ public class Tester {
 
 	static class Test1
 	{
+		MiniPython mp;
+		Test1(MiniPython mp) { this.mp=mp;}
 		public void retNone() {}
 		@SuppressWarnings("rawtypes")
 		public void takesAll(Boolean b, boolean b2, Map m, List l, Integer i, int i2, Test1 t1) {}
 		public Test1 retSelf() { return this; }
+		@Override
+		public boolean equals(Object other) { throw new ClassCastException(); }
+		@SuppressWarnings("unused")
+		private void privatemethod() { throw new AssertionError("this code should not be executed"); }
+		public Object call(String name, Object ...args) throws ExecutionError { return mp.callMethod(name, args); }
+		public int add(int l, int r) throws ExecutionError { return (Integer)mp.callMethod("add", 3, 4); }
+		public void vacall(String foo, String ...bar) {}
+		public void signalBatman() throws ExecutionError { mp.signalError("Batman", "come"); }
 	}
 }

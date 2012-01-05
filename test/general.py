@@ -67,6 +67,8 @@ assert False < True
 
 assert str(3<4)=="True"
 assert str(3>4)=="False"
+assert "module" in str(test1)
+
 
 d={1: 2}
 d["foo"]=d
@@ -105,6 +107,13 @@ assert test1.retSelf==test1.retSelf
 assert test1.retSelf!=test1.retSelf()
 assert test1.retSelf!=meth
 assert test1.retSelf()!=3
+assert test1.retSelf!=test2.retSelf
+assert test1.retSelf()!=test2.retSelf()
+
+l=[]
+assert l.index==l.index
+assert l.index!=[3].index
+assert l.index!="".replace
 
 assert {1:1, 2:3} < {1:1, 2:4}
 
@@ -157,3 +166,14 @@ assert "a1a2a3a4".split("a", 2)==['', '1', '2a3a4']
 assert "".strip()==""
 assert "     ".strip()==""
 assert "  a   ".strip()=="a"
+
+assert test1.call("id", 7)==id(7)
+
+used=False
+def add(a,b):
+    global used
+    used=True
+    return a+b
+
+assert test1.add(3,4)==7
+assert used

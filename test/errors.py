@@ -243,3 +243,33 @@ range(1,2,3,4,5,6)
 def meth(a,b):
     assert False
 [1,2].sort(meth)
+
+#> AttributeError
+test1.privatemethod
+
+#> TypeError
+notcallable=7
+test1.call("notcallable")
+
+#> NameError
+test1.call("doesn't exist")
+
+#> TypeError
+apply(None, [])
+
+##> foo
+#x=test1.call
+#test1.call("x")
+
+#> TypeError
+test1.vacall(3)
+#> TypeError
+test1.vacall("foo", 4)
+#> TypeError.*takes.*args.*
+test1.vacall()
+
+#> Batman
+test1.signalBatman()
+
+#> Batman
+test2.signalBatman()

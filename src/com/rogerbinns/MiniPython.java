@@ -243,8 +243,8 @@ public class MiniPython {
 
 		@Override
 		public String toString() {
-			return String.format("<instance method %s.%s>",
-					toPyTypeString(prefixargs[0]), prettyname);
+			return String.format("<instance method %s.%s for %d>",
+					toPyTypeString(prefixargs[0]), prettyname, builtin_id(prefixargs[0]));
 		}
 	}
 
@@ -1064,13 +1064,12 @@ public class MiniPython {
 		Object badval = null;
 
 		boolean varargs = method.isVarArgs();
-		if (varargs) {
+		if (varargs && suppliedargs>=method.getGenericParameterTypes().length-1) {
 			int varargsindex = method.getGenericParameterTypes().length - 1;
 			Class<?> vatype = parameterTypes[varargsindex].getComponentType();
 			Object varargsdata = Array.newInstance(vatype, suppliedargs
 					- varargsindex);
 			args = new Object[varargsindex + 1];
-
 			args[varargsindex] = varargsdata;
 
 			for (int i = 0; i < suppliedargs; i++) {
