@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import com.rogerbinns.MiniPython.ExecutionError;
 
@@ -119,8 +120,8 @@ public class Tester {
 	}
 
 	static String toJSON(String s) {
-		return '"'+s.replace("\"", "\\\"")
-				.replace("\\", "\\\\")
+		return '"'+s.replace("\\", "\\\\")
+				.replace("\"", "\\\"")
 				.replace("\n", "\\n")
 				.replace("/", "\\/")
 				+'"';
@@ -129,5 +130,8 @@ public class Tester {
 	static class Test1
 	{
 		public void retNone() {}
+		@SuppressWarnings("rawtypes")
+		public void takesAll(Boolean b, boolean b2, Map m, List l, Integer i, int i2, Test1 t1) {}
+		public Test1 retSelf() { return this; }
 	}
 }

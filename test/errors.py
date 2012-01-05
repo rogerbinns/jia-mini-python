@@ -103,4 +103,143 @@ del [][:2]
 # see above
 del [1,2,3][2:]
 
+#> NameError
+name=3
+assert 3+name==6
+del name
+assert 3+name==77
+#> NameError
+del foo
+#> NameError
+def meth():
+    foo=3
+    assert foo==3
+    del foo
+    assert foo==88
+meth()
 
+#> TypeError
+"sdffds" in 3
+#> TypeError
+3 in 3
+#> TypeError
+-True
+#> TypeError
++True
+
+#> TypeError
+for x in 3: pass
+#> AssertionError
+assert False, None # for coverage
+
+#. foo.*\n
+print "foobar"
+#. .*foobar[^\n]$
+print "foobar",
+#. .*foo bar\n
+print "foo","bar"
+
+#> SyntaxError
+
+global foo # for coverage
+def meth():
+    foo=3
+    global foo
+
+meth()
+
+#> TypeError:.*not callable.*
+d={}
+d()
+
+#> TypeError.*takes exactly.*
+def meth(a,b,c):
+    pass
+
+meth(1)
+#> SyntaxError
+return 3
+#> RuntimeError
+def meth():
+    return 3+meth()
+meth()
+
+### Exercise the toPyTypeString code
+#> TypeError.*bool.*
+test1.takesAll(3)
+#> TypeError.*bool.*
+test1.takesAll(True, 3)
+#> TypeError.*dict.*
+test1.takesAll(False, True, 4)
+#> TypeError.*list.*
+test1.takesAll(False, True, {}, {})
+#> TypeError.*int.*
+test1.takesAll(False, True, {}, [], "fff")
+#> TypeError.*int.*
+test1.takesAll(False, True, {}, [], 3, "")
+#> TypeError.*Test1.*
+test1.takesAll(False, True, {}, [], 3, 3, "")
+#> TypeError.*Test1.*
+test1.takesAll(test1.retSelf())
+
+#> TypeError
+bool(test1.retSelf())
+
+#> ValueError
+int("fred")
+#> TypeError
+int({})
+#> TypeError
+len(True)
+#> TypeError
+"fdsfdsa"[3]="5"
+
+#> ValueError
+range(0,10,0)
+
+#> TypeError
+range(1,2,3,4,5,6)
+
+#> NullPointerException
+"fdasfdsa".endswith(None)
+
+#> TypeError
+"".join(["sfds", "sas", 1])
+
+#> TypeError.*too many.*
+"".split(1,2,3,4,5)
+
+#> TypeError
+"".split("", "foo")
+
+#> TypeError
+"".split(1,2)
+
+#> ValueError
+"afdsfads".split("")
+
+#> NullPointerException
+[].extend(None)
+
+#> TypeError
+[].extend()
+
+#> IndexError
+[].pop()
+
+#> TypeError
+[].sort(1,2,3,4,5,6)
+
+#> TypeError
+[].sort(None, None, 1)
+
+#> ValueError.*callable.*
+[].sort(None, True)
+
+#> ValueError.*callable.*
+[].sort(True)
+
+#> AssertionError
+def meth(a,b):
+    assert False
+[1,2].sort(meth)

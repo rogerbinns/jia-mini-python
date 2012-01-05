@@ -8,6 +8,8 @@ import unittest
 import glob
 import re
 import json
+import time
+import imp
 
 opj=os.path.join
 
@@ -25,7 +27,19 @@ if os.getenv("JMPCOVERAGE"):
         jars.append(f)
     covoptions=["-cp", os.pathsep.join(jars),
                 "-Dnet.sourceforge.cobertura.datafile="+os.path.abspath(opj(coveragedir, "cobertura.ser"))]
-    
+
+with open(opj(topdir, "host", "jmp-compile"), "rtU") as f:
+    jmpcompilemod=imp.new_module("jmp_compile")
+    exec f in jmpcompilemod.__dict__, jmpcompilemod.__dict__
+    jmpcompilerobject=jmpcompilemod.Compiler()
+
+def jmp_compile_internal(infile, outfile=None):
+    class options:
+        print_function=False
+        asserts=True
+    if outfile is None:
+        outfile=os.path.splitext(infile)[1]+".jmp"
+    jmpcompilerobject.compile(options, infile, outfile)
 
 def delfiles(files):
     for f in files:
@@ -91,41 +105,42 @@ class JavaMiniPython(unittest.TestCase):
         code=[]
         for lineno,line in enumerate(open("test/errors.py")):
             lineno+=1 # we count from one for files
-            if line.startswith("#>"):
+            if line.startswith("#>") or line.startswith("#."):
                 if code:
-                    tests.append( (linestart, pat, "".join(code)) )
+                    tests.append( (linestart, pattype, pat, "".join(code)) )
                     code=[]
                 linestart=lineno
                 pat=line[2:].strip()
+                pattype=["out","err"][line[1]==">"]
                 continue
             code.append(line)
         if code:
-            tests.append( (linestart, pat, "".join(code)) )
+            tests.append( (linestart, pattype, pat, "".join(code)) )
 
         with open("test/errors.jmp", "wb") as jmp:
-            for _,_, code in tests:
+            for _,_,_, code in tests:
                 with tempfile.NamedTemporaryFile(prefix="runtest") as tmppyf, \
                         tempfile.NamedTemporaryFile(prefix="runtest") as tmpjmpf:
                     tmppyf.write(code)
                     tmppyf.flush()
-                    self.jmp_compile(tmppyf.name, tmpjmpf.name)
+                    jmp_compile_internal(tmppyf.name, tmpjmpf.name)
                     jmp.write(tmpjmpf.read())
-        
         out,err=self.run_jar("test/errors.jmp", multi=True)
         self.assertEqual(err, "")
         results=json.loads(out)
         self.assertEqual(len(results), len(tests))
-        for num, (lineno, pat, _) in enumerate(tests):
+        for num, (lineno, pattype, pat, _) in enumerate(tests):
             out,err=results[num]
+            against=[out,err][pattype=="err"]
             if "*" in pat:
-                self.assert_(re.match(pat, err, re.DOTALL|re.IGNORECASE), "Failed to match at line %d of errors.py\nerr = %s" % (lineno, err))
+                self.assert_(re.match(pat, against, re.DOTALL|re.IGNORECASE), "Failed to match at line %d of errors.py\n%s = %s" % (lineno, pattype, against))
             else:
-                self.assert_(err.startswith(pat), "Failed to prefix at line %d of errors.py\nerr = %s" % (lineno,err))
+                self.assert_(against.startswith(pat), "Failed to prefix at line %d of errors.py\n%s = %s" % (lineno,pattype, against))
 
     def testSource(self):
         "Source checks"
         for lineno,line in enumerate(open("src/com/rogerbinns/MiniPython.java", "rtU")):
-            if "internalError" in line and "private" not in line:
+            if "internalError" in line and "private" not in line and "SOURCECHECKOK" not in line:
                 self.assert_("throw internalError" in line, "Line %d doesn't throw internalError" % (lineno+1,))
 
 def main():
