@@ -1218,12 +1218,11 @@ public class MiniPython {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private final int compareTo(Object left, Object right)
 			throws ExecutionError {
-		if (left == null || right == null) {
-			if (left == right)
-				return 0;
-			return compareTo(toPyTypeString(left), toPyTypeString(right));
-		}
+		if(left==right)
+			return 0;
 
+		if (left == null || right == null)
+			return compareTo(toPyTypeString(left), toPyTypeString(right));
 		try {
 			// ignore any exceptions this throws
 			if (left.equals(right))

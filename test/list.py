@@ -93,3 +93,13 @@ l.sort(None, lambda x: x[1])
 assert l==[{1: 1}, {1: 2}, {1: 3}]
 l.sort(cmp, None, True)
 assert l==[{1: 3}, {1: 2}, {1: 1}]
+
+# A list that can't do equals well
+l=test1.badeqlist()
+l2=test2.badeqlist()
+for i in 1,"fdsa", True, l, l2:
+    l.append(i)
+    l2.append(i)
+assert l==l2
+
+

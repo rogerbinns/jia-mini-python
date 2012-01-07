@@ -10,6 +10,7 @@ import re
 import json
 import time
 import imp
+import array
 
 opj=os.path.join
 
@@ -51,14 +52,14 @@ def delfiles(files):
 
 class JavaMiniPython(unittest.TestCase):
 
-    def jmp_compile(self, infile, *outfile):
-        out,err=self.run_external_command([jmpcompiler, "--asserts", infile]+list(outfile))
+    def jmp_compile(self, infile, outfile=None, print_function=False):
+        outfile=[outfile] if outfile else []
+        out,err=self.run_external_command([jmpcompiler]+(["--print-function"] if print_function else [])+["--asserts", infile]+outfile)
         self.assertEqual(err, "")
 
-    def run_jar(self, filename, multi=False):
+    def run_jar(self, filename, args=[]):
         cmd=["java"]+covoptions+["com.rogerbinns.Tester"]
-        if multi:
-            cmd.append("--multi")
+        cmd.extend(args)
         cmd.append(filename)
         return self.run_external_command(cmd)
 
@@ -125,7 +126,7 @@ class JavaMiniPython(unittest.TestCase):
                     tmppyf.flush()
                     jmp_compile_internal(tmppyf.name, tmpjmpf.name)
                     jmp.write(tmpjmpf.read())
-        out,err=self.run_jar("test/errors.jmp", multi=True)
+        out,err=self.run_jar("test/errors.jmp", args=["--multi"])
         self.assertEqual(err, "")
         results=json.loads(out)
         self.assertEqual(len(results), len(tests))
@@ -137,11 +138,67 @@ class JavaMiniPython(unittest.TestCase):
             else:
                 self.assert_(against.startswith(pat), "Failed to prefix at line %d of errors.py\n%s = %s" % (lineno,pattype, against))
 
+    def testPrintFunction(self):
+        "Test print function"
+        for expect, code in (
+            ('\n', 'print()'),
+            ('1 2\n', 'print(1,2)'),
+            ):
+            with tempfile.NamedTemporaryFile() as tmpf, tempfile.NamedTemporaryFile() as jmp:
+                tmpf.write(code)
+                tmpf.flush()
+                self.jmp_compile(tmpf.name, jmp.name, print_function=True)
+                out,err=self.run_jar(jmp.name)
+                self.assertEqual(err, "")
+                self.assertEqual(out, expect)
+                
+    def testCorrupt(self):
+        "Corrupted input"
+
+        testpats=[]
+        t=array.array('B', [0,0, 0,0, 10,0, 0, 1, 2, 3])
+        for i in range(1, len(t)+1):
+            testpats.append( ("Unexpected end of file", t[:i]) )
+
+        if False:
+            # Cobertura bug: doesn't see these so no point running them
+            for i in [20]+range(35,128)+range(134,160)+range(165,200)+range(202,56):
+                testpats.append(("RuntimeError: Unknown/unimplemented opcode: "+str(i),
+                                 array.array('B', [0,0, 0,0, 3,0, i,0,0])))
+
+        testpats.append(("RuntimeError: Unknown/unimplemented opcode: 245",
+                         array.array('B', [0,0, 0,0, 3,0, 245,0,0])))
+
+        testpats.append(("Unexpected end of file",
+                         array.array('B', [1,0, 245,0,0])))
+        # This is invalid utf8 but java is happy to accept it
+        testpats.append(("",
+                         array.array('B', [1,0, 4,0, 0xf0, 0x28, 0x8c, 0x28, 0, 0, 1, 0, 19])))
+        for expect, code in testpats:
+            with tempfile.NamedTemporaryFile() as tmpf:
+                # array decides tempfiles are not open files
+                code.tofile(open(tmpf.name, "wb"))
+                out,err=self.run_jar(tmpf.name)
+                self.assert_(err.startswith(expect))
+
     def testSource(self):
         "Source checks"
         for lineno,line in enumerate(open("src/com/rogerbinns/MiniPython.java", "rtU")):
             if "internalError" in line and "private" not in line and "SOURCECHECKOK" not in line:
                 self.assert_("throw internalError" in line, "Line %d doesn't throw internalError" % (lineno+1,))
+
+    def testClear(self):
+        "Test clear()"
+        for pf in False, True:
+            with tempfile.NamedTemporaryFile() as tmpf, tempfile.NamedTemporaryFile() as jmp:
+                tmpf.write("print(3)\ntest1\n")
+                tmpf.flush()
+                self.jmp_compile(tmpf.name, jmp.name, print_function=pf)
+                out,err=self.run_jar(jmp.name, args=["--clear"])
+                self.assertEqual(out, "")
+                self.assertNotEqual(err, "")
+                self.assert_(err.startswith("NameError"))
+        
 
 def main():
     # Check the jar file is present

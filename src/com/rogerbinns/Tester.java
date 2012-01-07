@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +16,7 @@ public class Tester {
 
 	public static void main(String[] args) {
 		boolean multimode=false;
+		boolean clear=false;
 
 		if(args.length<1) {
 			usage();
@@ -24,6 +26,9 @@ public class Tester {
 			int nargs=0;
 			if(args[0].equals("--multi")) {
 				multimode=true;
+				nargs=1;
+			} else if(args[0].equals("--clear")) {
+				clear=true;
 				nargs=1;
 			} else {
 				usage();
@@ -51,31 +56,35 @@ public class Tester {
 		final StringBuilder out=new StringBuilder(), err=new StringBuilder();
 		final boolean fmultimode=multimode;
 
-		mp.setClient(new MiniPython.Client() {
-			@Override
-			public void print(String s) throws ExecutionError {
-				if(fmultimode) {
-					out.append(s);
-				} else {
-					System.out.print(s);
+		if(!clear) {
+			mp.setClient(new MiniPython.Client() {
+				@Override
+				public void print(String s) throws ExecutionError {
+					if(fmultimode) {
+						out.append(s);
+					} else {
+						System.out.print(s);
+					}
 				}
-			}
 
-			@Override
-			public void onError(ExecutionError error) {
-				if(fmultimode) {
-					err.append(error.toString()+"\n");
-					err.append(String.format("Line %d.  pc=%d\n", error.linenumber(), error.pc()));
-				} else {
-					System.err.println(error);
-					System.err.printf("Line %d.  pc=%d\n", error.linenumber(), error.pc());
-					System.err.flush();
+				@Override
+				public void onError(ExecutionError error) {
+					if(fmultimode) {
+						err.append(error.toString()+"\n");
+						err.append(String.format("Line %d.  pc=%d\n", error.linenumber(), error.pc()));
+					} else {
+						System.err.println(error);
+						System.err.printf("Line %d.  pc=%d\n", error.linenumber(), error.pc());
+						System.err.flush();
+					}
 				}
-			}
-		});
+			});
+		}
 
-		mp.addModule("test1", new Test1(mp));
-		mp.addModule("test2", new Test1(mp));
+		if(!clear) {
+			mp.addModule("test1", new Test1(mp));
+			mp.addModule("test2", new Test1(mp));
+		}
 
 		if(multimode) {
 			System.out.print("[");
@@ -86,6 +95,9 @@ public class Tester {
 			err.setLength(0);
 
 			try {
+				if(clear) {
+					mp.clear();
+				}
 				mp.setCode(is);
 				if(!multimode) {
 					System.exit(0);
@@ -96,11 +108,15 @@ public class Tester {
 					System.exit(0);
 				}
 				System.err.println("Unexpected end of file");
+				System.exit(1);
 			} catch (IOException e) {
 				System.err.printf("Failure: %s\n", e);
 				System.exit(1);
 			} catch (ExecutionError e) {
-				// we printed in the client
+				// we printed in client unless clear is set
+				if(clear) {
+					System.err.println(e);
+				}
 				if(!multimode) {
 					System.exit(7);
 				}
@@ -144,5 +160,23 @@ public class Tester {
 		public int add(int l, int r) throws ExecutionError { return (Integer)mp.callMethod("add", 3, 4); }
 		public void vacall(String foo, String ...bar) {}
 		public void signalBatman() throws ExecutionError { mp.signalError("Batman", "come"); }
+		@SuppressWarnings("rawtypes")
+		public List badeqlist() { return new ListBadEquals(); }
+		@SuppressWarnings("rawtypes")
+		public Map badeqDict() { return new MapBadEquals(); }
+	}
+
+	// these two simulate a container that can't determine if its items are actually
+	// equal.  it would happen with very complex items contained within
+	@SuppressWarnings({ "serial", "rawtypes" })
+	static class ListBadEquals extends ArrayList {
+		@Override
+		public boolean equals(Object other) { return false; }
+	}
+
+	@SuppressWarnings({ "serial", "rawtypes" })
+	static class MapBadEquals extends HashMap {
+		@Override
+		public boolean equals(Object other) { return false; }
 	}
 }

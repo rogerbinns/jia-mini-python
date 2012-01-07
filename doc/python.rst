@@ -143,7 +143,7 @@ Global functions
    Returns a new list consisting of members when `function(member)`
    returned true.
 
-.. function:: id(item):
+.. function:: id(item)
 
    Returns a numeric code uniquely representing this instance.  Behind
    the scenes it returns the result of

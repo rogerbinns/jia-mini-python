@@ -74,3 +74,12 @@ for k in another:
     assert str(k) in stringed
     assert str(another[k]) in stringed
 
+# a dict that can't do equals well
+d=test1.badeqDict()
+d2=test2.badeqDict()
+
+for k in another:
+    d[k]=another[k]
+    d2[k]=another[k]
+
+assert d==d2

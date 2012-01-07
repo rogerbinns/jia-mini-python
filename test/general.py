@@ -177,3 +177,9 @@ def add(a,b):
 
 assert test1.add(3,4)==7
 assert used
+
+# no errors but does make sure classcastexception is handled in comparators
+test1.retSelf()<test2.retSelf()
+[test1.retSelf(), 2].sort()
+
+assert None==None
