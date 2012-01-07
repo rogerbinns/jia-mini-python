@@ -156,7 +156,7 @@ class JavaMiniPython(unittest.TestCase):
         "Corrupted input"
 
         testpats=[]
-        t=array.array('B', [0,0, 0,0, 10,0, 0, 1, 2, 3])
+        t=array.array('B', [0,0, 0,0, 0,0, 10,0, 0, 1, 2, 3])
         for i in range(1, len(t)+1):
             testpats.append( ("Unexpected end of file", t[:i]) )
 
@@ -164,22 +164,25 @@ class JavaMiniPython(unittest.TestCase):
             # Cobertura bug: doesn't see these so no point running them
             for i in [20]+range(35,128)+range(134,160)+range(165,200)+range(202,56):
                 testpats.append(("RuntimeError: Unknown/unimplemented opcode: "+str(i),
-                                 array.array('B', [0,0, 0,0, 3,0, i,0,0])))
+                                 array.array('B', [0,0,0,0, 0,0, 3,0, i,0,0])))
 
         testpats.append(("RuntimeError: Unknown/unimplemented opcode: 245",
-                         array.array('B', [0,0, 0,0, 3,0, 245,0,0])))
+                         array.array('B', [0,0,0,0, 0,0, 3,0, 245,0,0])))
+
+        testpats.append(("Failure: java.io.IOException: Unknown JMP version number 1",
+                         array.array('B', [1,0])))
 
         testpats.append(("Unexpected end of file",
-                         array.array('B', [1,0, 245,0,0])))
+                         array.array('B', [0,0,1,0, 245,0,0])))
         # This is invalid utf8 but java is happy to accept it
         testpats.append(("",
-                         array.array('B', [1,0, 4,0, 0xf0, 0x28, 0x8c, 0x28, 0, 0, 1, 0, 19])))
+                         array.array('B', [0,0,1,0, 4,0, 0xf0, 0x28, 0x8c, 0x28, 0, 0, 1, 0, 19])))
         for expect, code in testpats:
             with tempfile.NamedTemporaryFile() as tmpf:
                 # array decides tempfiles are not open files
                 code.tofile(open(tmpf.name, "wb"))
                 out,err=self.run_jar(tmpf.name)
-                self.assert_(err.startswith(expect))
+                self.assert_(err.startswith(expect), "Expected: %r, Got: %r" % (expect,err))
 
     def testSource(self):
         "Source checks"

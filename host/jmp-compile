@@ -163,36 +163,13 @@ class Compiler(ast.NodeVisitor):
                 out.append( (n,v) )
             res=out
 
-            if False:
-                # prints after fixups -this should match dumper output
-                print ">>> String table"
-                for i,v in enumerate(strings):
-                    print "% 4d" % (i,), v
-                print ">>> Line number table"
-                for pos,line in linenotab:
-                    print "% 4d  -> % 4d" % (pos, line)
-                pos=0
-                for _,v in res:
-                    for p,l in linenotab:
-                        if p>pos:
-                            break
-                        if p==pos:
-                            print "\n# % 4d %s" % (l, linecache.getline(inputfile, l))
-                            break
-                    print "% 5d" % pos, v,
-                    if isinstance(v, tuple):
-                        if is_string_op(v[0]):
-                            print "   \t# string", v[1], "=", repr(strings[v[1]]),
-                        elif is_int_op(v[0]):
-                            print "   \t# int", v[1], "=", integers[v[1]],
-                        pos+=3
-                    else:
-                        pos+=1
-                    print
-
             ### final output - this could really use a bytes type
             out=array.array("B")
             assert out.itemsize==1, "Bytes must be one byte in length!"
+
+            # version
+            out.append(0)
+            out.append(0)
 
             # string table
             if len(strings)>65535:
@@ -659,6 +636,13 @@ def dumper(options, infile):
         return (data[-1]<<8)+data[-2]
 
     infile=open(infile, "rb")
+
+    # version
+    ver=get16()
+    print "# JMP Version:", ver
+    if ver!=0:
+        print >> sys.stderr, "Don't know how to handle version",ver
+        sys.exit(2)
 
     # string table
     strings=[]
