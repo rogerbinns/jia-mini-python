@@ -79,3 +79,8 @@ your print method log, display or take similar action.
 When there are errors you get a line number that can be looked up, as
 well as a program counter which can be used with an :doc:`annotated
 listing <jmp-compile>` to find the exact issue.
+
+Use asserts to verify operation of your code.  By default they are
+ignored but you can turn them on passing :option:`--asserts` to
+:doc:`jmp-compile`.  A large portion of the test suite is implemented
+using asserts.

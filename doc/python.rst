@@ -35,7 +35,7 @@ list type
 .. method:: reverse()
 
    Reverses the order of the elements in the list by calling
-   :jdoc:`java/util/Collections.html#reverse(java.util.List)`.
+   :jdoc:`Collections.reverse <java/util/Collections.html#reverse(java.util.List)>`.
 
 .. method:: pop()
 
@@ -79,9 +79,10 @@ str type
 
 .. method:: replace(target, replacement)
 
-   Replaces all occurrences of `target` with `replacement` by calling
-   :jdoc:`String.replace
-   <java/lang/String.html#replace(java.lang.CharSequence, java.lang.CharSequence)>`.
+   Returns a new string replacing all occurrences of `target` with
+   `replacement` by calling :jdoc:`String.replace
+   <java/lang/String.html#replace(java.lang.CharSequence,
+   java.lang.CharSequence)>`.
 
 .. method:: split(sep, maxsplits)
 
@@ -135,8 +136,7 @@ Global functions
 .. function:: cmp(left, right)
 
    Compares left against right depending on if they are less, equal or
-   greater.  Note that an exception is raised if they are not of
-   comparable types.
+   greater.  (:ref:`Note <comparisons>`) 
 
 .. function:: filter(function, list)
 

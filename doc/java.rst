@@ -83,7 +83,7 @@ arguments) then the one to be used is picked at random.  No attempt is
 made to try and select a method based on number or type of arguments.
 
 No attempt is made to convert method parameters.  For example if a
-method takes a `boolean` and a `list` is provided then the `list` will
+method takes a `boolean` and an `int` is provided then the `int` will
 not be converted to a `boolean`.
 
 Errors
@@ -118,7 +118,7 @@ class MiniPython
       :param name:  Module name in the Python environment
       :param object:  Object to introspect looking for methods
 
-      .. seealso:: `Adding methods <../../../../java.html#id1>`__
+      .. seealso:: `Adding methods <java.html#id1>`__
 
    .. method:: Object callMethod(String name, Object... args)
 

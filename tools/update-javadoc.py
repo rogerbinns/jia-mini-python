@@ -143,8 +143,10 @@ def fixup(line):
     elif x[0]=="@throws":
         return ":raises %s: %s" % (x[1], x[2])
     elif x[0]=="@see":
-        x=line.split(None, 1)
-        return ("", ".. seealso:: "+x[1])
+        x=line.split(None, 1)[1]
+        # strip leading ../
+        x=re.sub(r"<(../)+", "<", x)
+        return ("", ".. seealso:: "+x)
     elif x[0].startswith("@"):
         import pdb ; pdb.set_trace()
         pass
