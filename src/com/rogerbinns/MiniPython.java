@@ -1186,8 +1186,8 @@ public class MiniPython {
 
 	private ExecutionError internalErrorBinaryOp(String exctype, String op,
 			Object left, Object right) {
-		return internalError(exctype,
-				String.format("Can't do binary op: %s %s %s", /* SOURCECHECKOK */
+		return internalError(exctype, /* SOURCECHECKOK */
+				String.format("Can't do binary op: %s %s %s",
 						toPyTypeString(left), op, toPyTypeString(right)));
 	}
 

@@ -93,7 +93,8 @@ class JavaMiniPython(unittest.TestCase):
         self.run_py("test/general.py")
 
     def run_py(self, name):
-        self.jmp_compile(name)
+        out,err=self.jmp_compile(name)
+        self.assertEqual("", err)
         out,err=self.run_jar(os.path.splitext(name)[0]+".jmp")
         self.assertEqual("", err)
 
