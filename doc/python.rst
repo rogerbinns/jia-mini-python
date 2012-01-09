@@ -113,6 +113,8 @@ str type
    Returns upper case version of string by calling
    :jdoc:`String.toUpperCase <java/lang/String.html#toUpperCase()>`.
 
+.. _global_functions:
+
 Global functions
 ----------------
 

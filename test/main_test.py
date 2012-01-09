@@ -38,6 +38,8 @@ def jmp_compile_internal(infile, outfile=None):
     class options:
         print_function=False
         asserts=True
+        line_table=True
+        annotate=False
     if outfile is None:
         outfile=os.path.splitext(infile)[1]+".jmp"
     jmpcompilerobject.compile(options, infile, outfile)
@@ -56,6 +58,7 @@ class JavaMiniPython(unittest.TestCase):
         outfile=[outfile] if outfile else []
         out,err=self.run_external_command([jmpcompiler]+(["--print-function"] if print_function else [])+["--asserts", infile]+outfile)
         self.assertEqual(err, "")
+        return out,err
 
     def run_jar(self, filename, args=[]):
         cmd=["java"]+covoptions+["com.rogerbinns.Tester"]

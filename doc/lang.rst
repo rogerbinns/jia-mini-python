@@ -73,6 +73,8 @@ What is not supported
 * Floating point
 * Bytes type
 * is/is not (you can call :func:`id` and compare result)
+* Assignment to False/True/None (allowed in some Python versions to
+  change value).  Has no effect.
 
 Use Jython if you want more than mini-Python
 
