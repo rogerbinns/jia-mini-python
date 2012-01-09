@@ -2,10 +2,6 @@
 
 "Turns the subset of Python we support into virtual bytecode for Java code to run"
 
-# The main way we support Python 2.6+ and 3
-
-from __future__ import print_function
-
 # We use Python's ast module for the heavy lifting.  It parses the
 # target file and we then operate on the resulting abstract syntax
 # tree.
@@ -25,6 +21,15 @@ class Label:
     "Instances used to mark locations while generating byte code"
     def __repr__(self):
         return "Label_"+str(id(self))
+
+# We can't use print()
+def write(*args, **kwargs):
+    end=kwargs.pop("end", "\n")
+    file=kwargs.pop("file", sys.stdout)
+    sep=kwargs.pop("sep", " ")
+    if kwargs:
+        raise Exception("Unexpected args "+repr(kwargs))
+    file.write(sep.join(str(x) if not isinstance(x,basestring) else x for x in args)+end)
 
 
 class Compiler(ast.NodeVisitor):
@@ -83,12 +88,12 @@ class Compiler(ast.NodeVisitor):
             t=compile(open(inputfile, "rb").read(), inputfile, 'exec', flags)
         except:
             t,e,_=sys.exc_info()
-            if not isinstance(v, SyntaxError):
+            if not isinstance(e, SyntaxError):
                 raise
-            print("SyntaxError:", e.msg,"at line",e.lineno,"of", inputfile, file=sys.stderr)
-            print(sys.stderr, linecache.getline(inputfile, e.lineno), file=sys.stderr)
+            write("SyntaxError:", e.msg,"at line",e.lineno,"of", inputfile, file=sys.stderr)
+            write(linecache.getline(inputfile, e.lineno), end="", file=sys.stderr)
             if e.offset is not None:
-                print (e.offset*" "+"^", file=sys.stderr)
+                write (e.offset*" "+"^", file=sys.stderr)
             sys.exit(2)
 
         # sadly this doesn't always work - especially for slices
@@ -114,7 +119,7 @@ class Compiler(ast.NodeVisitor):
                     lastlineno=n.lineno
                 if not isinstance(v, tuple):
                     if v not in opcode_map:
-                        print("Internal error: unknown opcode \"%s\"" % (v,), file=sys.stderr)
+                        write("Internal error: unknown opcode \"%s\"" % (v,), file=sys.stderr)
                         sys.exit(3)
                     assert opcode_map[v]<128
                     out.append( (n,v) )
@@ -123,7 +128,7 @@ class Compiler(ast.NodeVisitor):
                 pos+=3
                 op, val=v
                 if op not in opcode_map:
-                    print ("Internal error: unknown opcode \"%s\"" % (op,), file=sys.stderr)
+                    write ("Internal error: unknown opcode \"%s\"" % (op,), file=sys.stderr)
                     sys.exit(3)
 
                 opcode=opcode_map[op]
@@ -156,13 +161,13 @@ class Compiler(ast.NodeVisitor):
             res=out
             codelen=pos
             if codelen==1:
-                print ("There is no executable code in the source file", file=sys.stderr)
+                write ("There is no executable code in the source file", file=sys.stderr)
                 sys.exit(3)
             if codelen>65535:
-                print ("Your code is too long - %d instructions" % (codelen,), file=sys.stderr)
+                write ("Your code is too long - %d instructions" % (codelen,), file=sys.stderr)
                 sys.exit(3)
             if linenotab[-1][1]>65535:
-                print("Too many lines of code - %d" % (linenotab[-1][1],), file=sys.stderr)
+                write("Too many lines of code - %d" % (linenotab[-1][1],), file=sys.stderr)
                 sys.exit(3)
 
             # fixup labels
@@ -183,14 +188,14 @@ class Compiler(ast.NodeVisitor):
 
             # string table
             if len(strings)>65535:
-                print ("There are too many strings (%d) - maximum is %d" % (len(strings), 65535), file=sys.stderr)
+                write ("There are too many strings (%d) - maximum is %d" % (len(strings), 65535), file=sys.stderr)
                 sys.exit(3)
             out.append(len(strings)&0xff)
             out.append(len(strings)>>8)
             for s in strings:
                 s=s.encode("utf8")
                 if len(s)>65535:
-                    print ("One of your strings is too long - %d bytes" % (len(s),), file=sys.stderr)
+                    write ("One of your strings is too long - %d bytes" % (len(s),), file=sys.stderr)
                     sys.exit(3)
                 out.append(len(s)&0xff)
                 out.append(len(s)>>8)
@@ -202,7 +207,7 @@ class Compiler(ast.NodeVisitor):
             # line number table
             if options.line_table:
                 if len(linenotab)>65535:
-                    print("There are too many lines with code (%d) - maximum is %d" % (len(linenotab), 65535), file=sys.stderr)
+                    write("There are too many lines with code (%d) - maximum is %d" % (len(linenotab), 65535), file=sys.stderr)
                     sys.exit(3)
                 out.append(len(linenotab)&0xff)
                 out.append(len(linenotab)>>8)
@@ -244,14 +249,14 @@ class Compiler(ast.NodeVisitor):
             if options.traceback:
                 x=sys.exc_info()
                 import traceback
-                traceback.print_exc(x)
+                traceback.write_exc(x)
             # Slice objects don't have line/column set so we use the
             # most recent item emitted.  If you tried really hard you
             # could also make that a Slice giving an error here.
             lineno=getattr(e.node, "lineno", res[-1][0].lineno)
             column=getattr(e.node, "col_offset", res[-1][0].col_offset)
-            print (e.message,"at line", lineno, "of", inputfile, file=sys.stderr)
-            print (linecache.getline(inputfile, lineno)+column*" "+"^", file=sys.stderr)
+            write (e.message,"at line", lineno, "of", inputfile, file=sys.stderr)
+            write (linecache.getline(inputfile, lineno)+column*" "+"^", file=sys.stderr)
             sys.exit(2)
 
     
@@ -259,7 +264,7 @@ class Compiler(ast.NodeVisitor):
         try:
             return opcode_map[opcode]
         except KeyError:
-            print ("Internal error.  No opcode for \"%s\"" % (opcode,), file=sys.stderr)
+            write ("Internal error.  No opcode for \"%s\"" % (opcode,), file=sys.stderr)
             sys.exit(5)
 
     def generic_visit(self, node):
@@ -664,9 +669,9 @@ def dumper(options, infile, outfile=sys.stdout):
 
     # version
     ver=get16()
-    print("# JMP Version:", ver, file=outfile)
+    write("# JMP Version:", ver, file=outfile)
     if ver!=0:
-        print("Don't know how to handle version", ver, file=sys.stderr)
+        write("Don't know how to handle version", ver, file=sys.stderr)
         sys.exit(2)
 
     # string table
@@ -689,7 +694,7 @@ def dumper(options, infile, outfile=sys.stdout):
     codesize=get16()
     getnbytes(codesize)
     if infile.read() not in ("", b""):
-        print("There is extra gunk at the end of the file - position", len(data), file=sys.stderr)
+        write("There is extra gunk at the end of the file - position", len(data), file=sys.stderr)
     code=data[-codesize:]
     dump_internal(options, strings, linenotab, code, outfile)
 
@@ -699,12 +704,12 @@ def dump_internal(options, strings, linenotab, code, outfile):
 
     if False:
         # prints tables
-        print(">>> String table", file=outfile)
+        write(">>> String table", file=outfile)
         for i,v in enumerate(strings):
-            print("% 4d" % (i,), v)
-        print(">>> Line number table", file=outfile)
+            write("% 4d" % (i,), v)
+        write(">>> Line number table", file=outfile)
         for pos,line in linenotab:
-            print("% 4d  -> % 4d" % (pos, line), file=outfile)
+            write("% 4d  -> % 4d" % (pos, line), file=outfile)
 
     # map ints to strings
     bytecode_map={}
@@ -718,7 +723,7 @@ def dump_internal(options, strings, linenotab, code, outfile):
             if p>pos:
                 break
             if p==pos:
-                print("\n# % 4d %s" % (l, getline(l)), file=outfile)
+                write("\n# % 4d %s" % (l, getline(l)), file=outfile)
                 break
 
         op=code[pos]
@@ -726,18 +731,18 @@ def dump_internal(options, strings, linenotab, code, outfile):
             val=code[pos+1]+(code[pos+2]<<8)
         
         if op not in bytecode_map:
-            print("Unknown opcode %d at position %d" % (op, pos), file=sys.stderr)
+            write("Unknown opcode %d at position %d" % (op, pos), file=sys.stderr)
             sys.exit(6)
         
         if op<128:
-            print("% 5d" % pos, bytecode_map[op], file=outfile)
+            write("% 5d" % pos, bytecode_map[op], file=outfile)
             pos+=1
         else:
             v=bytecode_map[op]
-            print("% 5d" % pos, v, val, end="", file=outfile)
+            write("% 5d" % pos, v, val, end="", file=outfile)
             if is_string_op(op):
-                print("   \t# string", val, "=", repr(strings[val]), end="", file=outfile)
-            print(file=outfile)
+                write("   \t# string", val, "=", repr(strings[val]), end="", file=outfile)
+            write(file=outfile)
             pos+=3
         
 
@@ -764,13 +769,13 @@ def java_maintenance(javafile):
                 if m:
                     val=int(m.group("val"))
                     if val in seen:
-                        print ("Second occurrence of",val,": line", len(out)+1, file=sys.stderr)
+                        write ("Second occurrence of",val,": line", len(out)+1, file=sys.stderr)
                         sys.exit(3)
                     if val not in int_map:
-                        print ("Line",len(out)+1,"opcode",val,"/", m.group("name"), "is not known", file=sys.stderr)
+                        write ("Line",len(out)+1,"opcode",val,"/", m.group("name"), "is not known", file=sys.stderr)
                         sys.exit(3)
                     if int_map[val]!=m.group("name"):
-                        print ("Line",len(out)+1,"opcode",val,"has comment of",m.group("name"),"but should be", int_map[val], file=sys.stderr)
+                        write ("Line",len(out)+1,"opcode",val,"has comment of",m.group("name"),"but should be", int_map[val], file=sys.stderr)
                         sys.exit(3)
                     seen.add(val)
                 if line.lstrip().startswith("// -- check end :"):
@@ -782,11 +787,11 @@ def java_maintenance(javafile):
     
 
     if capturing:
-        print ("End marker not seen in", javafile, file=sys.stderr)
+        write ("End marker not seen in", javafile, file=sys.stderr)
         sys.exit(3)
 
     if not seen:
-        print ("Special markers not identified in", javafile, file=sys.stderr)
+        write ("Special markers not identified in", javafile, file=sys.stderr)
         sys.exit(3)
 
     out="".join(out)
@@ -796,7 +801,7 @@ def java_maintenance(javafile):
     if current!=out:
         with open(javafile, "wt") as java:
             java.write(out)
-        print("Updated", javafile)
+        write("Updated", javafile)
                     
             
 
