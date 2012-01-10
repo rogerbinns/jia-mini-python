@@ -5,3 +5,6 @@ doc/_build/
 bin/
 coverage/
 *.jmp
+build/
+dist/
+tools/googlecode_upload.py

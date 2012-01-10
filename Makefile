@@ -1,10 +1,10 @@
-VERSION = 0.9
-DATE = "8 January 2012"
+VERSION = 1.0
+DATE = "9 January 2012"
 
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
-.PHONY: doc docs publish test ant nose help javadoc coverage
+.PHONY: doc docs publish test ant nose help javadoc coverage dist
 
 help:
 	@echo "Use \`make <target>' where target is one of"
@@ -50,3 +50,24 @@ coverage: ant
 	bash $(COBERTURADIR)/cobertura-instrument.sh --datafile /space/java-mini-python/coverage/cobertura.ser --destination coverage bin/*.jar
 	env JMPCOVERAGE=t COBERTURADIR=$(COBERTURADIR) python test/main_test.py
 	bash $(COBERTURADIR)/cobertura-report.sh --datafile coverage/cobertura.ser --destination coverage src
+
+BUILDDIR="build/JavaMiniPython-$(VERSION)"
+
+dist: doc
+	@rm -rf build dist
+	mkdir -p "$(BUILDDIR)"
+	cp host/jmp-compile "$(BUILDDIR)"
+	sed -e 's/^package.*$$//' -e "s/%%VERSION%%/$(VERSION)/" < src/com/rogerbinns/MiniPython.java > "$(BUILDDIR)/MiniPython.java"
+	cp -r doc/_build/html "$(BUILDDIR)/doc"
+	mkdir dist
+	cd build ; zip -9r "../dist/JavaMiniPython-$(VERSION).zip" *
+	for f in dist/* ; do gpg --use-agent --armor --detach-sig "$$f" ; done
+
+upload:
+	@if [ -z "$(GC_USER)" ] ; then echo "Specify googlecode user by setting GC_USER environment variable" ; exit 1 ; fi
+	@if [ -z "$(GC_PASSWORD)" ] ; then echo "Specify googlecode password by setting GC_PASSWORD environment variable" ; exit 1 ; fi
+	test -f tools/googlecode_upload.py
+	test -f dist/JavaMiniPython-$(VERSION).zip
+	test -f dist/JavaMiniPython-$(VERSION).zip.asc
+	python tools/googlecode_upload.py --user "$(GC_USER)" --password "$(GC_PASSWORD)" -p java-mini-python -s "$(VERSION) GPG signature" -l "Type-Signatures,OpSys-All" dist/JavaMiniPython-$(VERSION).zip.asc
+	python tools/googlecode_upload.py --user "$(GC_USER)" --password "$(GC_PASSWORD)" -p java-mini-python -s "$(VERSION) (Source, includes HTML documentation)" -l "Type-Source,OpSys-All" dist/JavaMiniPython-$(VERSION).zip

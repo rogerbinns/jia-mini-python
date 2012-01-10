@@ -1,5 +1,10 @@
 package com.rogerbinns;
 
+/* Java Mini Python - version %%VERSION%%
+ * See http://code.google.com/p/java-mini-python/ for the project page,
+ * bug tracker, mailing lists, support, documentation and license information
+ */
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
