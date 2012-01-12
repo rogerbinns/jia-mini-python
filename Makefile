@@ -1,4 +1,4 @@
-VERSION = 1.0
+VERSION = 1.1pre
 DATE = "9 January 2012"
 
 # Used for coverage

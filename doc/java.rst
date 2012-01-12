@@ -107,9 +107,8 @@ class MiniPython
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.html>`__)
    Encapsulates running a Python syntax file.
 
-   The source should have been transformed using jmp-compile. The class is not
-   threadsafe and calls should only be made in the same thread. There is no
-   shared state between instances.
+   The source should have been transformed using jmp-compile. The class cannot be used
+   concurrently. There is no shared state between instances.
 
    .. method:: void addModule(String name, Object object)
 
@@ -180,7 +179,7 @@ class MiniPython
 
       :param o:  Object to stringify. Can be null.
 
-   .. method:: static String toPyTypeString(Object o)
+   .. method:: String toPyTypeString(Object o)
 
       Returns a string representing the type of the object using Python
       nomenclature where possible
@@ -202,7 +201,7 @@ interface MiniPython.Client
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.Client.html>`__)
    Provide platform behaviour
 
-   .. method:: void onError(ExecutionError error);
+   .. method:: void onError(ExecutionError error)
 
       Called whenever there is an ExecutionError.
 

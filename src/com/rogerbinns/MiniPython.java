@@ -1641,7 +1641,7 @@ public class MiniPython {
 		return res;
 	}
 
-	@SuppressWarnings("unused")
+	@SuppressWarnings({"unused", "fallthrough"})
 	private List<String> instance_str_split(String s, Object... args)
 			throws ExecutionError {
 		int maxsplit = 0;
@@ -1729,7 +1729,7 @@ public class MiniPython {
 		Collections.reverse(list);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
+	@SuppressWarnings({ "unchecked", "rawtypes", "unused", "fallthrough" })
 	private void instance_list_sort(List list, Object... args) throws ExecutionError {
 		Callable cmp = null;
 		Callable key = null;
