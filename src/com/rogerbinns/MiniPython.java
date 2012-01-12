@@ -27,9 +27,8 @@ import java.util.regex.Pattern;
 /**
  * Encapsulates running a Python syntax file.
  * 
- * The source should have been transformed using jmp-compile. The class is not
- * threadsafe and calls should only be made in the same thread. There is no
- * shared state between instances.
+ * The source should have been transformed using jmp-compile. The class cannot be used
+ * concurrently. There is no shared state between instances.
  */
 public class MiniPython {
 
@@ -56,7 +55,7 @@ public class MiniPython {
 	 * instance by calling addModule to reregister modules and setCode to run
 	 * new code.
 	 */
-	public void clear() {
+	public synchronized void clear() {
 		root = current = null;
 		stack = null;
 		strings = null;
@@ -82,7 +81,7 @@ public class MiniPython {
 	 * @throws ExecutionError
 	 *             Any issues from executing the code
 	 */
-	public void setCode(InputStream stream) throws IOException, ExecutionError {
+	public synchronized void setCode(InputStream stream) throws IOException, ExecutionError {
 		if (root == null) {
 			root = new Context(null);
 		}
@@ -331,7 +330,7 @@ public class MiniPython {
 	 * @throws ExecutionError
 	 *             On any issues encountered
 	 */
-	public Object callMethod(String name, Object... args) throws ExecutionError {
+	public synchronized Object callMethod(String name, Object... args) throws ExecutionError {
 		Object meth = root.variables.get(name);
 		if (meth == null)
 			throw internalError("NameError", name + " is not defined");
