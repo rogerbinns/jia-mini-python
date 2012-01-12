@@ -1635,7 +1635,7 @@ public class MiniPython {
 	@SuppressWarnings("unused")
 	private String instance_str_replace(String s, String target, String replacement) {
 		String res = s.replace(target, replacement);
-		if (target.isEmpty())
+		if (target.length()==0)
 			// Python precedes each character with replacement
 			// Java also adds one more on the end which we undo here
 			return res.substring(0, res.length() - replacement.length());
@@ -1662,7 +1662,7 @@ public class MiniPython {
 			if (!(args[0] instanceof String))
 				throw internalError("TypeError", "sep should be an integer");
 			sep = (String) args[0];
-			if (sep.isEmpty())
+			if (sep.length()==0)
 				throw internalError("ValueError", "empty separator");
 		case 0:
 		}
