@@ -54,6 +54,9 @@ def update(thejson, package, content, line, state):
     # Fixup the line
     line=line.replace("{", " ").replace(",", ", ")
     line=re.sub(r"\bpublic\b", "", line)
+    line=re.sub(r"\bsynchronized\b", "", line)
+    line=re.sub(r"\bstatic\b", "", line)
+    line=line.replace(";", " ")
     line=re.sub(r"\s+", " ", line)
     line=line.strip()
     # fixup content
