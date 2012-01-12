@@ -47,7 +47,7 @@ You can make methods available to the Python by calling
 
        // using types from above
        public boolean isdst() { return false; }
-       public int day_of_week(int year, int month, day) {  return 2; }
+       public int day_of_week(int year, int month, int day) {  return 2; }
        public int sum_all(List<Object> items) { return 17; }
 
        // You can use other types

@@ -33,17 +33,17 @@ import java.util.regex.Pattern;
  */
 public class MiniPython {
 
-	String[] strings;
-	int[][] linenumbers;
-	byte[] code;
+	private String[] strings;
+	private int[][] linenumbers;
+	private byte[] code;
 
-	Context root;
-	Context current;
-	Object[] stack; // stack of values
-	int stacktop; // top occupied slot on stack
-	int pc;
+	private Context root;
+	private Context current;
+	private Object[] stack; // stack of values
+	private int stacktop; // top occupied slot on stack
+	private int pc;
 
-	static int STACK_SIZE;
+	private static int STACK_SIZE;
 
 	public MiniPython() {
 		STACK_SIZE = 1024;
@@ -341,7 +341,7 @@ public class MiniPython {
 		return call((Callable) meth, args);
 	}
 
-	Object call(Callable meth, Object... args) throws ExecutionError {
+	private Object call(Callable meth, Object... args) throws ExecutionError {
 		int savedsp = stacktop;
 		int savedpc = pc;
 		Context savedcontext = current;
@@ -1173,7 +1173,6 @@ public class MiniPython {
 		ExecutionError e = new ExecutionError();
 		e.type = exctype;
 		e.message = message;
-		e.context = current;
 		e.pc = pc;
 		if (mTheClient != null) {
 			mTheClient.onError(e);
@@ -1217,7 +1216,7 @@ public class MiniPython {
 		throw internalError(exctype, message);
 	}
 
-	Object getAttr(Object o, String name) throws ExecutionError {
+	private Object getAttr(Object o, String name) throws ExecutionError {
 		if (o instanceof TModule)
 			return new TModuleNativeMethod((TModule) o, name);
 
@@ -1431,7 +1430,7 @@ public class MiniPython {
 		return toPyTypeString(o.getClass());
 	}
 
-	Client mTheClient;
+	private Client mTheClient;
 
 	/**
 	 * Callbacks to use for specific behaviour
@@ -1460,13 +1459,14 @@ public class MiniPython {
 	}
 
 	// builtin methods
-	Object builtin_apply(Callable meth, List<Object> args)
+	@SuppressWarnings("unused")
+	private Object builtin_apply(Callable meth, List<Object> args)
 			throws ExecutionError {
 		return call(meth, args.toArray());
 	}
 
 	@SuppressWarnings("rawtypes")
-	boolean builtin_bool(Object o) throws ExecutionError {
+	private boolean builtin_bool(Object o) throws ExecutionError {
 		if (o instanceof Boolean)
 			return (Boolean) o;
 		if (o instanceof String)
@@ -1485,16 +1485,16 @@ public class MiniPython {
 				throw internalError("TypeError", "Can't 'bool' " + toPyString(o));
 	}
 
-	boolean builtin_callable(Object o) {
+	private boolean builtin_callable(Object o) {
 		return o instanceof Callable;
 	}
 
-	int builtin_cmp(Object left, Object right) throws ExecutionError {
+	private int builtin_cmp(Object left, Object right) throws ExecutionError {
 		return compareTo(left, right);
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	List builtin_filter(Callable function, List items) throws ExecutionError {
+	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
+	private List builtin_filter(Callable function, List items) throws ExecutionError {
 		List res = new ArrayList();
 		for (Object item : items) {
 			if (builtin_bool(call(function, item))) {
@@ -1504,11 +1504,11 @@ public class MiniPython {
 		return res;
 	}
 
-	int builtin_id(Object o) {
+	private int builtin_id(Object o) {
 		return System.identityHashCode(o);
 	}
 
-	int builtin_int(Object o) throws ExecutionError {
+	private int builtin_int(Object o) throws ExecutionError {
 		if (o instanceof Integer)
 			return (Integer) o;
 		if (o instanceof Boolean)
@@ -1525,8 +1525,8 @@ public class MiniPython {
 						+ toPyTypeString(o));
 	}
 
-	@SuppressWarnings("rawtypes")
-	int builtin_len(Object item) throws ExecutionError {
+	@SuppressWarnings({ "rawtypes", "unused" })
+	private int builtin_len(Object item) throws ExecutionError {
 		if (item instanceof Map)
 			return ((Map) item).size();
 		if (item instanceof List)
@@ -1537,8 +1537,8 @@ public class MiniPython {
 				+ toPyString(item));
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	List builtin_map(Callable function, List items) throws ExecutionError {
+	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
+	private List builtin_map(Callable function, List items) throws ExecutionError {
 		List res = new ArrayList(items.size());
 		for (Object item : items) {
 			res.add(call(function, item));
@@ -1546,7 +1546,8 @@ public class MiniPython {
 		return res;
 	}
 
-	void builtin_print(Object... items) throws ExecutionError {
+	@SuppressWarnings("unused")
+	private void builtin_print(Object... items) throws ExecutionError {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < items.length; i++) {
 			if (i != 0) {
@@ -1560,7 +1561,8 @@ public class MiniPython {
 		}
 	}
 
-	List<Object> builtin_range(int start, int... constraints)
+	@SuppressWarnings("unused")
+	private List<Object> builtin_range(int start, int... constraints)
 			throws ExecutionError {
 		if (constraints.length > 2)
 			throw internalError("TypeError", "Expected at most 3 arguments");
@@ -1595,21 +1597,24 @@ public class MiniPython {
 		return res;
 	}
 
-	String builtin_str(Object o) {
+	@SuppressWarnings("unused")
+	private String builtin_str(Object o) {
 		return toPyString(o);
 	}
 
-	String builtin_type(Object o) {
+	@SuppressWarnings("unused")
+	private String builtin_type(Object o) {
 		return toPyTypeString(o);
 	}
 
 	// instance methods
-	boolean instance_str_endswith(String s, String suffix) {
+	@SuppressWarnings("unused")
+	private boolean instance_str_endswith(String s, String suffix) {
 		return s.endsWith(suffix);
 	}
 
-	@SuppressWarnings("rawtypes")
-	String instance_str_join(String s, List items) throws ExecutionError {
+	@SuppressWarnings({ "rawtypes", "unused" })
+	private String instance_str_join(String s, List items) throws ExecutionError {
 		StringBuilder sb = new StringBuilder();
 		for (Object item : items) {
 			if (sb.length() > 0) {
@@ -1622,11 +1627,13 @@ public class MiniPython {
 		return sb.toString();
 	}
 
-	String instance_str_lower(String s) {
+	@SuppressWarnings("unused")
+	private String instance_str_lower(String s) {
 		return s.toLowerCase();
 	}
 
-	String instance_str_replace(String s, String target, String replacement) {
+	@SuppressWarnings("unused")
+	private String instance_str_replace(String s, String target, String replacement) {
 		String res = s.replace(target, replacement);
 		if (target.isEmpty())
 			// Python precedes each character with replacement
@@ -1635,7 +1642,8 @@ public class MiniPython {
 		return res;
 	}
 
-	List<String> instance_str_split(String s, Object... args)
+	@SuppressWarnings("unused")
+	private List<String> instance_str_split(String s, Object... args)
 			throws ExecutionError {
 		int maxsplit = 0;
 		String sep = null;
@@ -1667,20 +1675,23 @@ public class MiniPython {
 		return res;
 	}
 
-	boolean instance_str_startswith(String s, String prefix) {
+	@SuppressWarnings("unused")
+	private boolean instance_str_startswith(String s, String prefix) {
 		return s.startsWith(prefix);
 	}
 
-	String instance_str_strip(String s) {
+	@SuppressWarnings("unused")
+	private String instance_str_strip(String s) {
 		return s.trim();
 	}
 
-	String instance_str_upper(String s) {
+	@SuppressWarnings("unused")
+	private String instance_str_upper(String s) {
 		return s.toUpperCase();
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	void instance_dict_update(Map map, Map other) {
+	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
+	private void instance_dict_update(Map map, Map other) {
 		Iterator<Map.Entry> it = other.entrySet().iterator();
 		while (it.hasNext()) {
 			Map.Entry m = it.next();
@@ -1688,25 +1699,25 @@ public class MiniPython {
 		}
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	void instance_list_append(List list, Object item) {
+	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
+	private void instance_list_append(List list, Object item) {
 		list.add(item);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	void instance_list_extend(List list, List other) {
+	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
+	private void instance_list_extend(List list, List other) {
 		for (Object i : other) {
 			list.add(i);
 		}
 	}
 
-	@SuppressWarnings("rawtypes")
-	int instance_list_index(List list, Object item) {
+	@SuppressWarnings({ "rawtypes", "unused" })
+	private int instance_list_index(List list, Object item) {
 		return list.indexOf(item);
 	}
 
-	@SuppressWarnings("rawtypes")
-	Object instance_list_pop(List list) throws ExecutionError {
+	@SuppressWarnings({ "rawtypes", "unused" })
+	private Object instance_list_pop(List list) throws ExecutionError {
 		if (list.size() == 0)
 			throw internalError("IndexError", "pop from empty list");
 		Object res = list.get(list.size() - 1);
@@ -1714,13 +1725,13 @@ public class MiniPython {
 		return res;
 	}
 
-	@SuppressWarnings("rawtypes")
-	void instance_list_reverse(List list) {
+	@SuppressWarnings({ "rawtypes", "unused" })
+	private void instance_list_reverse(List list) {
 		Collections.reverse(list);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	void instance_list_sort(List list, Object... args) throws ExecutionError {
+	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
+	private void instance_list_sort(List list, Object... args) throws ExecutionError {
 		Callable cmp = null;
 		Callable key = null;
 		boolean reverse = false;
@@ -1826,10 +1837,9 @@ public class MiniPython {
 	 * 
 	 */
 	public class ExecutionError extends Exception {
-		private static final long serialVersionUID = -4271385191079964823L;
-		String type, message;
-		Context context;
-		int pc;
+		static final long serialVersionUID = -4271385191079964823L;
+		private String type, message;
+		private int pc;
 
 		private ExecutionError() {
 		}

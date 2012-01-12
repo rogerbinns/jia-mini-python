@@ -37,6 +37,7 @@ Contents:
    quirks
    internals
    faq
+   changes
    copyright
 
 
