@@ -15,7 +15,8 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 extlinks={
-    "jdoc": ("http://docs.oracle.com/javase/7/docs/api/%s", "javadoc")
+    "jdoc": ("http://docs.oracle.com/javase/7/docs/api/%s", "javadoc"),
+    "issue": ("http://code.google.com/p/java-mini-python/issues/detail?id=%s", "Issue "),
 }
 
 # The encoding of source files.
