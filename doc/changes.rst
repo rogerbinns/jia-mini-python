@@ -10,3 +10,5 @@ completions if you copied the code to your own package.  (:issue:`1`)
 Do not use `String.isEmpty()` (:issue:`2`)
 
 Public entry points are synchronized to prevent concurrent usage (:issue:`3`)
+
+Added `dict.get(key, default)` (:issue:`5`)

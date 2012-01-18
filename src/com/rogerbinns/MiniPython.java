@@ -1689,6 +1689,11 @@ public class MiniPython {
 		return s.toUpperCase();
 	}
 
+	@SuppressWarnings({ "unused", "rawtypes" })
+	private Object instance_dict_get(Map map, Object key, Object defValue) {
+		return map.containsKey(key)?map.get(key):defValue;
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
 	private void instance_dict_update(Map map, Map other) {
 		Iterator<Map.Entry> it = other.entrySet().iterator();

@@ -12,6 +12,10 @@ implementation.
 dict type
 ---------
 
+.. method:: get(key, default)
+
+   Returns value associated with key, and if it doesn't exist then `default`.
+
 .. method:: update(other)
 
    Copies all items from other into this dict.
