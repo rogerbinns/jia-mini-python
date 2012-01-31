@@ -36,7 +36,8 @@ output is alongside the input with a `.jmp` extension.
     and the corresponding source line number is included in the
     output.  This allows line numbers to be given in exceptions.
     However it consumes 4 bytes per line of executable code so you can
-    save space by specifying this flag.
+    save space by specifying this flag.  You can always work out the
+    line number from a program counter using annotated output.
 
 .. option:: --annotate
 

@@ -157,7 +157,7 @@ in the listing.
     could be numbers, strings, lists etc)
 .. describe:: STORE_NAME
 
-    Takes the top item off the stack and saves it in a variabe with
+    Takes the top item off the stack and saves it in a variable with
     the specified name
 .. describe:: LOAD_NAME
 
@@ -177,8 +177,8 @@ in the listing.
 .. describe:: PRINT
 
     Print statement builtin which needs to know if a newline should be
-    emitted (the True or False pushed beforehand) as well as how items
-    it should print.
+    emitted (the True or False pushed beforehand) as well as how many
+    items it should print.
 
 .. describe:: FUNCTION_PROLOG
 

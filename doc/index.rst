@@ -24,6 +24,14 @@ Works with `Java 1.5+
 and `Python 2.6+/3.1+
 <http://en.wikipedia.org/wiki/History_of_Python#Version_release_dates>`__.
 
+As a JAR file Java Mini Python comes in at 32kb, `Rhino
+<http://www.mozilla.org/rhino/>`__ (Javascript interpreter) comes in
+at 1.1MB or more and various Lua implementations are at least ½ MB.
+Java Mini Python doesn't include a language parser or `REPL
+<http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop>`__
+as you use :doc:`jmp-compile` to do the parsing.  This keeps things
+small - just the way we like it.
+
 Contents:
 
 .. toctree::

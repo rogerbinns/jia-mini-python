@@ -107,8 +107,8 @@ class MiniPython
    (`javadoc <_static/javadoc/com/rogerbinns/MiniPython.html>`__)
    Encapsulates running a Python syntax file.
 
-   The source should have been transformed using jmp-compile. The class cannot be used
-   concurrently. There is no shared state between instances.
+   The source should have been transformed using jmp-compile. The class cannot
+   be used concurrently. There is no shared state between instances.
 
    .. method:: void addModule(String name, Object object)
 
