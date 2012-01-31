@@ -172,19 +172,24 @@ public class MiniPython {
 		// address of method in bytecode
 		int addr;
 		Context context;
+		Object self; // set if a bound method
 
 		TMethod(int addr, Context context) {
 			this.addr = addr;
 			this.context = context;
+			this.self=null;
 		}
 
 		public String toString() {
+			if (self!=null)
+				return String.format("<bound method of id %d at %d>", builtin_id(self), addr);
 			return String.format("<method at %d>", addr);
 		}
 
 		@Override
 		public boolean equals(Object other) {
 			return other instanceof TMethod
+					&& this.self == ((TMethod) other).self
 					&& this.addr == ((TMethod) other).addr;
 		}
 	}
@@ -353,6 +358,7 @@ public class MiniPython {
 			stack[++stacktop] = args.length;
 			if (meth instanceof TMethod) {
 				TMethod tmeth = (TMethod) meth;
+				adjustArgsForBoundMethod(tmeth);
 				Context c = new Context(tmeth.context);
 				stack[++stacktop] = current; // return context
 				stack[++stacktop] = -1; // returnpc
@@ -375,6 +381,15 @@ public class MiniPython {
 			pc = savedpc;
 			current = savedcontext;
 		}
+	}
+
+	// futzes the stack to insert the self argument if needed
+	private void adjustArgsForBoundMethod(TMethod meth) {
+		if(meth.self==null) return;
+		int nargs=(Integer)stack[stacktop];
+		System.arraycopy(stack, stacktop-nargs, stack, stacktop-nargs+1, nargs+1);
+		stack[stacktop-nargs]=meth.self;
+		stack[++stacktop]=nargs+1;
 	}
 
 	// The virtual cpu execution loop.
@@ -1010,6 +1025,7 @@ public class MiniPython {
 							toPyTypeString(stack[stacktop])
 							+ " is not callable");
 				TMethod meth = (TMethod) stack[stacktop--];
+				adjustArgsForBoundMethod(meth);
 				stack[++stacktop] = current; // return context
 				stack[++stacktop] = pc; // return address
 				current = new Context(meth.context);
@@ -1238,8 +1254,18 @@ public class MiniPython {
 
 		if(o instanceof Map) {
 			Map m=(Map)o;
-			if(m.containsKey(name))
-				return m.get(name);
+			if(m.containsKey(name)) {
+				Object retval=m.get(name);
+				if(retval instanceof TMethod) {
+					TMethod t=(TMethod)retval;
+					if (t.self == null) {
+						t=new TMethod(t.addr, t.context);
+						t.self=o;
+						retval=t;
+					}
+				}
+				return retval;
+			}
 		}
 
 		// find an instance method
@@ -1538,7 +1564,7 @@ public class MiniPython {
 		return res;
 	}
 
-	private int builtin_id(Object o) {
+	private static int builtin_id(Object o) {
 		return System.identityHashCode(o);
 	}
 

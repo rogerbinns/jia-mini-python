@@ -197,3 +197,16 @@ Global functions
    it will be the expected name.  For others it will be their
    :jdoc:`Class.getSimpleName()
    <java/lang/Class.html#getSimpleName()>`.
+
+.. _pyobject:
+
+Object orientation
+------------------
+
+You can do a form of object oriented programming because of two
+features on dictionaries - attribute access and implicit *self* if
+attribute access returns a method.
+
+::TODO:: fill out more
+
+::TODO:: update the example

@@ -58,7 +58,7 @@ What is not supported
   a function with a list of arguments.
 * Augmented assignments (+= -= /= etc)
 * Bitwise operators (<< >> & | ^)
-* Classes
+* Classes - note however that there is some :ref:`pyobject`
 * Decorators
 * Threads
 * Exceptions
