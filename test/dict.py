@@ -83,3 +83,11 @@ for k in another:
     d2[k]=another[k]
 
 assert d==d2
+
+# get
+d={}
+assert d.get("foo", 3)==3
+d["foo"]=4
+assert d.get("foo", 3)==4
+d[None]=5
+assert d.get(None, 3)==5

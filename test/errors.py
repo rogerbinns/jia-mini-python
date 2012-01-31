@@ -274,3 +274,6 @@ test1.signalBatman()
 #> Batman
 test2.signalBatman()
 
+#> TypeError
+x=3
+x.foo=4

@@ -50,6 +50,7 @@ coverage: ant
 	bash $(COBERTURADIR)/cobertura-instrument.sh --datafile /space/java-mini-python/coverage/cobertura.ser --destination coverage bin/*.jar
 	env JMPCOVERAGE=t COBERTURADIR=$(COBERTURADIR) python test/main_test.py
 	bash $(COBERTURADIR)/cobertura-report.sh --datafile coverage/cobertura.ser --destination coverage src
+	@echo "Report in coverage/com.rogerbinns.MiniPython.html"
 
 BUILDDIR="build/JavaMiniPython-$(VERSION)"
 
