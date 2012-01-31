@@ -95,6 +95,10 @@ class JavaMiniPython(unittest.TestCase):
         "Test various operations"
         self.run_py("test/general.py")
 
+    def testDictAttr(self):
+        "Test dictionary/attribute access"
+        self.run_py("test/dictattr.py")
+
     def run_py(self, name):
         out,err=self.jmp_compile(name)
         self.assertEqual("", err)

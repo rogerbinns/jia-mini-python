@@ -27,8 +27,8 @@ import java.util.regex.Pattern;
 /**
  * Encapsulates running a Python syntax file.
  * 
- * The source should have been transformed using jmp-compile. The class cannot be used
- * concurrently. There is no shared state between instances.
+ * The source should have been transformed using jmp-compile. The class cannot
+ * be used concurrently. There is no shared state between instances.
  */
 public class MiniPython {
 
@@ -81,7 +81,8 @@ public class MiniPython {
 	 * @throws ExecutionError
 	 *             Any issues from executing the code
 	 */
-	public synchronized void setCode(InputStream stream) throws IOException, ExecutionError {
+	public synchronized void setCode(InputStream stream) throws IOException,
+	ExecutionError {
 		if (root == null) {
 			root = new Context(null);
 		}
@@ -330,7 +331,8 @@ public class MiniPython {
 	 * @throws ExecutionError
 	 *             On any issues encountered
 	 */
-	public synchronized Object callMethod(String name, Object... args) throws ExecutionError {
+	public synchronized Object callMethod(String name, Object... args)
+			throws ExecutionError {
 		Object meth = root.variables.get(name);
 		if (meth == null)
 			throw internalError("NameError", name + " is not defined");
@@ -658,6 +660,14 @@ public class MiniPython {
 				Object o = stack[stacktop--];
 				String name = (String) stack[stacktop--];
 				stack[++stacktop] = getAttr(o, name);
+				continue;
+			}
+			case 165: // STORE_ATTR_NAME
+			{
+				Object o = stack[stacktop--];
+				Object v = stack[stacktop--];
+				String name = strings[val];
+				setAttr(o, name, v);
 				continue;
 			}
 			case 14: // SUBSCRIPT
@@ -1215,9 +1225,16 @@ public class MiniPython {
 		throw internalError(exctype, message);
 	}
 
+	@SuppressWarnings("rawtypes")
 	private Object getAttr(Object o, String name) throws ExecutionError {
 		if (o instanceof TModule)
 			return new TModuleNativeMethod((TModule) o, name);
+
+		if(o instanceof Map) {
+			Map m=(Map)o;
+			if(m.containsKey(name))
+				return m.get(name);
+		}
 
 		// find an instance method
 		String target = "instance_" + toPyTypeString(o) + "_" + name;
@@ -1229,6 +1246,17 @@ public class MiniPython {
 
 		throw internalError("AttributeError",
 				String.format("No attribute '%s' of %s", name, toPyString(o)));
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void setAttr(Object o, String name, Object value)
+			throws ExecutionError {
+		if (o instanceof Map) {
+			((Map) o).put(name, value);
+			return;
+		}
+		throw internalError("TypeError", "Can't set attributes on "
+				+ toPyTypeString(o));
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -1493,7 +1521,8 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
-	private List builtin_filter(Callable function, List items) throws ExecutionError {
+	private List builtin_filter(Callable function, List items)
+			throws ExecutionError {
 		List res = new ArrayList();
 		for (Object item : items) {
 			if (builtin_bool(call(function, item))) {
@@ -1537,7 +1566,8 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
-	private List builtin_map(Callable function, List items) throws ExecutionError {
+	private List builtin_map(Callable function, List items)
+			throws ExecutionError {
 		List res = new ArrayList(items.size());
 		for (Object item : items) {
 			res.add(call(function, item));
@@ -1613,7 +1643,8 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unused" })
-	private String instance_str_join(String s, List items) throws ExecutionError {
+	private String instance_str_join(String s, List items)
+			throws ExecutionError {
 		StringBuilder sb = new StringBuilder();
 		for (Object item : items) {
 			if (sb.length() > 0) {
@@ -1632,16 +1663,17 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings("unused")
-	private String instance_str_replace(String s, String target, String replacement) {
+	private String instance_str_replace(String s, String target,
+			String replacement) {
 		String res = s.replace(target, replacement);
-		if (target.length()==0)
+		if (target.length() == 0)
 			// Python precedes each character with replacement
 			// Java also adds one more on the end which we undo here
 			return res.substring(0, res.length() - replacement.length());
 		return res;
 	}
 
-	@SuppressWarnings({"unused", "fallthrough"})
+	@SuppressWarnings({ "unused", "fallthrough" })
 	private List<String> instance_str_split(String s, Object... args)
 			throws ExecutionError {
 		int maxsplit = 0;
@@ -1661,7 +1693,7 @@ public class MiniPython {
 			if (!(args[0] instanceof String))
 				throw internalError("TypeError", "sep should be an integer");
 			sep = (String) args[0];
-			if (sep.length()==0)
+			if (sep.length() == 0)
 				throw internalError("ValueError", "empty separator");
 		case 0:
 		}
@@ -1691,7 +1723,7 @@ public class MiniPython {
 
 	@SuppressWarnings({ "unused", "rawtypes" })
 	private Object instance_dict_get(Map map, Object key, Object defValue) {
-		return map.containsKey(key)?map.get(key):defValue;
+		return map.containsKey(key) ? map.get(key) : defValue;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes", "unused" })
@@ -1735,7 +1767,8 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes", "unused", "fallthrough" })
-	private void instance_list_sort(List list, Object... args) throws ExecutionError {
+	private void instance_list_sort(List list, Object... args)
+			throws ExecutionError {
 		Callable cmp = null;
 		Callable key = null;
 		boolean reverse = false;

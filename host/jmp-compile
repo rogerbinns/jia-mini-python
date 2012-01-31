@@ -417,12 +417,19 @@ class Compiler(ast.NodeVisitor):
         if len(node.targets)!=1:
             raise self.Error(node, "Only assigning to one item at a time is supported")
         target=node.targets[0]
-        if not isinstance(target, (ast.Name, ast.Subscript)):
+        if not isinstance(target, (ast.Name, ast.Subscript, ast.Attribute)):
             raise self.Error(target, "That kind of assignment is not supported")
         if isinstance(target, ast.Name):
             for x in self.visit(node.value):
                 yield x
             yield node, ("STORE_NAME", target.id)
+        elif isinstance(target, ast.Attribute):
+            # python evaluation order is rhs then lhs
+            for x in self.visit(node.value):
+                yield x
+            for x in self.visit(target.value):
+                yield x
+            yield node, ("STORE_ATTR_NAME", target.attr)
         else:
             if not isinstance(target.slice, ast.Index):
                 raise self.Error(node, "Only simple array/list subscript assignment supported")
@@ -860,6 +867,7 @@ opcode_map={
     "PUSH_STR": 162,
     "GLOBAL": 163,
     "DEL_NAME": 164,
+    "STORE_ATTR_NAME": 165,
 
     # integers
     "PUSH_INT": 200,
