@@ -29,3 +29,6 @@ y* into *id(x) == id(y)*.
 It is possible to do a form of object orientation keeping data and the
 functions that operate it together in the same dictionary as
 :ref:`documented here <pyobject>`.
+
+Code that attempted to do a rich compare of dictionaries was removed
+and their :func:`id` is used instead.  (:ref:`comparisons`).

@@ -31,6 +31,8 @@ print "# and that Python 3 gives exceptions"
 for left in testvals:
     for op in testops:
         for right in testvals:
+            if (type(left), type(right))==(dict,dict) and op not in ("and", "or", "==", "!="):
+                continue
             toeval=code="%r %s %r" % (left, op, right)
             try:
                 if op in ("+", "-", "*", "/") and (isinstance(right, bool) or isinstance(left, bool)):

@@ -88,12 +88,6 @@ assert l==range(4,-1,-1)
 l.sort(None, None, None)
 assert l==range(5)
 
-l=[{1: 2}, {1: 1}, {1: 3}]
-l.sort(None, lambda x: x[1])
-assert l==[{1: 1}, {1: 2}, {1: 3}]
-l.sort(cmp, None, True)
-assert l==[{1: 3}, {1: 2}, {1: 1}]
-
 # A list that can't do equals well
 l=test1.badeqlist()
 l2=test2.badeqlist()
@@ -102,4 +96,8 @@ for i in 1,"fdsa", True, l, l2:
     l2.append(i)
 assert l==l2
 
+# key
 
+l=[{"foo": 1}, {"foo": 7}, {"foo": 2}]
+l.sort(None, lambda x: x["foo"])
+assert l==[{"foo": 1}, {"foo": 2}, {"foo": 7}]

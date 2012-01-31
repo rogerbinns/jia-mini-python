@@ -6,10 +6,15 @@ Quirks and differences
 :index:`Comparisons`
 --------------------
 
-Comparisons will always succeed.  Where the items being compared are
-the same type then the logical comparison is performed.  When the
-types differ then there is still an absolute ordering (eg all lists
-come after all dicts).  This matches the behaviour of Python 2,
+Comparisons will always succeed.  This is to ensure you can sort any
+list and not have to worry about members being different types.
+
+Where the items being compared are the same type then the logical
+comparison is performed.  For dictionaries that are not equal the
+:func:`id` is used as ordering doesn't make sense.
+
+When the types differ then there is still an absolute ordering (eg all
+lists come after all dicts).  This matches the behaviour of Python 2,
 although the ordering of unrelated types may differ (the type name is
 used for the comparison).  In Python 3 comparing unrelated types
 results in an exception.

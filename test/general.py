@@ -115,8 +115,6 @@ assert l.index==l.index
 assert l.index!=[3].index
 assert l.index!="".replace
 
-assert {1:1, 2:3} < {1:1, 2:4}
-
 assert id(meth)==id(meth)
 assert id(test1.retSelf)!=id(test1.retSelf)
 

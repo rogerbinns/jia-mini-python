@@ -19,13 +19,10 @@ two={next(): next(), next(): next()}
 assert two=={1:0, 3:2}
 
 # Python 3 doesn't allow ordering of dictionaries
-assert one<two
-assert one<=two
-assert one!=two
-assert (one>=two)==False
-assert (one>two)==False
-assert (one==two)==False
-
+if one<two:
+    assert two>one
+else:
+    assert one>two
 assert ("a" in empty) ==False
 assert (() in empty) ==False
 assert (() in one)==False
@@ -82,7 +79,7 @@ for k in another:
     d[k]=another[k]
     d2[k]=another[k]
 
-assert d==d2
+assert d!=d2
 
 # get
 d={}

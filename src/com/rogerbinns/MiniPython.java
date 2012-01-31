@@ -1344,27 +1344,8 @@ public class MiniPython {
 			}
 			return 0;
 		}
-		if (left instanceof Map) {
-			Map mleft = (Map) left;
-			Map mright = (Map) right;
-			if (mleft.size() != mright.size())
-				return compareTo(mleft.size(), mright.size());
-			Iterator<Map.Entry> li = mleft.entrySet().iterator();
-			Iterator<Map.Entry> ri = mright.entrySet().iterator();
-			while (true) {
-				if (!li.hasNext())
-					return 0;
-				Map.Entry lme = li.next();
-				Map.Entry rme = ri.next();
-
-				int cmp = compareTo(lme.getKey(), rme.getKey());
-				if (cmp != 0)
-					return cmp;
-				cmp = compareTo(lme.getValue(), rme.getValue());
-				if (cmp != 0)
-					return cmp;
-			}
-		}
+		if (left instanceof Map)
+			return compareTo(builtin_id(left), builtin_id(right));
 		if (left instanceof Boolean)
 			return compareTo(builtin_int(left), builtin_int(right));
 		return compareTo(left.toString(), right.toString());

@@ -1245,13 +1245,8 @@ assert ( {} < None )==False
 assert ( {} < [1, 2, 3] )
 assert ( {} < ['one', 'two', 'three'] )
 assert ( {} < ['one', 'three', 'too'] )
-assert ( {} < {} )==False
-assert ( {} < {(1, 2, 3): []} )
-assert ( {} < {(1, 't', '3'): []} )
 assert ( {} < [True, False] )
 assert ( {} < [False, True] )
-assert ( {} < {1: 'one'} )
-assert ( {} < {0: 'zero', 1: 'pne'} )
 assert ( {} > 'a string' )==False
 assert ( {} > 6 )==False
 assert ( {} > -2 )==False
@@ -1261,13 +1256,8 @@ assert ( {} > None )
 assert ( {} > [1, 2, 3] )==False
 assert ( {} > ['one', 'two', 'three'] )==False
 assert ( {} > ['one', 'three', 'too'] )==False
-assert ( {} > {} )==False
-assert ( {} > {(1, 2, 3): []} )==False
-assert ( {} > {(1, 't', '3'): []} )==False
 assert ( {} > [True, False] )==False
 assert ( {} > [False, True] )==False
-assert ( {} > {1: 'one'} )==False
-assert ( {} > {0: 'zero', 1: 'pne'} )==False
 assert ( {} == 'a string' )==False
 assert ( {} == 6 )==False
 assert ( {} == -2 )==False
@@ -1293,13 +1283,8 @@ assert ( {} <= None )==False
 assert ( {} <= [1, 2, 3] )
 assert ( {} <= ['one', 'two', 'three'] )
 assert ( {} <= ['one', 'three', 'too'] )
-assert ( {} <= {} )
-assert ( {} <= {(1, 2, 3): []} )
-assert ( {} <= {(1, 't', '3'): []} )
 assert ( {} <= [True, False] )
 assert ( {} <= [False, True] )
-assert ( {} <= {1: 'one'} )
-assert ( {} <= {0: 'zero', 1: 'pne'} )
 assert ( {} >= 'a string' )==False
 assert ( {} >= 6 )==False
 assert ( {} >= -2 )==False
@@ -1309,13 +1294,8 @@ assert ( {} >= None )
 assert ( {} >= [1, 2, 3] )==False
 assert ( {} >= ['one', 'two', 'three'] )==False
 assert ( {} >= ['one', 'three', 'too'] )==False
-assert ( {} >= {} )
-assert ( {} >= {(1, 2, 3): []} )==False
-assert ( {} >= {(1, 't', '3'): []} )==False
 assert ( {} >= [True, False] )==False
 assert ( {} >= [False, True] )==False
-assert ( {} >= {1: 'one'} )==False
-assert ( {} >= {0: 'zero', 1: 'pne'} )==False
 assert ( {} != 'a string' )
 assert ( {} != 6 )
 assert ( {} != -2 )
@@ -1373,13 +1353,8 @@ assert ( {(1, 2, 3): []} < None )==False
 assert ( {(1, 2, 3): []} < [1, 2, 3] )
 assert ( {(1, 2, 3): []} < ['one', 'two', 'three'] )
 assert ( {(1, 2, 3): []} < ['one', 'three', 'too'] )
-assert ( {(1, 2, 3): []} < {} )==False
-assert ( {(1, 2, 3): []} < {(1, 2, 3): []} )==False
-assert ( {(1, 2, 3): []} < {(1, 't', '3'): []} )
 assert ( {(1, 2, 3): []} < [True, False] )
 assert ( {(1, 2, 3): []} < [False, True] )
-assert ( {(1, 2, 3): []} < {1: 'one'} )==False
-assert ( {(1, 2, 3): []} < {0: 'zero', 1: 'pne'} )
 assert ( {(1, 2, 3): []} > 'a string' )==False
 assert ( {(1, 2, 3): []} > 6 )==False
 assert ( {(1, 2, 3): []} > -2 )==False
@@ -1389,13 +1364,8 @@ assert ( {(1, 2, 3): []} > None )
 assert ( {(1, 2, 3): []} > [1, 2, 3] )==False
 assert ( {(1, 2, 3): []} > ['one', 'two', 'three'] )==False
 assert ( {(1, 2, 3): []} > ['one', 'three', 'too'] )==False
-assert ( {(1, 2, 3): []} > {} )
-assert ( {(1, 2, 3): []} > {(1, 2, 3): []} )==False
-assert ( {(1, 2, 3): []} > {(1, 't', '3'): []} )==False
 assert ( {(1, 2, 3): []} > [True, False] )==False
 assert ( {(1, 2, 3): []} > [False, True] )==False
-assert ( {(1, 2, 3): []} > {1: 'one'} )
-assert ( {(1, 2, 3): []} > {0: 'zero', 1: 'pne'} )==False
 assert ( {(1, 2, 3): []} == 'a string' )==False
 assert ( {(1, 2, 3): []} == 6 )==False
 assert ( {(1, 2, 3): []} == -2 )==False
@@ -1421,13 +1391,8 @@ assert ( {(1, 2, 3): []} <= None )==False
 assert ( {(1, 2, 3): []} <= [1, 2, 3] )
 assert ( {(1, 2, 3): []} <= ['one', 'two', 'three'] )
 assert ( {(1, 2, 3): []} <= ['one', 'three', 'too'] )
-assert ( {(1, 2, 3): []} <= {} )==False
-assert ( {(1, 2, 3): []} <= {(1, 2, 3): []} )
-assert ( {(1, 2, 3): []} <= {(1, 't', '3'): []} )
 assert ( {(1, 2, 3): []} <= [True, False] )
 assert ( {(1, 2, 3): []} <= [False, True] )
-assert ( {(1, 2, 3): []} <= {1: 'one'} )==False
-assert ( {(1, 2, 3): []} <= {0: 'zero', 1: 'pne'} )
 assert ( {(1, 2, 3): []} >= 'a string' )==False
 assert ( {(1, 2, 3): []} >= 6 )==False
 assert ( {(1, 2, 3): []} >= -2 )==False
@@ -1437,13 +1402,8 @@ assert ( {(1, 2, 3): []} >= None )
 assert ( {(1, 2, 3): []} >= [1, 2, 3] )==False
 assert ( {(1, 2, 3): []} >= ['one', 'two', 'three'] )==False
 assert ( {(1, 2, 3): []} >= ['one', 'three', 'too'] )==False
-assert ( {(1, 2, 3): []} >= {} )
-assert ( {(1, 2, 3): []} >= {(1, 2, 3): []} )
-assert ( {(1, 2, 3): []} >= {(1, 't', '3'): []} )==False
 assert ( {(1, 2, 3): []} >= [True, False] )==False
 assert ( {(1, 2, 3): []} >= [False, True] )==False
-assert ( {(1, 2, 3): []} >= {1: 'one'} )
-assert ( {(1, 2, 3): []} >= {0: 'zero', 1: 'pne'} )==False
 assert ( {(1, 2, 3): []} != 'a string' )
 assert ( {(1, 2, 3): []} != 6 )
 assert ( {(1, 2, 3): []} != -2 )
@@ -1501,13 +1461,8 @@ assert ( {(1, 't', '3'): []} < None )==False
 assert ( {(1, 't', '3'): []} < [1, 2, 3] )
 assert ( {(1, 't', '3'): []} < ['one', 'two', 'three'] )
 assert ( {(1, 't', '3'): []} < ['one', 'three', 'too'] )
-assert ( {(1, 't', '3'): []} < {} )==False
-assert ( {(1, 't', '3'): []} < {(1, 2, 3): []} )==False
-assert ( {(1, 't', '3'): []} < {(1, 't', '3'): []} )==False
 assert ( {(1, 't', '3'): []} < [True, False] )
 assert ( {(1, 't', '3'): []} < [False, True] )
-assert ( {(1, 't', '3'): []} < {1: 'one'} )==False
-assert ( {(1, 't', '3'): []} < {0: 'zero', 1: 'pne'} )
 assert ( {(1, 't', '3'): []} > 'a string' )==False
 assert ( {(1, 't', '3'): []} > 6 )==False
 assert ( {(1, 't', '3'): []} > -2 )==False
@@ -1517,13 +1472,8 @@ assert ( {(1, 't', '3'): []} > None )
 assert ( {(1, 't', '3'): []} > [1, 2, 3] )==False
 assert ( {(1, 't', '3'): []} > ['one', 'two', 'three'] )==False
 assert ( {(1, 't', '3'): []} > ['one', 'three', 'too'] )==False
-assert ( {(1, 't', '3'): []} > {} )
-assert ( {(1, 't', '3'): []} > {(1, 2, 3): []} )
-assert ( {(1, 't', '3'): []} > {(1, 't', '3'): []} )==False
 assert ( {(1, 't', '3'): []} > [True, False] )==False
 assert ( {(1, 't', '3'): []} > [False, True] )==False
-assert ( {(1, 't', '3'): []} > {1: 'one'} )
-assert ( {(1, 't', '3'): []} > {0: 'zero', 1: 'pne'} )==False
 assert ( {(1, 't', '3'): []} == 'a string' )==False
 assert ( {(1, 't', '3'): []} == 6 )==False
 assert ( {(1, 't', '3'): []} == -2 )==False
@@ -1549,13 +1499,8 @@ assert ( {(1, 't', '3'): []} <= None )==False
 assert ( {(1, 't', '3'): []} <= [1, 2, 3] )
 assert ( {(1, 't', '3'): []} <= ['one', 'two', 'three'] )
 assert ( {(1, 't', '3'): []} <= ['one', 'three', 'too'] )
-assert ( {(1, 't', '3'): []} <= {} )==False
-assert ( {(1, 't', '3'): []} <= {(1, 2, 3): []} )==False
-assert ( {(1, 't', '3'): []} <= {(1, 't', '3'): []} )
 assert ( {(1, 't', '3'): []} <= [True, False] )
 assert ( {(1, 't', '3'): []} <= [False, True] )
-assert ( {(1, 't', '3'): []} <= {1: 'one'} )==False
-assert ( {(1, 't', '3'): []} <= {0: 'zero', 1: 'pne'} )
 assert ( {(1, 't', '3'): []} >= 'a string' )==False
 assert ( {(1, 't', '3'): []} >= 6 )==False
 assert ( {(1, 't', '3'): []} >= -2 )==False
@@ -1565,13 +1510,8 @@ assert ( {(1, 't', '3'): []} >= None )
 assert ( {(1, 't', '3'): []} >= [1, 2, 3] )==False
 assert ( {(1, 't', '3'): []} >= ['one', 'two', 'three'] )==False
 assert ( {(1, 't', '3'): []} >= ['one', 'three', 'too'] )==False
-assert ( {(1, 't', '3'): []} >= {} )
-assert ( {(1, 't', '3'): []} >= {(1, 2, 3): []} )
-assert ( {(1, 't', '3'): []} >= {(1, 't', '3'): []} )
 assert ( {(1, 't', '3'): []} >= [True, False] )==False
 assert ( {(1, 't', '3'): []} >= [False, True] )==False
-assert ( {(1, 't', '3'): []} >= {1: 'one'} )
-assert ( {(1, 't', '3'): []} >= {0: 'zero', 1: 'pne'} )==False
 assert ( {(1, 't', '3'): []} != 'a string' )
 assert ( {(1, 't', '3'): []} != 6 )
 assert ( {(1, 't', '3'): []} != -2 )
@@ -1899,13 +1839,8 @@ assert ( {1: 'one'} < None )==False
 assert ( {1: 'one'} < [1, 2, 3] )
 assert ( {1: 'one'} < ['one', 'two', 'three'] )
 assert ( {1: 'one'} < ['one', 'three', 'too'] )
-assert ( {1: 'one'} < {} )==False
-assert ( {1: 'one'} < {(1, 2, 3): []} )
-assert ( {1: 'one'} < {(1, 't', '3'): []} )
 assert ( {1: 'one'} < [True, False] )
 assert ( {1: 'one'} < [False, True] )
-assert ( {1: 'one'} < {1: 'one'} )==False
-assert ( {1: 'one'} < {0: 'zero', 1: 'pne'} )
 assert ( {1: 'one'} > 'a string' )==False
 assert ( {1: 'one'} > 6 )==False
 assert ( {1: 'one'} > -2 )==False
@@ -1915,13 +1850,8 @@ assert ( {1: 'one'} > None )
 assert ( {1: 'one'} > [1, 2, 3] )==False
 assert ( {1: 'one'} > ['one', 'two', 'three'] )==False
 assert ( {1: 'one'} > ['one', 'three', 'too'] )==False
-assert ( {1: 'one'} > {} )
-assert ( {1: 'one'} > {(1, 2, 3): []} )==False
-assert ( {1: 'one'} > {(1, 't', '3'): []} )==False
 assert ( {1: 'one'} > [True, False] )==False
 assert ( {1: 'one'} > [False, True] )==False
-assert ( {1: 'one'} > {1: 'one'} )==False
-assert ( {1: 'one'} > {0: 'zero', 1: 'pne'} )==False
 assert ( {1: 'one'} == 'a string' )==False
 assert ( {1: 'one'} == 6 )==False
 assert ( {1: 'one'} == -2 )==False
@@ -1947,13 +1877,8 @@ assert ( {1: 'one'} <= None )==False
 assert ( {1: 'one'} <= [1, 2, 3] )
 assert ( {1: 'one'} <= ['one', 'two', 'three'] )
 assert ( {1: 'one'} <= ['one', 'three', 'too'] )
-assert ( {1: 'one'} <= {} )==False
-assert ( {1: 'one'} <= {(1, 2, 3): []} )
-assert ( {1: 'one'} <= {(1, 't', '3'): []} )
 assert ( {1: 'one'} <= [True, False] )
 assert ( {1: 'one'} <= [False, True] )
-assert ( {1: 'one'} <= {1: 'one'} )
-assert ( {1: 'one'} <= {0: 'zero', 1: 'pne'} )
 assert ( {1: 'one'} >= 'a string' )==False
 assert ( {1: 'one'} >= 6 )==False
 assert ( {1: 'one'} >= -2 )==False
@@ -1963,13 +1888,8 @@ assert ( {1: 'one'} >= None )
 assert ( {1: 'one'} >= [1, 2, 3] )==False
 assert ( {1: 'one'} >= ['one', 'two', 'three'] )==False
 assert ( {1: 'one'} >= ['one', 'three', 'too'] )==False
-assert ( {1: 'one'} >= {} )
-assert ( {1: 'one'} >= {(1, 2, 3): []} )==False
-assert ( {1: 'one'} >= {(1, 't', '3'): []} )==False
 assert ( {1: 'one'} >= [True, False] )==False
 assert ( {1: 'one'} >= [False, True] )==False
-assert ( {1: 'one'} >= {1: 'one'} )
-assert ( {1: 'one'} >= {0: 'zero', 1: 'pne'} )==False
 assert ( {1: 'one'} != 'a string' )
 assert ( {1: 'one'} != 6 )
 assert ( {1: 'one'} != -2 )
@@ -2027,13 +1947,8 @@ assert ( {0: 'zero', 1: 'pne'} < None )==False
 assert ( {0: 'zero', 1: 'pne'} < [1, 2, 3] )
 assert ( {0: 'zero', 1: 'pne'} < ['one', 'two', 'three'] )
 assert ( {0: 'zero', 1: 'pne'} < ['one', 'three', 'too'] )
-assert ( {0: 'zero', 1: 'pne'} < {} )==False
-assert ( {0: 'zero', 1: 'pne'} < {(1, 2, 3): []} )==False
-assert ( {0: 'zero', 1: 'pne'} < {(1, 't', '3'): []} )==False
 assert ( {0: 'zero', 1: 'pne'} < [True, False] )
 assert ( {0: 'zero', 1: 'pne'} < [False, True] )
-assert ( {0: 'zero', 1: 'pne'} < {1: 'one'} )==False
-assert ( {0: 'zero', 1: 'pne'} < {0: 'zero', 1: 'pne'} )==False
 assert ( {0: 'zero', 1: 'pne'} > 'a string' )==False
 assert ( {0: 'zero', 1: 'pne'} > 6 )==False
 assert ( {0: 'zero', 1: 'pne'} > -2 )==False
@@ -2043,13 +1958,8 @@ assert ( {0: 'zero', 1: 'pne'} > None )
 assert ( {0: 'zero', 1: 'pne'} > [1, 2, 3] )==False
 assert ( {0: 'zero', 1: 'pne'} > ['one', 'two', 'three'] )==False
 assert ( {0: 'zero', 1: 'pne'} > ['one', 'three', 'too'] )==False
-assert ( {0: 'zero', 1: 'pne'} > {} )
-assert ( {0: 'zero', 1: 'pne'} > {(1, 2, 3): []} )
-assert ( {0: 'zero', 1: 'pne'} > {(1, 't', '3'): []} )
 assert ( {0: 'zero', 1: 'pne'} > [True, False] )==False
 assert ( {0: 'zero', 1: 'pne'} > [False, True] )==False
-assert ( {0: 'zero', 1: 'pne'} > {1: 'one'} )
-assert ( {0: 'zero', 1: 'pne'} > {0: 'zero', 1: 'pne'} )==False
 assert ( {0: 'zero', 1: 'pne'} == 'a string' )==False
 assert ( {0: 'zero', 1: 'pne'} == 6 )==False
 assert ( {0: 'zero', 1: 'pne'} == -2 )==False
@@ -2075,13 +1985,8 @@ assert ( {0: 'zero', 1: 'pne'} <= None )==False
 assert ( {0: 'zero', 1: 'pne'} <= [1, 2, 3] )
 assert ( {0: 'zero', 1: 'pne'} <= ['one', 'two', 'three'] )
 assert ( {0: 'zero', 1: 'pne'} <= ['one', 'three', 'too'] )
-assert ( {0: 'zero', 1: 'pne'} <= {} )==False
-assert ( {0: 'zero', 1: 'pne'} <= {(1, 2, 3): []} )==False
-assert ( {0: 'zero', 1: 'pne'} <= {(1, 't', '3'): []} )==False
 assert ( {0: 'zero', 1: 'pne'} <= [True, False] )
 assert ( {0: 'zero', 1: 'pne'} <= [False, True] )
-assert ( {0: 'zero', 1: 'pne'} <= {1: 'one'} )==False
-assert ( {0: 'zero', 1: 'pne'} <= {0: 'zero', 1: 'pne'} )
 assert ( {0: 'zero', 1: 'pne'} >= 'a string' )==False
 assert ( {0: 'zero', 1: 'pne'} >= 6 )==False
 assert ( {0: 'zero', 1: 'pne'} >= -2 )==False
@@ -2091,13 +1996,8 @@ assert ( {0: 'zero', 1: 'pne'} >= None )
 assert ( {0: 'zero', 1: 'pne'} >= [1, 2, 3] )==False
 assert ( {0: 'zero', 1: 'pne'} >= ['one', 'two', 'three'] )==False
 assert ( {0: 'zero', 1: 'pne'} >= ['one', 'three', 'too'] )==False
-assert ( {0: 'zero', 1: 'pne'} >= {} )
-assert ( {0: 'zero', 1: 'pne'} >= {(1, 2, 3): []} )
-assert ( {0: 'zero', 1: 'pne'} >= {(1, 't', '3'): []} )
 assert ( {0: 'zero', 1: 'pne'} >= [True, False] )==False
 assert ( {0: 'zero', 1: 'pne'} >= [False, True] )==False
-assert ( {0: 'zero', 1: 'pne'} >= {1: 'one'} )
-assert ( {0: 'zero', 1: 'pne'} >= {0: 'zero', 1: 'pne'} )
 assert ( {0: 'zero', 1: 'pne'} != 'a string' )
 assert ( {0: 'zero', 1: 'pne'} != 6 )
 assert ( {0: 'zero', 1: 'pne'} != -2 )
