@@ -8,3 +8,4 @@ coverage/
 build/
 dist/
 tools/googlecode_upload.py
+test/*.i
