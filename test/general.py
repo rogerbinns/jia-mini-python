@@ -187,3 +187,17 @@ assert None==None
 x={"y":3}
 assert x is x
 assert x is not 3
+
+# globals/locals functions - these may be removed
+assert "x" in globals()
+assert globals().x=={"y": 3}
+
+def foo(opop):
+    assert "opop" in locals()
+    assert len(locals())==1
+    assert "x" not in locals()
+    x=7
+    assert globals().x!=locals().x
+    assert len(locals())==2
+
+foo(1)

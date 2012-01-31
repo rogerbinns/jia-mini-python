@@ -1545,6 +1545,11 @@ public class MiniPython {
 		return res;
 	}
 
+	@SuppressWarnings({ "unused", "rawtypes" })
+	private Map builtin_globals() {
+		return root.variables;
+	}
+
 	private static int builtin_id(Object o) {
 		return System.identityHashCode(o);
 	}
@@ -1578,6 +1583,10 @@ public class MiniPython {
 				+ toPyString(item));
 	}
 
+	@SuppressWarnings({ "unused", "rawtypes" })
+	private Map builtin_locals() {
+		return current.variables;
+	}
 	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
 	private List builtin_map(Callable function, List items)
 			throws ExecutionError {
