@@ -183,3 +183,9 @@ test1.retSelf()<test2.retSelf()
 [test1.retSelf(), 2].sort()
 
 assert None==None
+
+# is
+
+x={"y":3}
+assert x is x
+assert x is not 3

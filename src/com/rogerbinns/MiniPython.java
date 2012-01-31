@@ -502,6 +502,12 @@ public class MiniPython {
 			}
 
 			// Binary operations
+			case 35: // IS
+			{
+				Object right = stack[stacktop--], left = stack[stacktop--];
+				stack[++stacktop]= builtin_id(left)==builtin_id(right);
+				continue;
+			}
 			case 2: // MULT
 			{
 				Object right = stack[stacktop--], left = stack[stacktop--];

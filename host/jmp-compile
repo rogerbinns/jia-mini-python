@@ -51,6 +51,7 @@ class Compiler(ast.NodeVisitor):
         ast.GtE: "GTE",
 
         ast.In: "IN",
+        ast.Is: "IS",
 
         ast.UAdd: "UNARY_ADD",
         ast.USub: "UNARY_NEG",
@@ -249,7 +250,7 @@ class Compiler(ast.NodeVisitor):
             if options.traceback:
                 x=sys.exc_info()
                 import traceback
-                traceback.write_exc(x)
+                traceback.print_exception(*x)
             # Slice objects don't have line/column set so we use the
             # most recent item emitted.  If you tried really hard you
             # could also make that a Slice giving an error here.
@@ -320,6 +321,9 @@ class Compiler(ast.NodeVisitor):
             yield x
         if isinstance(node.ops[0], ast.NotIn):
             yield node, "IN"
+            yield node, "NOT"
+        elif isinstance(node.ops[0], ast.IsNot):
+            yield node, "IS"
             yield node, "NOT"
         else:
             yield node, self.get_op(node, node.ops[0])
@@ -851,6 +855,7 @@ opcode_map={
     "LTE": 32,
     "ASSIGN_INDEX": 33,
     "ASSERT_FAILED": 34,
+    "IS": 35,
 
     ### All the following take two byte int value
     # code position

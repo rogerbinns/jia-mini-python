@@ -22,3 +22,6 @@ too (:issue:`6`)::
    # Set
    a.bar=7
    print a["bar"], a.bar
+
+Added *is/is not* operator.  Behind the scenes this translates *x is
+y* into *id(x) == id(y)*.

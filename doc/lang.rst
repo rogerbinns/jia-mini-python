@@ -41,6 +41,7 @@ Operators
 * \+ - * / // % (Where applicable for types. Division is always floor division.)
 * < <= == != >= > (:ref:`note <comparisons>`)
 * in / not in (list/dict membership)
+* is / is not (same object checking)
 * len (as applicable)
 * [] (list and dict indexing)
 * [from:to] list slicing (step not supported)
@@ -72,7 +73,6 @@ What is not supported
         pass
 * Floating point
 * Bytes type
-* is/is not (you can call :func:`id` and compare result)
 * Assignment to False/True/None (allowed in some Python versions to
   change value).  Has no effect.
 
