@@ -8,7 +8,7 @@ There was a need for controlling behaviour in a Java library project
 that fell between a JSON configuration file and full blown code.
 
 While Jython, Lua or some similar library could be used it would
-require version coordination if they already used those libraries.
+require version coordination if the app already used those libraries.
 Additionally those libraries are orders of magnitude larger than the
 original project which is very undesirable.
 

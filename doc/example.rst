@@ -38,6 +38,11 @@ using it as well, having version clashes etc.
       void print(String s) {
            System.out.print(s);
       }
+      @Override
+      void onError(Execution error) {
+        // a single location to log, dissect or otherwise deal
+	// with any error
+      }     
   });
 
   // give it code to run in an inputstream from a file, network etc

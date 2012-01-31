@@ -25,3 +25,7 @@ too (:issue:`6`)::
 
 Added *is/is not* operator.  Behind the scenes this translates *x is
 y* into *id(x) == id(y)*.
+
+It is possible to do a form of object orientation keeping data and the
+functions that operate it together in the same dictionary as
+:ref:`documented here <pyobject>`.

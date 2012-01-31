@@ -203,10 +203,62 @@ Global functions
 Object orientation
 ------------------
 
-You can do a form of object oriented programming because of two
-features on dictionaries - attribute access and implicit *self* if
-attribute access returns a method.
+You can do a form of object oriented programming where you keep data
+and the methods that operate on it together in the same dictionary.
+This is because of two features on dictionaries - attribute access and
+implicit *self* if attribute access returns a method.
 
-::TODO:: fill out more
+Java MiniPython lets you access dictionaries the regular Python way
+and as attribute access::
 
-::TODO:: update the example
+    d={"a": 3}
+    # normal way
+    d["a"]
+    # attribute access
+    d.a
+
+If you add a method to a dictionary and then access the method via
+attribute access then the dictionary will be added as an implicit
+first parameter in calls, which you traditionally call *self*.::
+
+    def meth(self, a):
+    	pass
+
+    d={"meth": meth}
+
+    # This call
+    d.meth(3)
+    # becomes this behind the scenes
+    meth(d, 3)
+
+    # Dictionary access won't and this will complain about not enough
+    # parameters
+    d["meth"](3)
+
+Here is an example of being somewhat object oriented by using
+dictionaries with methods.  (Technically this is substantially similar
+to `prototype based programming
+<http://en.wikipedia.org/wiki/Prototype-based_programming>`__ and
+similar to how Javascript works.)::
+
+    # How we make new ones
+    def Circle(x, y, radius):
+
+       def area(self):
+       	   return radius*radius*31415/10000
+
+       def draw(self, graphics):
+       	   graphics.plot(...)
+
+       return {
+          # data members
+	  "x": x,
+	  "y": y,
+	  "radius": radius,
+	  # method members
+	  "area": area,
+	  "draw": draw}
+    
+    # This is how we make a new instance
+    circ=Circle(25, 3, 12)
+    print circ.area()

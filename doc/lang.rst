@@ -29,7 +29,7 @@ Keywords
 * def (new methods)
 * if
 * while
-* for  iterate over list members and dict keys
+* for (iterate over list members and dict keys)
 * return
 * del
 * lambda
@@ -56,6 +56,7 @@ What is not supported
   Note that methods :ref:`added via Java <adding_methods>` can take
   variable numbers of arguments.  You can call :func:`apply` to call
   a function with a list of arguments.
+* Default arguments
 * Augmented assignments (+= -= /= etc)
 * Bitwise operators (<< >> & | ^)
 * Classes - note however that there is some :ref:`pyobject`
