@@ -88,3 +88,13 @@ d["foo"]=4
 assert d.get("foo", 3)==4
 d[None]=5
 assert d.get(None, 3)==5
+
+# close
+d={"one": 1, "two": 2}
+assert d.copy()==d
+assert id(d.copy())!=id(d)
+d2=d.copy()
+d2["one"]=3
+assert d2!=d
+assert d.one==1
+assert d2.one==3

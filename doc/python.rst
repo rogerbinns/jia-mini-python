@@ -12,6 +12,11 @@ implementation.
 dict type
 ---------
 
+.. method:: copy()  -> dict
+
+   Returns a new dictionary with the same contents, but changes to the
+   new one do not affect the original.
+
 .. method:: get(key, default)
 
    Returns value associated with key, and if it doesn't exist then `default`.

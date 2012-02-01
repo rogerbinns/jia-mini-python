@@ -1743,6 +1743,11 @@ public class MiniPython {
 		return s.toUpperCase();
 	}
 
+	@SuppressWarnings({ "unchecked", "unused", "rawtypes" })
+	private Map instance_dict_copy(Map map) {
+		return new HashMap(map);
+	}
+
 	@SuppressWarnings({ "unused", "rawtypes" })
 	private Object instance_dict_get(Map map, Object key, Object defValue) {
 		return map.containsKey(key) ? map.get(key) : defValue;
