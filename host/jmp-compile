@@ -159,6 +159,8 @@ class Compiler(ast.NodeVisitor):
                         pos+=3
                 else:
                     assert False, "Unhandled opcode "+op
+
+            # Generate output           
             res=out
             codelen=pos
             if codelen==1:
@@ -235,13 +237,14 @@ class Compiler(ast.NodeVisitor):
             assert len(out)-startsize==codelen, "Internal error: code actual size doesn't match calculated size"
 
             # Write it 
-            with open(outputfile, "wb") as f:
-                out.tofile(f)
+            if options.jmpoutput:
+                with open(outputfile, "wb") as f:
+                    out.tofile(f)
 
-            if options.annotate:
-                options.dump_source=inputfile
-                with open(os.path.splitext(outputfile)[0]+".i", "wt") as outf:
-                    dump_internal(options, strings, linenotab, out[-codelen:], outf)
+                if options.annotate:
+                    options.dump_source=inputfile
+                    with open(os.path.splitext(outputfile)[0]+".i", "wt") as outf:
+                        dump_internal(options, strings, linenotab, out[-codelen:], outf)
 
         except:
             t,e,_=sys.exc_info()
@@ -903,6 +906,7 @@ filename to override where the output goes.""")
     g.add_option("--print-function", action="store_true", default=sys.version_info>(3,), help="'print' is a function (Python 3 style) [%default]")
     g.add_option("--asserts", action="store_true", default=False, help="Include asserts in the output [%default]")
     g.add_option("--annotate", action="store_true", default=False, help="Place an annotated JMP/source file (extension .i) alongside the .jmp output")
+    g.add_option("--syntax", action="store_false", dest="jmpoutput", default=True, help="Do a syntax check only - do not produce .jmp output")
     g.add_option("--omit-line-table", action="store_false", default=True, dest="line_table", help="Exclude line number table from .jmp output")
     p.add_option_group(g)
 

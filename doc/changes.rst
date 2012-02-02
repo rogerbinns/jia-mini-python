@@ -34,3 +34,5 @@ Code that attempted to do a rich compare of dictionaries was removed
 and their :func:`id` is used instead.  (:ref:`comparisons`).
 
 Added dict.copy (:issue:`8`)
+
+Added :doc:`jmp-compile` option to only do a syntax check

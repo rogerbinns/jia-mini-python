@@ -48,6 +48,11 @@ output is alongside the input with a `.jmp` extension.
     can map the program counter to the corresponding line as this
     output always includes the line information.
 
+.. option:: --syntax
+
+    Does not produce an output file.  This checks the syntax and that
+    various limits (eg string length, jmp size) are not exceeded.
+
 Dumping
 -------
 
