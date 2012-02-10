@@ -157,6 +157,9 @@ class Compiler(ast.NodeVisitor):
                         out.append( (n, ("PUSH_INT", val&0xffff)) )
                         out.append( (n, ("PUSH_INT_HI", (val>>16)&0xffff)) )
                         pos+=3
+                elif is_int_op(opcode):
+                    assert val<0xffff
+                    out.append( (n, (op, val)) )
                 else:
                     assert False, "Unhandled opcode "+op
 
@@ -484,7 +487,7 @@ class Compiler(ast.NodeVisitor):
             raise self.Error(node, "else not supported for while")
         test=Label()
         end=Label()
-        self.bcstack.append( (end, test) )
+        self.bcstack.append( (end, test, "while") )
         yield node, test
         for x in self.visit(node.test):
             yield x
@@ -504,7 +507,7 @@ class Compiler(ast.NodeVisitor):
 
         loop=Label()
         end=Label()
-        self.bcstack.append( (end, loop) )
+        self.bcstack.append( (end, loop, "for") )
         for x in self.visit(node.iter):
             yield x
         yield node, "ITER"
@@ -615,6 +618,18 @@ class Compiler(ast.NodeVisitor):
         yield node, "CALL"
 
     def visit_Return(self, node):
+        # pop iterators off the stack first
+        icount=0
+        for i in self.bcstack[::-1]:
+            if i is None:
+                break
+            if i[2]=="for":
+                icount+=1
+        if icount==1:
+            yield node, "POP_TOP"
+        elif icount:
+            yield node, ("POP_N", icount)
+        # now return
         for x in self.visit(node.value):
             yield x
         yield node, "RETURN"
@@ -880,6 +895,7 @@ opcode_map={
     # integers
     "PUSH_INT": 200,
     "PUSH_INT_HI": 201,
+    "POP_N": 202,
 }
 
 def is_code_op(v):

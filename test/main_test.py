@@ -40,6 +40,7 @@ def jmp_compile_internal(infile, outfile=None):
         asserts=True
         line_table=True
         annotate=False
+        jmpoutput=True
     if outfile is None:
         outfile=os.path.splitext(infile)[1]+".jmp"
     jmpcompilerobject.compile(options, infile, outfile)
@@ -98,6 +99,10 @@ class JavaMiniPython(unittest.TestCase):
     def testDictAttr(self):
         "Test dictionary/attribute access"
         self.run_py("test/dictattr.py")
+
+    def testIssue10(self):
+        "Test issue 10"
+        self.run_py("test/issue10.py")
 
     def run_py(self, name):
         out,err=self.jmp_compile(name)

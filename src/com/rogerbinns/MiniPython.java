@@ -454,6 +454,11 @@ public class MiniPython {
 				stacktop--;
 				continue;
 			}
+			case 202: // POP_N
+			{
+				stacktop-=val;
+				continue;
+			}
 			// Codes that make the stack bigger
 			case 200: // PUSH_INT
 			{
