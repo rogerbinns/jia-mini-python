@@ -51,7 +51,8 @@ Operators
 What is not supported
 =====================
 
-* docstrings are seen but ignored.  You cannot retrieve them.
+* docstrings are seen but ignored.  You cannot retrieve them.  They do
+  not end up in the output jmp file.
 * Variable arguments and keyword arguments (`*args` and `**kwargs`).
   Note that methods :ref:`added via Java <adding_methods>` can take
   variable numbers of arguments.  You can call :func:`apply` to call

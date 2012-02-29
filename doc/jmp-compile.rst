@@ -26,9 +26,9 @@ output is alongside the input with a `.jmp` extension.
 
 .. option:: --asserts
 
-    By default asserts are ignored.  If you supply this flag will
-    cause asserts to be evaluated and an exception to be thrown if it
-    does not evaluate to true.
+    By default asserts are ignored.  If you supply this flag then
+    asserts will be evaluated and an exception to be thrown if it does
+    not evaluate to a true value.
 
 .. option:: --omit-line-table
 
@@ -42,16 +42,18 @@ output is alongside the input with a `.jmp` extension.
 .. option:: --annotate
 
     Places a file alongside the output with an extension of `.i` that
-    has the source lines intermingled with the internal
-    representation like :option:`--dump` output.  It is recommended
-    you use this option if omitting the line table so that later you
-    can map the program counter to the corresponding line as this
-    output always includes the line information.
+    has the source lines intermingled with the internal representation
+    like :option:`--dump` output.  It is recommended you use this
+    option if omitting the line table so that later you can map the
+    program counter to the corresponding line as this output always
+    includes the line information.  You can see an example annotated
+    file below.
 
 .. option:: --syntax
 
     Does not produce an output file.  This checks the syntax and that
-    various limits (eg string length, jmp size) are not exceeded.
+    various limits (eg string length, jmp size) are not exceeded.  The
+    exit code will be non-zero on any error.
 
 Dumping
 -------

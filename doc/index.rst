@@ -4,10 +4,11 @@ Welcome to Java Mini Python's documentation
 .. centered::  Version |version| released |today|
 
 Java Mini Python provides an implementation of a useful subset of
-Python syntax in Java.  The sweet spot is where you need a `DSL
-<http://en.wikipedia.org/wiki/Domain-specific_language>`__ (eg
+Python syntax and types in Java.  The sweet spot is where you need a
+`DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`__ (eg
 expressions, variables, conditionals, methods/macros, callbacks) and
-would like to use Python's syntax.
+would like to use Python's syntax and types (eg heterogeneous lists
+and dicts).
 
 It was originally written in order to have a richer configuration file
 for an Android app library. For example you could make the brightness

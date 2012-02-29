@@ -29,7 +29,8 @@ using it as well, having version clashes etc.
   // make methods available
   class timestuff { 
        int day_of_week() { return 4; } 
-  };
+  }
+
   mp.addModule("time", new timestuff());
 
   // provide print and other Client behaviour
@@ -45,8 +46,8 @@ using it as well, having version clashes etc.
       }     
   });
 
-  // give it code to run in an inputstream from a file, network etc
+  // give it code to run in an inputStream from a file, network etc
   mp.setCode(new FileInputStream("settings.jmp"));
 
-  // Call a method 
+  // Call a method passing in one parameter
   int brightness=(Integer)mp.callMethod("get_brightness", 2);

@@ -43,12 +43,14 @@ You can make methods available to the Python by calling
 .. code-block:: java
 
     class timeinfo {
+       // can't be seen from Python because it is not public
        private void not_exposed() {}
 
        // using types from above
        public boolean isdst() { return false; }
        public int day_of_week(int year, int month, int day) {  return 2; }
-       public int sum_all(List<Object> items) { return 17; }
+       // Java's type erasure doesn't make the Integer particularly meaningful
+       public int sum_all(List<Integer> items) { return 17; }
 
        // You can use other types
        public Widget get_widget() { return new Widget(); }
@@ -84,7 +86,7 @@ made to try and select a method based on number or type of arguments.
 
 No attempt is made to convert method parameters.  For example if a
 method takes a `boolean` and an `int` is provided then the `int` will
-not be converted to a `boolean`.
+not be converted to a `boolean` and there will be an exception.
 
 Errors
 ******
