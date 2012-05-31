@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
  * The source should have been transformed using jmp-compile. The class cannot
  * be used concurrently. There is no shared state between instances.
  */
+@SuppressWarnings({ "boxing" })
 public class MiniPython {
 
 	private String[] strings;
@@ -178,12 +179,13 @@ public class MiniPython {
 		TMethod(int addr, Context context) {
 			this.addr = addr;
 			this.context = context;
-			this.self=null;
+			this.self = null;
 		}
 
 		public String toString() {
-			if (self!=null)
-				return String.format("<bound method of id %d at %d>", builtin_id(self), addr);
+			if (self != null)
+				return String.format("<bound method of id %d at %d>",
+						builtin_id(self), addr);
 			return String.format("<method at %d>", addr);
 		}
 
@@ -386,11 +388,13 @@ public class MiniPython {
 
 	// futzes the stack to insert the self argument if needed
 	private void adjustArgsForBoundMethod(TMethod meth) {
-		if(meth.self==null) return;
-		int nargs=(Integer)stack[stacktop];
-		System.arraycopy(stack, stacktop-nargs, stack, stacktop-nargs+1, nargs+1);
-		stack[stacktop-nargs]=meth.self;
-		stack[++stacktop]=nargs+1;
+		if (meth.self == null)
+			return;
+		int nargs = (Integer) stack[stacktop];
+		System.arraycopy(stack, stacktop - nargs, stack, stacktop - nargs + 1,
+				nargs + 1);
+		stack[stacktop - nargs] = meth.self;
+		stack[++stacktop] = nargs + 1;
 	}
 
 	// The virtual cpu execution loop.
@@ -457,7 +461,7 @@ public class MiniPython {
 			}
 			case 202: // POP_N
 			{
-				stacktop-=val;
+				stacktop -= val;
 				continue;
 			}
 			// Codes that make the stack bigger
@@ -526,7 +530,7 @@ public class MiniPython {
 			case 35: // IS
 			{
 				Object right = stack[stacktop--], left = stack[stacktop--];
-				stack[++stacktop]= left==right;
+				stack[++stacktop] = left == right;
 				continue;
 			}
 			case 2: // MULT
@@ -1206,10 +1210,11 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings("synthetic-access")
-	private ExecutionError internalError(String exctype, String message, Throwable cause) {
+	private ExecutionError internalError(String exctype, String message,
+			Throwable cause) {
 		// need to know current context
 		ExecutionError e = new ExecutionError();
-		if(cause!=null) {
+		if (cause != null) {
 			e.initCause(cause);
 		}
 		e.type = exctype;
@@ -1228,7 +1233,8 @@ public class MiniPython {
 	private ExecutionError internalError(Exception e) {
 		if (e instanceof ArrayIndexOutOfBoundsException
 				&& stacktop >= stack.length)
-			return internalError("RuntimeError", "Maximum stack depth exceeded", null); /* SOURCECHECKOK */
+			return internalError("RuntimeError", /* SOURCECHECKOK */
+					"Maximum stack depth exceeded", null);
 		return internalError(e.getClass().getSimpleName(), /* SOURCECHECKOK */
 				e.toString(), e);
 	}
@@ -1283,21 +1289,22 @@ public class MiniPython {
 			throws ExecutionError {
 		throw internalError(exctype, message, cause);
 	}
+
 	@SuppressWarnings("rawtypes")
 	private Object getAttr(Object o, String name) throws ExecutionError {
 		if (o instanceof TModule)
 			return new TModuleNativeMethod((TModule) o, name);
 
-		if(o instanceof Map) {
-			Map m=(Map)o;
-			if(m.containsKey(name)) {
-				Object retval=m.get(name);
-				if(retval instanceof TMethod) {
-					TMethod t=(TMethod)retval;
+		if (o instanceof Map) {
+			Map m = (Map) o;
+			if (m.containsKey(name)) {
+				Object retval = m.get(name);
+				if (retval instanceof TMethod) {
+					TMethod t = (TMethod) retval;
 					if (t.self == null) {
-						t=new TMethod(t.addr, t.context);
-						t.self=o;
-						retval=t;
+						t = new TMethod(t.addr, t.context);
+						t.self = o;
+						retval = t;
 					}
 				}
 				return retval;
@@ -1623,6 +1630,7 @@ public class MiniPython {
 	private Map builtin_locals() {
 		return current.variables;
 	}
+
 	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
 	private List builtin_map(Callable function, List items)
 			throws ExecutionError {
