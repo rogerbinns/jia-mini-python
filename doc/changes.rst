@@ -5,10 +5,12 @@ Change History
 ===
 
 Filled in the :jdoc:`cause <java/lang/Throwable.html#getCause()>` for
-:ref:`ExecutionError <ExecutionError>`
+:ref:`ExecutionError <ExecutionError>` and added toDetailedString()
+method.
 
 Added several annotations that help when the file is compiled with
 very strict warnings.
+
 
 1.1
 ===

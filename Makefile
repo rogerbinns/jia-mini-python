@@ -13,6 +13,7 @@ help:
 	@echo "  ant       Build a jar file for command line usage and testing"
 	@echo "  doc       To build the documentation using sphinx"
 	@echo "  coverage  Run the test suites with coverage"
+	@echo "  dist      Produce final code and doc suitable for redistribution"
 
 docs: doc
 
