@@ -1953,6 +1953,15 @@ public class MiniPython {
 		}
 
 		/**
+		 * Returns more detailed than toString (eg includes linenumber and pc).
+		 * In the future it may also include a stack trace and local variables.
+		 */
+		public String toDetailedString() {
+			return String.format("%s: %s.  Line %d pc %d", getType(), message,
+					linenumber(), pc());
+		}
+
+		/**
 		 * Returns the type of the error.
 		 * 
 		 * This typically corresponds to a Python exception (eg `TypeError` or
