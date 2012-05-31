@@ -200,7 +200,7 @@ range(0,10,0)
 #> TypeError
 range(1,2,3,4,5,6)
 
-#> NullPointerException
+#> java.lang.NullPointerException
 "fdasfdsa".endswith(None)
 
 #> TypeError
@@ -218,7 +218,7 @@ range(1,2,3,4,5,6)
 #> ValueError
 "afdsfads".split("")
 
-#> NullPointerException
+#> java.lang.NullPointerException
 [].extend(None)
 
 #> TypeError

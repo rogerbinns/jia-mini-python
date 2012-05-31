@@ -644,7 +644,7 @@ public class MiniPython {
 								((List) right).toArray());
 					} catch (IllegalFormatException e) {
 						throw internalError("TypeError",
-								"String.format - " + e.toString());
+								"String.format - " + e.toString(), e);
 					}
 				} else
 					throw internalErrorBinaryOp("TypeError", "%", left, right);
@@ -1200,11 +1200,11 @@ public class MiniPython {
 			throw internalError("RuntimeError", String.format(
 					"Illegal access to native method %s: %s", tm, e));
 		} catch (InvocationTargetException e) {
-			Object cause = e.getCause();
+			Throwable cause = (e.getCause() != null) ? e.getCause() : e;
 			if (cause instanceof ExecutionError)
 				throw (ExecutionError) cause;
-			throw internalError(cause.getClass().getSimpleName(),
-					String.format("%s: %s", tm, cause));
+			throw internalError(cause.getClass().getName(),
+					tm.toString(), cause);
 		}
 		stack[++stacktop] = result;
 	}
@@ -1606,7 +1606,7 @@ public class MiniPython {
 			try {
 				return Integer.parseInt((String) o);
 			} catch (NumberFormatException e) {
-				throw internalError("ValueError", e.toString());
+				throw internalError("ValueError", e.toString(), e);
 			}
 		}
 		throw internalError("TypeError",
@@ -1965,8 +1965,15 @@ public class MiniPython {
 		 * In the future it may also include a stack trace and local variables.
 		 */
 		public String toDetailedString() {
-			return String.format("%s: %s.  Line %d pc %d", getType(), message,
-					linenumber(), pc());
+			String s = String.format("%s: %s.  Line %d pc %d", getType(),
+					message, linenumber(), pc());
+			if (getCause() != null) {
+				String cause = getCause().toString();
+				if (!s.contains(cause)) {
+					s += " caused by " + cause;
+				}
+			}
+			return s;
 		}
 
 		/**
