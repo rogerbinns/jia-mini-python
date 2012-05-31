@@ -41,6 +41,9 @@ def genjson(filename):
                 content.append(line)
                 continue
             if content:
+                # ignore annotations
+                if line.strip().startswith("@"):
+                    continue
                 if line.strip():
                     update(thejson, package, content, line, state)
                 else:
@@ -105,7 +108,7 @@ def update_doc(data):
             while pos<len(lines):
                 line=lines[pos]
                 if line.strip():
-                    line=fixup(line) 
+                    line=fixup(line)
                 if not isinstance(line, tuple):
                     line=(line,)
                 for l in line:
@@ -119,7 +122,7 @@ def update_doc(data):
                     pos+=1
                 pos+=1
             indentlevel-=1
-              
+
         res.append("")
         indentlevel=savedindent
 
@@ -127,9 +130,9 @@ def update_doc(data):
 
 def unhtml(line):
     # strip/replace html tags we use with rst
-    line=line.replace("<p>", "").replace("</p>", "") 
-    
-    line=re.sub(r'<a.*?\bhref="(?P<addr>[^"]+?)".*?>(?P<text>.*?)</a>', 
+    line=line.replace("<p>", "").replace("</p>", "")
+
+    line=re.sub(r'<a.*?\bhref="(?P<addr>[^"]+?)".*?>(?P<text>.*?)</a>',
                 r'`\g<text> <\g<addr>>`__',
                 line)
 
@@ -184,4 +187,4 @@ if __name__=='__main__':
     data=genjson(opj(topdir, "src", "com", "rogerbinns", "MiniPython.java"))
     res=update_doc(data)
     update_file(opj(topdir, "doc", "java.rst"), res)
-    
+
