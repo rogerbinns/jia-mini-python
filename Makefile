@@ -44,6 +44,8 @@ javadoc:
 	tools/update-javadoc.py
 
 
+# Note that cobertura currently only works with Java 6.  You get all
+# sorts of errors with Java 7.
 coverage: ant
 	@rm -rf coverage
 	@mkdir -p coverage/bin

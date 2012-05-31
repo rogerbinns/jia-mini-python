@@ -1,6 +1,15 @@
 Change History
 **************
 
+1.2
+===
+
+Filled in the :jdoc:`cause <java/lang/Throwable.html#getCause()>` for
+:ref:`ExecutionError <ExecutionError>`
+
+Added several annotations that help when the file is compiled with
+very strict warnings.
+
 1.1
 ===
 

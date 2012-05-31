@@ -81,6 +81,7 @@ public class MiniPython {
 	 * @throws ExecutionError
 	 *             Any issues from executing the code
 	 */
+	@SuppressWarnings("boxing")
 	public synchronized void setCode(InputStream stream) throws IOException,
 	ExecutionError {
 		if (root == null) {
@@ -396,7 +397,7 @@ public class MiniPython {
 	// Java's generics are poor and it whines about conversions even when the
 	// generic types are Object
 	// so this turns off the whining as there is nothing we can do about it.
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({ "rawtypes", "unchecked", "boxing" })
 	private final Object mainLoop() throws ExecutionError {
 		int op, val = -1;
 		opcodeswitch: while (true) {
@@ -525,7 +526,7 @@ public class MiniPython {
 			case 35: // IS
 			{
 				Object right = stack[stacktop--], left = stack[stacktop--];
-				stack[++stacktop]= builtin_id(left)==builtin_id(right);
+				stack[++stacktop]= left==right;
 				continue;
 			}
 			case 2: // MULT
@@ -1204,9 +1205,13 @@ public class MiniPython {
 		stack[++stacktop] = result;
 	}
 
-	private ExecutionError internalError(String exctype, String message) {
+	@SuppressWarnings("synthetic-access")
+	private ExecutionError internalError(String exctype, String message, Throwable cause) {
 		// need to know current context
 		ExecutionError e = new ExecutionError();
+		if(cause!=null) {
+			e.initCause(cause);
+		}
 		e.type = exctype;
 		e.message = message;
 		e.pc = pc;
@@ -1216,12 +1221,16 @@ public class MiniPython {
 		return e;
 	}
 
+	private ExecutionError internalError(String exctype, String message) {
+		return internalError(exctype, message, null); /* SOURCECHECKOK */
+	}
+
 	private ExecutionError internalError(Exception e) {
 		if (e instanceof ArrayIndexOutOfBoundsException
 				&& stacktop >= stack.length)
-			return internalError("RuntimeError", "Maximum stack depth exceeded"); /* SOURCECHECKOK */
+			return internalError("RuntimeError", "Maximum stack depth exceeded", null); /* SOURCECHECKOK */
 		return internalError(e.getClass().getSimpleName(), /* SOURCECHECKOK */
-				e.toString());
+				e.toString(), e);
 	}
 
 	private ExecutionError internalErrorBinaryOp(String exctype, String op,
@@ -1249,9 +1258,31 @@ public class MiniPython {
 	 */
 	public void signalError(String exctype, String message)
 			throws ExecutionError {
-		throw internalError(exctype, message);
+		throw internalError(exctype, message, null);
 	}
 
+	/**
+	 * Call this method when your callbacks need to halt execution due to an
+	 * error
+	 * 
+	 * This method will do the internal bookkeeping necessary in order to
+	 * provide diagnostics to the original caller and then throw an
+	 * ExecutionError which you should not catch.
+	 * 
+	 * @param exctype
+	 *            Best practise is to use the name of a Python exception (eg
+	 *            "TypeError")
+	 * @param message
+	 *            Text describing the error.
+	 * @param cause
+	 *            The underlying reason why this exception is being caused
+	 * @throws ExecutionError
+	 *             Always thrown
+	 */
+	public void signalError(String exctype, String message, Throwable cause)
+			throws ExecutionError {
+		throw internalError(exctype, message, cause);
+	}
 	@SuppressWarnings("rawtypes")
 	private Object getAttr(Object o, String name) throws ExecutionError {
 		if (o instanceof TModule)
@@ -1296,7 +1327,7 @@ public class MiniPython {
 				+ toPyTypeString(o));
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({ "rawtypes" })
 	private final int compareTo(Object left, Object right)
 			throws ExecutionError {
 		if (left == right)
@@ -1555,7 +1586,7 @@ public class MiniPython {
 		return root.variables;
 	}
 
-	private static int builtin_id(Object o) {
+	static int builtin_id(Object o) {
 		return System.identityHashCode(o);
 	}
 

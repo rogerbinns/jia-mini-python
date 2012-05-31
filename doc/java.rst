@@ -112,6 +112,20 @@ class MiniPython
    The source should have been transformed using jmp-compile. The class cannot
    be used concurrently. There is no shared state between instances.
 
+   .. method:: @SuppressWarnings("boxing")
+
+      Reads and executes code from the supplied stream
+
+      The stream provided must satisfy reads completely (eg if 27 bytes is
+      asked for then that number should be returned in the read() call unless
+      end of file is reached.)
+
+      :param stream:  The stream is not closed and you can have additional content
+                 after the jmp.
+      :raises IOException:  Passed on from read() calls on the stream
+      :raises EOFException:  When the stream is truncated
+      :raises ExecutionError:  Any issues from executing the code
+
    .. method:: void addModule(String name, Object object)
 
       Makes methods on the methods Object available to the Python
@@ -143,21 +157,7 @@ class MiniPython
 
       :param client:  Replaces existing client with this one
 
-   .. method:: void setCode(InputStream stream)
-
-      Reads and executes code from the supplied stream
-
-      The stream provided must satisfy reads completely (eg if 27 bytes is
-      asked for then that number should be returned in the read() call unless
-      end of file is reached.)
-
-      :param stream:  The stream is not closed and you can have additional content
-                 after the jmp.
-      :raises IOException:  Passed on from read() calls on the stream
-      :raises EOFException:  When the stream is truncated
-      :raises ExecutionError:  Any issues from executing the code
-
-   .. method:: void signalError(String exctype, String message)
+   .. method:: void signalError(String exctype, String message, Throwable cause)
 
       Call this method when your callbacks need to halt execution due to an
       error
@@ -169,6 +169,7 @@ class MiniPython
       :param exctype:  Best practise is to use the name of a Python exception (eg
                  "TypeError")
       :param message:  Text describing the error.
+      :param cause:  The underlying reason why this exception is being caused
       :raises ExecutionError:  Always thrown
 
    .. method:: String toPyString(Object o)
