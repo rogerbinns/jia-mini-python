@@ -11,6 +11,10 @@ method.
 Added several annotations that help when the file is compiled with
 very strict warnings.
 
+Minor documentation tweaks and updates.
+
+Added toDetailedString() on the Exception which provides additional
+useful detail for logging and analytics.
 
 1.1
 ===
