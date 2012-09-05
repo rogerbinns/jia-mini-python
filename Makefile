@@ -1,5 +1,5 @@
-VERSION = 1.2beta
-DATE = "9 February 2012"
+VERSION = 1.2
+DATE = "5 September 2012"
 
 # Used for coverage
 COBERTURADIR=/space/cobertura
