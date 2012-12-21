@@ -133,7 +133,7 @@ public class Tester {
 	}
 
 	static void usage() {
-		System.err.println("Usage: Tester [--multi] inputfile");
+		System.err.println("Usage: Tester [--multi] [--clear] inputfile");
 	}
 
 	static String toJSON(String s) {
