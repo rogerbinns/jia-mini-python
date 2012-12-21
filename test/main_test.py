@@ -17,6 +17,7 @@ opj=os.path.join
 topdir=os.path.abspath(opj(os.path.dirname(__file__), ".."))
 coveragedir=opj(topdir, "coverage")
 jarfile=opj(topdir if not os.getenv("JMPCOVERAGE") else coveragedir, "bin", "MiniPython.jar")
+objcfile=opj(topdir, "bin", "testminipython")
 testfiledir=opj(topdir, "test")
 jmpcompiler=opj(topdir, "host", "jmp-compile")
 
@@ -61,10 +62,14 @@ class JavaMiniPython(unittest.TestCase):
         self.assertEqual(err, "")
         return out,err
 
-    def run_jar(self, filename, args=[]):
+    def run_mp_java(self, filename, args=[]):
         cmd=["java"]+covoptions+["com.rogerbinns.Tester"]
         cmd.extend(args)
         cmd.append(filename)
+        return self.run_external_command(cmd)
+
+    def run_mp_objc(self, filename, args=[]):
+        cmd=[objcfile]+args+[filename]
         return self.run_external_command(cmd)
 
     def run_external_command(self, args):
@@ -79,7 +84,7 @@ class JavaMiniPython(unittest.TestCase):
     def testCmp(self):
         "Test comparisons"
         self.run_py("test/cmp.py")
-        
+
     def testDict(self):
         "Test dictionaries"
         self.run_py("test/dict.py")
@@ -107,7 +112,7 @@ class JavaMiniPython(unittest.TestCase):
     def run_py(self, name):
         out,err=self.jmp_compile(name)
         self.assertEqual("", err)
-        out,err=self.run_jar(os.path.splitext(name)[0]+".jmp")
+        out,err=self.run_mp(os.path.splitext(name)[0]+".jmp")
         self.assertEqual("", err)
 
     def testErrors(self):
@@ -139,7 +144,7 @@ class JavaMiniPython(unittest.TestCase):
                     tmppyf.flush()
                     jmp_compile_internal(tmppyf.name, tmpjmpf.name)
                     jmp.write(tmpjmpf.read())
-        out,err=self.run_jar("test/errors.jmp", args=["--multi"])
+        out,err=self.run_mp("test/errors.jmp", args=["--multi"])
         self.assertEqual(err, "")
         results=json.loads(out)
         self.assertEqual(len(results), len(tests))
@@ -161,10 +166,10 @@ class JavaMiniPython(unittest.TestCase):
                 tmpf.write(code)
                 tmpf.flush()
                 self.jmp_compile(tmpf.name, jmp.name, print_function=True)
-                out,err=self.run_jar(jmp.name)
+                out,err=self.run_mp(jmp.name)
                 self.assertEqual(err, "")
                 self.assertEqual(out, expect)
-                
+
     def testCorrupt(self):
         "Corrupted input"
 
@@ -194,7 +199,7 @@ class JavaMiniPython(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as tmpf:
                 # array decides tempfiles are not open files
                 code.tofile(open(tmpf.name, "wb"))
-                out,err=self.run_jar(tmpf.name)
+                out,err=self.run_mp(tmpf.name)
                 self.assert_(err.startswith(expect), "Expected: %r, Got: %r" % (expect,err))
 
     def testSource(self):
@@ -210,18 +215,32 @@ class JavaMiniPython(unittest.TestCase):
                 tmpf.write("print(3)\ntest1\n")
                 tmpf.flush()
                 self.jmp_compile(tmpf.name, jmp.name, print_function=pf)
-                out,err=self.run_jar(jmp.name, args=["--clear"])
+                out,err=self.run_mp(jmp.name, args=["--clear"])
                 self.assertEqual(out, "")
                 self.assertNotEqual(err, "")
                 self.assert_(err.startswith("NameError"))
-        
 
-def main():
-    # Check the jar file is present
-    if not os.path.exists(jarfile):
-        raise Exception("Couldn't find built test code.  Run ant to produce "+jarfile)
+
+def main(flavour="java"):
+    if flavour=="java":
+        # Check the jar file is present
+        if not os.path.exists(jarfile):
+            raise Exception("Couldn't find built test code.  Run ant to produce "+jarfile)
+    else:
+        assert flavour=="objc"
+        if not os.path.exists(objcfile):
+            raise Exception("Couldn't find built test code.  Run make otest to produce "+objcfile)
+
+    JavaMiniPython.run_mp=getattr(JavaMiniPython, "run_mp_"+flavour)
 
     unittest.main()
 
 if __name__=='__main__':
-    main()
+    flavour="java"
+    if len(sys.argv)>1:
+        if len(sys.argv)!=2 or sys.argv[1] not in ("objc", "java"):
+            sys.exit("Specify java or objc as parameter")
+        flavour=sys.argv[1]
+        # unconfuse unittest
+        sys.argv=sys.argv[:1]
+    main(flavour)

@@ -4,11 +4,12 @@ DATE = "5 September 2012"
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
-.PHONY: doc docs publish test ant nose help javadoc coverage dist
+.PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind
 
 help:
 	@echo "Use \`make <target>' where target is one of"
-	@echo "  test      Run tests using standard Python"
+	@echo "  test      Run tests using standard Python (java based)"
+	@echo "  otest     Run tests for Objective C implementation"
 	@echo "  nose      Run tests using enhanced nosetests tool"
 	@echo "  ant       Build a jar file for command line usage and testing"
 	@echo "  doc       To build the documentation using sphinx"
@@ -35,6 +36,17 @@ test: ant
 
 nose: ant
 	nosetests test/
+
+otest: obin
+	python test/main_test.py objc
+
+obin: bin/testminipython
+
+bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makefile
+	$(CC) -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
+
+valgrind: obin
+	valgrind --dsymutil=yes --leak-check=full --show-reachable=yes bin/testminipython
 
 JAVADOCDIR="doc/_build/javadoc"
 
