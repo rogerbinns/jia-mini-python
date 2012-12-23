@@ -163,7 +163,7 @@ class Compiler(ast.NodeVisitor):
                 else:
                     assert False, "Unhandled opcode "+op
 
-            # Generate output           
+            # Generate output
             res=out
             codelen=pos
             if codelen==1:
@@ -239,7 +239,7 @@ class Compiler(ast.NodeVisitor):
                     out.append(self.opcode_for(v))
             assert len(out)-startsize==codelen, "Internal error: code actual size doesn't match calculated size"
 
-            # Write it 
+            # Write it
             if options.jmpoutput:
                 with open(outputfile, "wb") as f:
                     out.tofile(f)
@@ -266,7 +266,7 @@ class Compiler(ast.NodeVisitor):
             write (linecache.getline(inputfile, lineno)+column*" "+"^", file=sys.stderr)
             sys.exit(2)
 
-    
+
     def opcode_for(self, opcode):
         try:
             return opcode_map[opcode]
@@ -383,7 +383,7 @@ class Compiler(ast.NodeVisitor):
             yield node, "SUBSCRIPT"
         else:
             yield node, "SUBSCRIPT_SLICE"
-        
+
     def visit_Index(self, node):
         for x in self.visit(node.value):
             yield x
@@ -649,7 +649,7 @@ class Compiler(ast.NodeVisitor):
                     yield target, "DEL_SLICE"
             else:
                 raise self.Error(target, "Unsupported item to delete")
-        
+
 # Currently only used by assert.  Turns nodes back into pretty printed
 # text.  While we could stringify each node it would require inserting
 # lots of parentheses to keep precedence and would look ugly.
@@ -758,11 +758,11 @@ def dump_internal(options, strings, linenotab, code, outfile):
         op=code[pos]
         if op>=128:
             val=code[pos+1]+(code[pos+2]<<8)
-        
+
         if op not in bytecode_map:
             write("Unknown opcode %d at position %d" % (op, pos), file=sys.stderr)
             sys.exit(6)
-        
+
         if op<128:
             write("% 5d" % pos, bytecode_map[op], file=outfile)
             pos+=1
@@ -773,8 +773,8 @@ def dump_internal(options, strings, linenotab, code, outfile):
                 write("   \t# string", val, "=", repr(strings[val]), end="", file=outfile)
             write(file=outfile)
             pos+=3
-        
 
+# this works just fine on the Objective-C code too
 def java_maintenance(javafile):
     out=[]
     seen=set()
@@ -788,7 +788,8 @@ def java_maintenance(javafile):
         capturing=False
         for line in java:
             if not capturing and line.lstrip().startswith("// -- check start :"):
-                assert len(seen)==0, "Multiple check sections!"
+                if len(seen):
+                    seen=set()
                 out.append(line)
                 capturing=True
                 indent=re.match(r"^(\s*)", line).group(1)
@@ -813,7 +814,7 @@ def java_maintenance(javafile):
                             out.append("%scase %d: // %s\n" % (indent, val, name))
                     capturing=False
             out.append(line)
-    
+
 
     if capturing:
         write ("End marker not seen in", javafile, file=sys.stderr)
@@ -831,8 +832,8 @@ def java_maintenance(javafile):
         with open(javafile, "wt") as java:
             java.write(out)
         write("Updated", javafile)
-                    
-            
+
+
 
 # The operations making up our bytecode.  We use a dict not a list so
 # that there can be holes/changes without affecting the stability of
