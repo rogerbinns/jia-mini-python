@@ -11,8 +11,8 @@
 - (void) clear;
 // inputstream must already be opened
 - (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
-- (NSString*) toPyString:(NSObject*) value;
-- (NSString*) toPyTypeString:(NSObject*)value;
++ (NSString*) toPyString:(NSObject*) value;
++ (NSString*) toPyTypeString:(NSObject*)value;
 @end
 
 // Error handling
@@ -26,5 +26,7 @@ enum {
                                    // possible from malformed bytecode
   MiniPythonRuntimeError=5,        // exceeding stack bounds etc
   MiniPythonTypeError=100,         // incorrect types
-  MiniPythonArithmeticError=101    // division/mod by zero etc
+  MiniPythonArithmeticError=101,   // division/mod by zero etc
+  MiniPythonAssertionError=102,    // assertion failed
+  MiniPythonNameError=103          // name doesn't exist
 };
