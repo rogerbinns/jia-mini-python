@@ -11,8 +11,8 @@
 - (void) clear;
 // inputstream must already be opened
 - (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
-+ (NSString*) toPyString:(NSObject*) value;
-+ (NSString*) toPyTypeString:(NSObject*)value;
++ (NSString*) toPyString:(id<NSObject>) value;
++ (NSString*) toPyTypeString:(id<NSObject>)value;
 - (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo;
 - (void) setNSError:(NSError*)error;
 - (NSError*) getError;

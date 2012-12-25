@@ -9,8 +9,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 @end
 
 @interface MiniPythonContext : NSObject
-- (void) setValue:(NSObject*)v forName:(NSString*)n;
-- (NSObject*) getName:(NSString*)n;
+- (void) setValue:(id<NSObject>)v forName:(NSString*)n;
+- (id<NSObject>) getName:(NSString*)n;
 @end
 
 @implementation MiniPythonContext
@@ -28,7 +28,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return self;
 }
 
-- (void) setValue:(NSObject*)v forName:(NSString*)n {
+- (void) setValue:(id<NSObject>)v forName:(NSString*)n {
   MiniPythonContext *use=self;
 
   if(use->parent && globals && [globals containsObject:n]) {
@@ -40,7 +40,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [use->variables setObject:v forKey:n];
 }
 
-- (NSObject*) getName:(NSString*)n {
+- (id<NSObject>) getName:(NSString*)n {
   MiniPythonContext *use=self;
 
   if(use->parent && globals && [globals containsObject:n]) {
@@ -55,20 +55,20 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 @interface MiniPythonNativeMethod : NSObject
 - (id) init:(MiniPython*)mp name:(NSString*)name target:(id)object;
-- (NSObject*) call:(NSArray*)args;
+- (id<NSObject>) call:(NSArray*)args;
 @end
 
 @interface MiniPython (Private)
-- (NSObject*) mainLoop;
+- (id<NSObject>) mainLoop;
 - (void) internalError:(int)errcode reason:(NSString*)str;
-- (void) typeError:(NSObject*)val expected:(NSString*)type;
-- (void) binaryOpError:(NSString*)op left:(NSObject*)l right:(NSObject*)r;
+- (void) typeError:(id<NSObject>)val expected:(NSString*)type;
+- (void) binaryOpError:(NSString*)op left:(id<NSObject>)l right:(id<NSObject>)r;
 - (void) outOfMemory;
 - (NSDictionary*) stateForError;
 - (void) addBuiltins;
 - (NSString*) format:(NSString*)format with:(NSArray*)args;
-- (int) builtin_cmp:(NSObject*)left :(NSObject*)right;
-- (BOOL) builtin_bool:(NSObject*)value;
+- (int) builtin_cmp:(id<NSObject>)left :(id<NSObject>)right;
+- (BOOL) builtin_bool:(id<NSObject>)value;
 @end
 
 @implementation MiniPython
@@ -76,7 +76,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   int stacklimit;
   id <MiniPythonClientDelegate> client;
   __strong NSString **strings;
-  __strong NSObject **stack;
+  __strong id<NSObject> *stack;
   uint16_t *linenotab;
   int nlineno;
   int nstrings;
@@ -133,7 +133,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     free(stack);
     stack=NULL;
   }
-  stack=(__strong NSString**)calloc((size_t)stacklimit, sizeof(NSObject*));
+  stack=(__strong id<NSObject>*) calloc((size_t)stacklimit, sizeof(id<NSObject>));
   if(!stack) [self outOfMemory];
 
   int version;
@@ -241,7 +241,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 #define L(v) ((NSArray*)(v))
 #define D(v) ((NSDictionary*)(v))
 
-- (NSObject*) mainLoop {
+- (id<NSObject>) mainLoop {
   int op, val=-1;
   BOOL stackerror=NO;
   while(true) {
@@ -353,7 +353,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     // binary operators
     case 1: // ADD
       {
-        NSObject *right=stack[stacktop--], *left=stack[stacktop--];
+        id<NSObject> right=stack[stacktop--], left=stack[stacktop--];
 
         if(ISINT(left) && ISINT(right)) {
           stack[++stacktop] = [NSNumber numberWithInt:[N(left) intValue] + [N(right) intValue]];
@@ -373,7 +373,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 27: // SUB
       {
-        NSObject *right=stack[stacktop--], *left=stack[stacktop--];
+        id<NSObject> right=stack[stacktop--], left=stack[stacktop--];
         if(ISINT(left) && ISINT(right)) {
           stack[++stacktop]=[NSNumber numberWithInt:[N(left) intValue]-[N(right) intValue]];
           continue;
@@ -383,7 +383,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 2: // MULT
       {
-        NSObject *right=stack[stacktop--], *left=stack[stacktop--];
+        id<NSObject> right=stack[stacktop--], left=stack[stacktop--];
         if(ISINT(left) && ISINT(right)) {
           stack[++stacktop]=[NSNumber numberWithInt:[N(left) intValue]*[N(right) intValue]];
           continue;
@@ -412,7 +412,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 3: // DIV
       {
-        NSObject *right=stack[stacktop--], *left=stack[stacktop--];
+        id<NSObject> right=stack[stacktop--], left=stack[stacktop--];
         if(ISINT(left) && ISINT(right)) {
           int l=[N(left) intValue], r=[N(right) intValue];
           if(!r) ERROR(ArithmeticError, @"Division by zero");
@@ -433,7 +433,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 30: // MOD
       {
-        NSObject *right=stack[stacktop--], *left=stack[stacktop--];
+        id<NSObject> right=stack[stacktop--], left=stack[stacktop--];
         if(ISINT(left) && ISINT(right)) {
           int l=[N(left) intValue], r=[N(right) intValue];
           if(!r) ERROR(ArithmeticError, @"Modulo by zero");
@@ -459,7 +459,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 31: // GTE
     case 32: // LTE
       {
-        NSObject *right=stack[stacktop--], *left=stack[stacktop--];
+        id<NSObject> right=stack[stacktop--], left=stack[stacktop--];
 
         int cmp=[self builtin_cmp:left :right];
         BOOL res=NO;
@@ -581,7 +581,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 34: // ASSERT_FAILED
       {
-        NSObject *o = stack[stacktop--];
+        id<NSObject> o = stack[stacktop--];
         ERROR(AssertionError, ISNONE(o)?@"assertion failed":[MiniPython toPyString:o]);
       }
 
@@ -623,7 +623,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 160: // LOAD_NAME
       {
         STRINGCHECK(val);
-        NSObject *v=[context getName:strings[val]];
+        id<NSObject> v=[context getName:strings[val]];
         if(v) {
           stack[++stacktop]=v;
           continue;
@@ -633,7 +633,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 10: // CALL
       {
-        NSObject *func=stack[stacktop--];
+        id<NSObject> func=stack[stacktop--];
         if(![func isKindOfClass:[MiniPythonNativeMethod class]]) TYPEERROR(func, @"function");
         if(!ISINT(stack[stacktop])) ERROR(InternalError, @"bad function call sequence");
         int nargs = [N(stack[stacktop--]) intValue];
@@ -647,7 +647,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
           [args addObject:stack[stacktop+i+1]];
         }
 
-        NSObject *res=[(MiniPythonNativeMethod*)func call:args];
+        id<NSObject> res=[(MiniPythonNativeMethod*)func call:args];
         if(errorindicator) return nil;
         stack[++stacktop]=res;
         continue;
@@ -683,7 +683,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 }
 
-+ (NSString*) toPyString:(NSObject*)value {
++ (NSString*) toPyString:(id<NSObject>)value {
   if(ISNONE(value))
     return @"None";
   if(ISSTRING(value))
@@ -696,7 +696,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return [NSString stringWithFormat:@"Need toPyString of %@: %@", [value class], value];
 }
 
-+ (NSString*) toPyTypeString:(NSObject*)value {
++ (NSString*) toPyTypeString:(id<NSObject>)value {
   if(ISNONE(value)) return @"NoneType";
   if(ISSTRING(value)) return @"str";
   if(ISBOOL(value)) return @"bool";
@@ -715,7 +715,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return [NSString stringWithFormat:@"fmt \"%@\" with %@", format, [MiniPython toPyString:args]];
 }
 
-- (int) builtin_cmp:(NSObject*)left :(NSObject*)right {
+- (int) builtin_cmp:(id<NSObject>)left :(id<NSObject>)right {
   if(left==right)
     return 0;
   if( (ISINT(left) && ISINT(right)) || (ISBOOL(left) && ISBOOL(right))) {
@@ -733,8 +733,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     NSEnumerator *li=[L(left) objectEnumerator],
       *ri=[L(right) objectEnumerator];
     for(;;) {
-      NSObject *l=[li nextObject],
-        *r=[ri nextObject];
+      id<NSObject> l=[li nextObject],
+        r=[ri nextObject];
       // both ended at same place?
       if(!l && !r) return 0;
       if(!l) return -1;
@@ -755,7 +755,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return [self builtin_cmp:[MiniPython toPyString:left] :[MiniPython toPyString:right]];
 }
 
-- (BOOL) builtin_bool:(NSObject*)value {
+- (BOOL) builtin_bool:(id<NSObject>)value {
   if(ISBOOL(value)) {
     return [N(value) boolValue];
   } else if(ISNONE(value)) {
@@ -788,13 +788,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
                                           userInfo:@{@"reason": str}]];
 }
 
-- (void) typeError:(NSObject*)value expected:(NSString*)type {
+- (void) typeError:(id<NSObject>)value expected:(NSString*)type {
   [self setNSError:[MiniPythonError withMiniPython:self
                                               code:MiniPythonTypeError
                                           userInfo:@{@"expected": type, @"got":[MiniPython toPyTypeString:value]}]];
 }
 
-- (void) typeError:(NSObject*)value expected:(NSString*)type details:(NSDictionary*)more {
+- (void) typeError:(id<NSObject>)value expected:(NSString*)type details:(NSDictionary*)more {
   NSMutableDictionary *d=[[NSMutableDictionary alloc] init];
   [d addEntriesFromDictionary:more];
   [d setObject:type forKey:@"expected"];
@@ -804,7 +804,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
                                           userInfo:d]];
 }
 
-- (void) binaryOpError:(NSString*)op left:(NSObject*)l right:(NSObject*)r {
+- (void) binaryOpError:(NSString*)op left:(id<NSObject>)l right:(id<NSObject>)r {
   [self setNSError:[MiniPythonError withMiniPython:self
                                               code:MiniPythonTypeError
                                           userInfo:@{@"op": op,  @"left": l, @"right": r}]];
@@ -944,7 +944,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return self;
 }
 
-- (NSObject*) call:(NSArray*)args {
+- (id<NSObject>) call:(NSArray*)args {
   if(!invocation || [args count]!=nargsininvocation) {
     NSMutableString *selname;
     if (object==mp) {
@@ -968,7 +968,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   // check/set parameters
   for(NSUInteger i=0; i<[args count]; i++) {
-    NSObject *v=[args objectAtIndex:i];
+    id<NSObject> v=[args objectAtIndex:i];
     const char *type=[[invocation methodSignature] getArgumentTypeAtIndex:2+i];
     if(strcmp(type, "i")==0) {
       int ival;
