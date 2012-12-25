@@ -78,8 +78,8 @@ l=[1,2]
 l.append(l)
 assert "..." in str(l)
 
-assert map(type, [None, True, {}, [], 3, "", meth, test1.retSelf, test1, [].sort])  \
-                  ==["NoneType", "bool", "dict", "list", "int", "str", "method", "modulemethod", "module", "instancemethod"]
+assert map(type, [None, True, {}, [], 3, "", meth, cmp, test1.retSelf, test1, [].sort])  \
+                  ==["NoneType", "bool", "dict", "list", "int", "str", "method", "modulemethod", "modulemethod", "module", "instancemethod"]
 
 def meth(a,b):
     return a+b
