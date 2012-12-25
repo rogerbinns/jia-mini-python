@@ -13,12 +13,15 @@
 - (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
 + (NSString*) toPyString:(NSObject*) value;
 + (NSString*) toPyTypeString:(NSObject*)value;
+- (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo;
+- (void) setNSError:(NSError*)error;
+- (NSError*) getError;
 @end
 
 // Error handling
 extern NSString * const MiniPythonErrorDomain;
 
-enum {
+enum MiniPythonErrorCode {
   MiniPythonEndOfStreamError=1,    // unexpected end of stream reading data
   MiniPythonStreamError=2,         // error reading from stream
   MiniPythonUnknownVersionError=3, // unknown jmp bytecode version
@@ -28,5 +31,6 @@ enum {
   MiniPythonTypeError=100,         // incorrect types
   MiniPythonArithmeticError=101,   // division/mod by zero etc
   MiniPythonAssertionError=102,    // assertion failed
-  MiniPythonNameError=103          // name doesn't exist
+  MiniPythonNameError=103,         // name doesn't exist
+  MiniPythonGeneralError=104       // Non specific via setError:userInfo:
 };

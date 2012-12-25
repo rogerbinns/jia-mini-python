@@ -14,7 +14,7 @@ static void usage() {
   printf("%s", [s UTF8String]);
 }
 - (void) onError:(NSError*)error {
-  fprintf(stderr, "ClientFailure: %s\n", [[error description] UTF8String]);
+  fprintf(stderr, "%s\n", [[error description] UTF8String]);
 }
 @end
 
@@ -22,30 +22,30 @@ static void usage() {
 // translated from the Java
 int main(int argc, char *argv[]) {
 
-  BOOL multimode=NO;
-  BOOL clear=NO;
+  @autoreleasepool {
 
-  // skip app name
-  argc--; argv++;
+    BOOL multimode=NO;
+    BOOL clear=NO;
 
-  while(argc && argv[0][0]=='-') {
-    if(strcmp(argv[0], "--multi")==0) {
-      multimode=YES;
-    } else if (strcmp(argv[0], "--clear")==0) {
-      clear=YES;
-    } else {
+    // skip app name
+    argc--; argv++;
+
+    while(argc && argv[0][0]=='-') {
+      if(strcmp(argv[0], "--multi")==0) {
+        multimode=YES;
+      } else if (strcmp(argv[0], "--clear")==0) {
+        clear=YES;
+      } else {
+        usage();
+        return 1;
+      }
+      argc--;
+      argv++;
+    }
+    if(argc!=1) {
       usage();
       return 1;
     }
-    argc--;
-    argv++;
-  }
-  if(argc!=1) {
-    usage();
-    return 1;
-  }
-
-  @autoreleasepool {
 
     NSString *fname=[[NSString alloc] initWithUTF8String:argv[0]];
 
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
       }
 
       if(!multimode)
-        return 0;
+        return 1;
 
       if(first)
         first=NO;
