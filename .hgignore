@@ -9,3 +9,6 @@ build/
 dist/
 tools/googlecode_upload.py
 test/*.i
+*.gcda
+*.gcno
+*.gcov

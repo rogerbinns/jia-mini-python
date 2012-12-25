@@ -4,7 +4,7 @@ DATE = "5 September 2012"
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
-.PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind
+.PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind ocoverage
 
 help:
 	@echo "Use \`make <target>' where target is one of"
@@ -14,6 +14,7 @@ help:
 	@echo "  ant       Build a jar file for command line usage and testing"
 	@echo "  doc       To build the documentation using sphinx"
 	@echo "  coverage  Run the test suites with coverage"
+	@echo "  ocoverage Coverage for objective C"
 	@echo "  dist      Produce final code and doc suitable for redistribution"
 
 docs: doc
@@ -44,6 +45,12 @@ obin: bin/testminipython
 
 bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makefile
 	$(CC) -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
+
+ocoverage:
+	-rm -f *.gcda *.gcno *.gcov
+	$(CC) --coverage -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
+	-python test/main_test.py objc
+	gcov -a -c src/MiniPython.m
 
 valgrind: obin
 	valgrind --dsymutil=yes --leak-check=full --show-reachable=yes bin/testminipython
