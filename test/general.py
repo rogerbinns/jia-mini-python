@@ -188,6 +188,12 @@ x={"y":3}
 assert x is x
 assert x is not 3
 
+assert True is True
+assert False is False
+assert None is None
+assert {} is not {}
+assert [] is not []
+
 # globals/locals functions - these may be removed
 assert "x" in globals()
 assert globals().x=={"y": 3}
