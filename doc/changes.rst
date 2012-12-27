@@ -1,6 +1,13 @@
 Change History
 **************
 
+2.0
+===
+
+There is now a compatible Objective C solution that works on iOS and Mac
+
+Added :jdoc:`toPyReprString` for Java
+
 1.2
 ===
 
