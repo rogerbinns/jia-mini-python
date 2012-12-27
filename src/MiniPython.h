@@ -13,6 +13,7 @@
 - (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
 + (NSString*) toPyString:(id<NSObject>) value;
 + (NSString*) toPyTypeString:(id<NSObject>)value;
++ (NSString*) toPyReprString:(id<NSObject>)value;
 - (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo;
 - (void) setNSError:(NSError*)error;
 - (NSError*) getError;
@@ -32,5 +33,9 @@ enum MiniPythonErrorCode {
   MiniPythonArithmeticError=101,   // division/mod by zero etc
   MiniPythonAssertionError=102,    // assertion failed
   MiniPythonNameError=103,         // name doesn't exist
-  MiniPythonGeneralError=104       // Non specific via setError:userInfo:
+  MiniPythonGeneralError=104,      // Non specific via setError:userInfo:
+  MiniPythonIndexError=105,        // array bounds
+  MiniPythonKeyError=106,          // key not in dict
+  MiniPythonAttributeError=107,    // no such attribute of an object
+  MiniPythonSyntaxError=108        // return outside a function
 };
