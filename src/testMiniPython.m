@@ -9,12 +9,29 @@ static void usage() {
 @interface Client : NSObject <MiniPythonClientDelegate>
 @end
 
-@implementation Client
+@implementation Client {
+  NSMutableString *out, *err;
+}
+
+- (id) init:(NSMutableString*)out_ :(NSMutableString*)err_ {
+  if( (self=[super init]) ) {
+    out=out_;
+    err=err_;
+  }
+  return self;
+}
+
 - (void) print:(NSString*)s {
-  printf("%s", [s UTF8String]);
+  if(out)
+    [out appendString:s];
+  else
+    printf("%s", [s UTF8String]);
 }
 - (void) onError:(NSError*)error {
-  fprintf(stderr, "%s\n", [[error description] UTF8String]);
+  if(err)
+    [err appendString:[error description]];
+  else
+    fprintf(stderr, "%s\n", [[error description] UTF8String]);
 }
 @end
 
@@ -57,12 +74,16 @@ int main(int argc, char *argv[]) {
     NSInputStream *is=[[NSInputStream alloc] initWithFileAtPath:[[NSString alloc] initWithUTF8String:argv[0]]];
     [is open];
 
-    NSOutputStream *out=nil, *err=nil;
+    NSMutableString *out=nil, *err=nil;
+    if(multimode) {
+      out=[[NSMutableString alloc] init];
+      err=[[NSMutableString alloc] init];
+    }
     MiniPython *mp=[[MiniPython alloc] init];
 
     if(!clear) {
       // needs print and onError
-      [mp setClient:[[Client alloc] init]];
+      [mp setClient:[[Client alloc] init:out :err]];
     }
 
     if(multimode)
@@ -70,8 +91,6 @@ int main(int argc, char *argv[]) {
 
     BOOL first=true;
     do {
-      out=[NSOutputStream outputStreamToMemory];
-      err=[NSOutputStream outputStreamToMemory];
       if(clear) [mp clear];
       NSError *error=nil;
       BOOL res=[mp setCode:is error:&error];
@@ -89,21 +108,30 @@ int main(int argc, char *argv[]) {
         default:
           if(clear)
             fprintf(stderr, "%s\n", [[error description] UTF8String]);
-          if(multimode)
+          if(!multimode)
             return 7;
           break;
         }
       }
 
       if(!multimode)
-        return 1;
+        return 0;
 
       if(first)
         first=NO;
       else
-        printf(",");
+        printf(",\n");
 
-      //::TODO:: output contents of out and err as json
+      // stupid amounts of code to print json data to stdout
+      NSOutputStream *thisisridiculous=[NSOutputStream outputStreamToMemory];
+      [thisisridiculous open];
+      [NSJSONSerialization writeJSONObject:@[out, err]
+                                  toStream:thisisridiculous options:0 error:nil];
+      NSData *noreally=[thisisridiculous propertyForKey:NSStreamDataWrittenToMemoryStreamKey];
+      fwrite([noreally bytes], [noreally length], 1, stdout);
+
+      [out setString:@""];
+      [err setString:@""];
     } while(multimode);
   }
 
