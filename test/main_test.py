@@ -40,7 +40,7 @@ def jmp_compile_internal(infile, outfile=None):
         print_function=False
         asserts=True
         line_table=True
-        annotate=False
+        annotate=True
         jmpoutput=True
     if outfile is None:
         outfile=os.path.splitext(infile)[1]+".jmp"
@@ -54,7 +54,7 @@ def delfiles(files):
             pass
 
 
-class JavaMiniPython(unittest.TestCase):
+class MiniPython(unittest.TestCase):
 
     def jmp_compile(self, infile, outfile=None, print_function=False):
         outfile=[outfile] if outfile else []
@@ -76,7 +76,9 @@ class JavaMiniPython(unittest.TestCase):
         j=subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out,err=j.communicate()
         if j.returncode!=0:
-            self.assertNotEqual(err, "")
+            if err=="":
+                print >> sys.stderr, "stderr is empty with returncode", j.returncode, "and cmd", args
+            self.assertNotEqual(err, ""),
         else:
             self.assertEqual(err, "")
         return out, err
@@ -231,16 +233,15 @@ def main(flavour="java"):
         if not os.path.exists(objcfile):
             raise Exception("Couldn't find built test code.  Run make otest to produce "+objcfile)
 
-    JavaMiniPython.run_mp=getattr(JavaMiniPython, "run_mp_"+flavour)
+    MiniPython.run_mp=getattr(MiniPython, "run_mp_"+flavour)
 
     unittest.main()
 
 if __name__=='__main__':
     flavour="java"
     if len(sys.argv)>1:
-        if len(sys.argv)!=2 or sys.argv[1] not in ("objc", "java"):
-            sys.exit("Specify java or objc as parameter")
-        flavour=sys.argv[1]
-        # unconfuse unittest
-        sys.argv=sys.argv[:1]
+        if sys.argv[1] in ("objc", "java"):
+            flavour=sys.argv[1]
+            # unconfuse unittest
+            sys.argv=sys.argv[:1]+sys.argv[2:]
     main(flavour)
