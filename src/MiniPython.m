@@ -8,9 +8,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 + (NSError*) withMiniPython:(MiniPython*)mp code:(NSInteger)code userInfo:(NSDictionary*)userinfo;
 @end
 
+
 @interface MiniPythonContext : NSObject
-- (void) setValue:(id<NSObject>)v forName:(NSString*)n;
-- (id<NSObject>) getName:(NSString*)n;
 @end
 
 @implementation MiniPythonContext
@@ -48,11 +47,27 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       use=use->parent;
   }
 
-  return (use->variables)?[use->variables objectForKey:n]:nil;
+  id<NSObject> v=nil;
+  do {
+    v=(use->variables)?[use->variables objectForKey:n]:nil;
+    if(v) return v;
+    use=use->parent;
+  } while(use);
+  return v;
 }
 
 - (MiniPythonContext*) parent {
   return parent;
+}
+
+- (BOOL) hasLocal:(NSString*)name {
+  return variables && !![variables objectForKey:name];
+}
+
+- (void) markGlobal:(NSString*) name {
+  if(!globals)
+    globals=[[NSMutableSet alloc] init];
+  [globals addObject:name];
 }
 
 @end
@@ -266,13 +281,14 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 #define TYPEERROR(v,s) do { [self typeError:(v) expected:(s)]; return nil; } while(0)
 #define BINARYOPERROR(op,l,r) do { [self binaryOpError:(op) left:(l) right:(r)]; return nil;} while(0)
 
-#define ISNONE(v) (!(v) || (v)==[NSNull null])
+#define ISNONE(v) ((v)==[NSNull null])
 #define ISINT(v) ([(v) isKindOfClass:[NSNumber class]] && 0==strcmp([N(v) objCType], @encode(int)))
 #define ISBOOL(v) ([(v) isKindOfClass:[NSNumber class]] && 0==strcmp([N(v) objCType], @encode(BOOL)))
 #define ISSTRING(v) ([(v) isKindOfClass:[NSString class]])
 #define ISLIST(v) ([(v) isKindOfClass:[NSArray class]])
 #define ISLISTM(v) ([(v) isKindOfClass:[NSMutableArray class]])
 #define ISDICT(v) ([(v) isKindOfClass:[NSDictionary class]])
+#define ISDICTM(v) ([(v) isKindOfClass:[NSMutableDictionary class]])
 
 #define N(v) ((NSNumber*)(v))
 #define S(v) ((NSString*)(v))
@@ -298,6 +314,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     // does not use stack
     case 19: // EXIT_LOOP
     case 129: // GOTO
+    case 163: // GLOBAL
       break;
 
     // Use top item
@@ -311,6 +328,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 133: // OR
     case 17: // LIST
     case 16: // DICT
+    case 25: // ITER
     case 161: // STORE_NAME
     case 11: // POP_TOP
       if(stacktop<0 || stacktop>=stacklimit) stackerror=YES;
@@ -331,6 +349,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 27: // SUB
     case 14: // SUBSCRIPT
     case 12: // ATTR
+    case 28: // DEL_INDEX
     case 23: // PRINT  (further checking in implementation)
     case 10: // CALL (further checking in implementation)
       if(stacktop-1<0 || stacktop>=stacklimit) stackerror=YES;
@@ -339,12 +358,18 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     // use top 3 items
     case 9: // RETURN
     case 15: // SUBSCRIPT_SLICE
+    case 33: // ASSIGN_INDEX
       if(stacktop-2<0 || stacktop>=stacklimit) stackerror=YES;
       break;
 
     // and the winner with 4 items
     case 0: // FUNCTION_PROLOG
       if(stacktop-3<0 || stacktop>=stacklimit) stackerror=YES;
+      break;
+
+    // uses top and adds one
+    case 131: // NEXT
+      if(stacktop<0 || stacktop+1>=stacklimit) stackerror=YES;
       break;
 
     // no use - adds item
@@ -359,13 +384,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       break;
 
 
-    case 25: // ITER
-    case 28: // DEL_INDEX
     case 29: // DEL_SLICE
-    case 33: // ASSIGN_INDEX
     case 35: // IS
-    case 131: // NEXT
-    case 163: // GLOBAL
     case 164: // DEL_NAME
     case 165: // STORE_ATTR_NAME
     case 202: // POP_N
@@ -564,6 +584,45 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         continue;
       }
 
+    case 7: // IN
+      {
+        id<NSObject> collection=stack[stacktop--];
+        id<NSObject> key=stack[stacktop--];
+        BOOL res;
+        if(ISDICT(collection))
+          res=!![D(collection) objectForKey:key];
+        else if (ISLIST(collection))
+          res=[L(collection) containsObject:key];
+        else if (ISSTRING(collection) && ISSTRING(key))
+          res=[S(key) length]==0 || [S(collection) rangeOfString:S(key)].location==NSNotFound;
+        else  BINARYOPERROR(@"in", key, collection);
+
+        stack[++stacktop]=[NSNumber numberWithBool:res];
+        continue;
+      }
+
+    case 25: // ITER
+      {
+        id<NSObject> object=stack[stacktop--];
+        if(ISLIST(object))
+          stack[++stacktop]=[L(object) objectEnumerator];
+        else if(ISDICT(object))
+          stack[++stacktop]=[D(object) keyEnumerator];
+        else TYPEERROR(object, @"iterable");
+        continue;
+      }
+
+    case 131: // NEXT
+      {
+        id<NSObject> iter=stack[stacktop];
+        if(![iter isKindOfClass:[NSEnumerator class]])
+          ERROR(InternalError, @"Non-iterator for next");
+        id<NSObject> v=[(NSEnumerator*)iter nextObject];
+        if(v) stack[++stacktop]=v;
+        else pc=val;
+        continue;
+      }
+
     case 14: // SUBSCRIPT
       {
         id<NSObject> key=stack[stacktop--], object=stack[stacktop--];
@@ -619,6 +678,45 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
           stack[++stacktop]=[L(object) subarrayWithRange:NSMakeRange((NSUInteger)ifrom, (NSUInteger)(ito-ifrom))];
         else
           stack[++stacktop]=[S(object) substringWithRange:NSMakeRange((NSUInteger)ifrom, (NSUInteger)(ito-ifrom))];
+        continue;
+      }
+
+    case 33: // ASSIGN_INDEX
+          {
+            id<NSObject> value=stack[stacktop--], index=stack[stacktop--], collection=stack[stacktop--];
+            if(ISDICT(collection)) {
+              if(!ISDICTM(collection)) TYPEERROR(collection, @"NSMutableDictionary");
+              [(NSMutableDictionary*)collection setObject:value forKey:index];
+            } else if (ISLIST(collection)) {
+              if(!ISLISTM(collection)) TYPEERROR(collection, @"NSMutableArray");
+              if(!ISINT(index)) TYPEERROR(index, @"int");
+              int iindex=[N(index) intValue];
+              NSUInteger length=[L(collection) count];
+              if(iindex<0) iindex+=(int)length;
+              if((NSUInteger)iindex>=length) ERROR(IndexError,
+                                                   ([NSString stringWithFormat:@"list assignment index out of range: %d", iindex]));
+              [(NSMutableArray*)collection replaceObjectAtIndex:(NSUInteger)iindex withObject:value];
+            } else TYPEERROR(collection, @"object supporting item assignment");
+            continue;
+          }
+
+    case 28: // DEL_INDEX
+      {
+        id<NSObject> item=stack[stacktop--], container=stack[stacktop--];
+        if(ISDICT(container)) {
+          if(!ISDICTM(container)) TYPEERROR(container, @"NSMutableDictionary");
+          if(![D(container) objectForKey:item]) ERROR(KeyError, [MiniPython toPyString:item]);
+          [(NSMutableDictionary*)container removeObjectForKey:item];
+        } else if (ISLIST(container)) {
+              if(!ISLISTM(container)) TYPEERROR(container, @"NSMutableArray");
+              if(!ISINT(item)) TYPEERROR(item, @"int");
+              int iindex=[N(item) intValue];
+              NSUInteger length=[L(container) count];
+              if(iindex<0) iindex+=(int)length;
+              if((NSUInteger)iindex>=length) ERROR(IndexError,
+                                                   ([NSString stringWithFormat:@"list deletion index out of range: %d", iindex]));
+              [(NSMutableArray*)container removeObjectAtIndex:(NSUInteger)iindex];
+        }  else TYPEERROR(container, @"object supporting item deletion");
         continue;
       }
 
@@ -756,6 +854,20 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         ERROR(NameError, ([NSString stringWithFormat:@"name '%@' is not defined", strings[val]]));
       }
 
+    case 163: // GLOBAL
+      {
+        STRINGCHECK(val);
+        if([context parent]) {
+          if([context hasLocal:strings[val]])
+            ERROR(SyntaxError, ([NSString stringWithFormat:@"Name '%@' us assigned to before 'global' declaration",
+                                           strings[val]]));
+          [context markGlobal:strings[val]];
+        }
+        continue;
+      }
+
+
+    // function calls
     case 10: // CALL
       {
         id<NSObject> func=stack[stacktop--];
@@ -851,15 +963,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         continue;
       }
 
-    case 7: // IN
     case 8: // UNARY_ADD
-    case 25: // ITER
-    case 28: // DEL_INDEX
     case 29: // DEL_SLICE
-    case 33: // ASSIGN_INDEX
     case 35: // IS
-    case 131: // NEXT
-    case 163: // GLOBAL
     case 164: // DEL_NAME
     case 165: // STORE_ATTR_NAME
     case 202: // POP_N
@@ -1011,12 +1117,97 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return 0;
 }
 
+// We don't have varargs support so everything gets routed to this guy
+- (void) print_helper:(NSArray*)args {
+  NSMutableString *output=[[NSMutableString alloc] init];
+  BOOL first=YES;
+  for(id<NSObject> item in args) {
+    if(first) first=NO;
+    else [output appendString:@" "];
+    [output appendString:[MiniPython toPyString:item]];
+  }
+  [output appendString:@"\n"];
+  [client print:output];
+}
+
+- (void) builtin_print {
+  [self print_helper:@[]];
+}
+
+- (void) builtin_print:(NSObject*)one {
+  [self print_helper:@[one]];
+}
+
+- (void) builtin_print:(NSObject*)one :(NSObject*)two {
+  [self print_helper:@[one, two]];
+}
+
+ - (void) builtin_print:(NSObject*)one :(NSObject*)two :(NSObject*) three{
+  [self print_helper:@[one, two, three]];
+}
+
+- (void) builtin_print:(NSObject*)one :(NSObject*)two :(NSObject*) three :(NSObject*)four {
+  [self print_helper:@[one, two, three, four]];
+}
+
+- (void) builtin_print:(NSObject*)one :(NSObject*)two :(NSObject*) three :(NSObject*)four :(NSObject*)five {
+  [self print_helper:@[one, two, three, four, five]];
+}
+
+- (void) builtin_print:(NSObject*)one :(NSObject*)two :(NSObject*) three :(NSObject*)four :(NSObject*)five
+  :(NSObject*)six {
+  [self print_helper:@[one, two, three, four, five, six]];
+}
+
+- (void) builtin_print:(NSObject*)one :(NSObject*)two :(NSObject*) three :(NSObject*)four :(NSObject*)five
+  :(NSObject*)six :(NSObject*)seven {
+  [self print_helper:@[one, two, three, four, five, six, seven]];
+}
+
+// should be enough ....
+- (void) builtin_print:(NSObject*)one :(NSObject*)two :(NSObject*) three :(NSObject*)four :(NSObject*)five
+  :(NSObject*)six :(NSObject*)seven :(NSObject*)eight {
+  [self print_helper:@[one, two, three, four, five, six, seven, eight]];
+}
+
+
+- (NSArray*) builtin_range:(int) end {
+  return [self builtin_range:0 :end :1];
+}
+
+- (NSArray*) builtin_range:(int) start :(int) end {
+  return [self builtin_range:start :end :1];
+}
+
+- (NSArray*) builtin_range:(int) start :(int) stop :(int) step {
+  NSMutableArray *res=[[NSMutableArray alloc] init];
+  if(step==0) ERROR(ValueError, @"step argument must not be zero");
+  if (step < 0 && stop < start) {
+    for (int i = start; i > stop; i += step) {
+      [res addObject:[NSNumber numberWithInt:i]];
+    }
+  } else if (step > 0) {
+    for (int i = start; i < stop; i += step) {
+      [res addObject:[NSNumber numberWithInt:i]];
+    }
+  }
+
+  return res;
+}
+
+
 - (NSString*)builtin_str:(id<NSObject>)value {
   return [MiniPython toPyString:value];
 }
 
 - (NSString*)builtin_type:(id<NSObject>)value {
   return [MiniPython toPyTypeString:value];
+}
+
+- (void) instance_dict_update:(NSMutableDictionary*)dict :(id<NSObject>)other {
+  if(!ISDICTM(dict)) {[self typeError:dict expected:@"NSMutableDictionary"]; return;}
+  if(!ISDICT(other)) {[self typeError:other expected:@"dict"]; return; }
+  [dict addEntriesFromDictionary:D(other)];
 }
 
 - (void) instance_list_append:(NSMutableArray*)list :(id<NSObject>)item {
