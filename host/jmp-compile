@@ -6,7 +6,7 @@
 # target file and we then operate on the resulting abstract syntax
 # tree.
 
-import sys
+import sys, os
 import ast
 import linecache
 import array
@@ -910,7 +910,6 @@ def is_int_op(v):
 
 
 if __name__=='__main__':
-    import os
     import optparse
     p=optparse.OptionParser(usage="""%prog [options] file[s]""")
 
