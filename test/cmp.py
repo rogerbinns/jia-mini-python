@@ -2014,3 +2014,18 @@ assert ( {0: 'zero', 1: 'pne'} != [True, False] )
 assert ( {0: 'zero', 1: 'pne'} != [False, True] )
 assert ( {0: 'zero', 1: 'pne'} != {1: 'one'} )
 assert ( {0: 'zero', 1: 'pne'} != {0: 'zero', 1: 'pne'} )==False
+
+def meth(): pass
+
+# Extended type check - see general.py around line 70
+assert None==None
+assert True==True
+assert {}=={}
+assert []==[]
+assert 3==3
+assert ""==""
+assert meth==meth
+assert cmp==cmp
+assert test1.retSelf==test1.retSelf
+assert test1==test1
+assert [].sort != [].sort

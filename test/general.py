@@ -9,6 +9,7 @@ assert 6/2==3
 assert -2/6==-1
 
 assert 65535+2==65537
+assert 256*256-1==65535
 
 assert 6%3==0
 assert 6%-3==0
@@ -45,6 +46,35 @@ def meth():
     del foo
 meth()
 assert toplevel==6
+
+# make sure all types can end up as dict keys
+x={}
+x.update({
+        None: 1,
+        True: 2,
+        {}: 3,
+        []: 4,
+        3: 5,
+        "": 6,
+        meth: 7,
+        cmp: 8,
+        test1.retSelf: 9,
+        test1: 10,
+        [].sort: 11
+})
+
+assert len(x)==11
+assert x[None]  ==1
+assert x[True]  ==2
+assert x[{}]    ==3
+assert x[[]]    ==4
+assert x[3]     ==5
+assert x[""]    ==6
+assert x[meth]  ==7
+assert x[cmp]   ==8
+assert x[test1.retSelf] ==9
+assert x[test1] ==10
+assert [].sort not in x # different instance
 
 #  multi globals
 a=4
