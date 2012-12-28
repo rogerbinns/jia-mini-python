@@ -4,7 +4,7 @@ DATE = "5 September 2012"
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
-.PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind ocoverage
+.PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind ocoverage clean
 
 help:
 	@echo "Use \`make <target>' where target is one of"
@@ -24,6 +24,9 @@ doc: javadoc
 
 linkcheck:
 	make -C doc linkcheck VERSION=$(VERSION) DATE=$(DATE)
+
+clean:
+	rm -rf bin doc/_build *.gcov *.gcda *.gcno coverage build dist
 
 publish: doc
 	rsync -av --delete --exclude=.hg doc/_build/html/ ../jmp-doc/
@@ -46,11 +49,12 @@ obin: bin/testminipython
 bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makefile
 	$(CC) -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
 
+# use -a with gcov to get each block
 ocoverage:
 	-rm -f *.gcda *.gcno *.gcov
 	$(CC) --coverage -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
 	-python test/main_test.py objc
-	gcov -a -c src/MiniPython.m
+	gcov src/MiniPython.m
 
 valgrind: obin
 	valgrind --dsymutil=yes --leak-check=full --show-reachable=yes bin/testminipython
@@ -76,7 +80,7 @@ coverage: ant
 
 BUILDDIR="build/JavaMiniPython-$(VERSION)"
 
-dist: doc
+dist: clean doc
 	@rm -rf build dist
 	mkdir -p "$(BUILDDIR)"
 	cp host/jmp-compile "$(BUILDDIR)"
