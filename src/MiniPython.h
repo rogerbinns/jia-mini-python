@@ -37,5 +37,6 @@ enum MiniPythonErrorCode {
   MiniPythonIndexError=105,        // array bounds
   MiniPythonKeyError=106,          // key not in dict
   MiniPythonAttributeError=107,    // no such attribute of an object
-  MiniPythonSyntaxError=108        // return outside a function
+  MiniPythonSyntaxError=108,       // return outside a function
+  MiniPythonValueError=109         // correct type, wrong contents
 };

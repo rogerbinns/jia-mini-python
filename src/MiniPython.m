@@ -27,6 +27,10 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return self;
 }
 
+- (id)init {
+  return nil;
+}
+
 - (void) setValue:(id<NSObject>)v forName:(NSString*)n {
   MiniPythonContext *use=self;
 
@@ -122,11 +126,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (id) init {
   if( (self = [super init]) ) {
     stacklimit=1024;
-  }
-
-  // build up list of known instance methods
-  {
-    NSMutableSet *ims=[[NSMutableSet alloc] init];
+    // build up list of known instance methods
+    instance_methods=[[NSMutableSet alloc] init];
     Method *methods=class_copyMethodList([self class], NULL);
     Method *m=methods;
     while(*m) {
@@ -136,11 +137,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         unsigned i;
         for(i=0; name[i] && name[i]!=':' ; i++);
         NSString *funcname=[[NSString alloc] initWithBytes:name length:i encoding:NSASCIIStringEncoding];
-        [ims addObject:funcname];
+        [(NSMutableSet*)instance_methods addObject:funcname];
       }
       m++;
     }
-    instance_methods=ims;
+    free(methods);
   }
 
   return self;
@@ -272,6 +273,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       stack[i]=nil;
     free(stack);
   }
+
+  free(linenotab);
 
   free(code);
 }
@@ -1019,7 +1022,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   stack[++stacktop]=[NSNumber numberWithInt:-1];
   pc=[method pc];
   context=[[MiniPythonContext alloc] initWithParent:[method context]];
-  res=[self mainLoop];
+  @autoreleasepool {
+    res=[self mainLoop];
+  }
   pc=savedpc;
   stacktop=savedsp;
   context=savedcontext;
@@ -1200,7 +1205,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     TYPEERROR(list, @"list");
 
   NSMutableArray *res=[[NSMutableArray alloc] init];
-  [args addObject:[NSNull null]];
   for(id<NSObject> v in list) {
     id<NSObject> value=[self call:func args:@[v]];
     if([self getError]) return NULL;
@@ -1516,6 +1520,29 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 @end
 
+
+/*
+ The return from the invocation is not retained so reference count
+ ends up wrong.  We need to ensure it is retained hence the
+ following additional method monkey patch for NSInvocation.
+ MiniPython is added to avoid name clashes.
+
+ http://stackoverflow.com/a/11874258/463462
+
+ This solution also works: http://stackoverflow.com/a/11569236/463462
+*/
+@implementation NSInvocation (ObjectReturnValueMiniPython)
+
+- (id<NSObject>)objectReturnValueForMiniPython {
+    __unsafe_unretained id<NSObject> result;
+    [self getReturnValue:&result];
+    return result;
+}
+
+@end
+
+
+
 @implementation MiniPythonNativeMethod
 {
   MiniPython *mp;
@@ -1672,9 +1699,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     [invocation getReturnValue:&bval];
     return [NSNumber numberWithBool:bval];
   } else if(strcmp(returntype, "@")==0) {
-    id oval;
-    [invocation getReturnValue:&oval];
-    return oval;
+    return [invocation objectReturnValueForMiniPython];
   } else if(strcmp(returntype, "v")==0) {
     return [NSNull null];
   } else {
