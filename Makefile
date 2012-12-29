@@ -26,7 +26,7 @@ linkcheck:
 	make -C doc linkcheck VERSION=$(VERSION) DATE=$(DATE)
 
 clean:
-	rm -rf bin doc/_build *.gcov *.gcda *.gcno coverage build dist
+	rm -rf bin/* doc/_build *.gcov *.gcda *.gcno coverage build dist
 
 publish: doc
 	rsync -av --delete --exclude=.hg doc/_build/html/ ../jmp-doc/
@@ -57,7 +57,7 @@ ocoverage:
 	gcov src/MiniPython.m
 
 valgrind: obin
-	valgrind --dsymutil=yes --leak-check=full --show-reachable=yes bin/testminipython
+	valgrind --dsymutil=yes --redzone-size=4096 --track-origins=yes --freelist-vol=1000000000 --leak-check=full --show-reachable=yes bin/testminipython
 
 JAVADOCDIR="doc/_build/javadoc"
 
