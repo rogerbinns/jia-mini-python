@@ -359,6 +359,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 9: // RETURN
     case 15: // SUBSCRIPT_SLICE
     case 33: // ASSIGN_INDEX
+    case 29: // DEL_SLICE
+
       if(stacktop-2<0 || stacktop>=stacklimit) stackerror=YES;
       break;
 
@@ -384,7 +386,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       break;
 
 
-    case 29: // DEL_SLICE
     case 35: // IS
     case 164: // DEL_NAME
     case 165: // STORE_ATTR_NAME
@@ -681,6 +682,24 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         continue;
       }
 
+    case 29: // DEL_SLICE
+          {
+            if(!ISINT(stack[stacktop]) || !ISINT(stack[stacktop-1]) || !ISLIST(stack[stacktop-2]))
+              ERROR(TypeError, [NSString stringWithFormat:@"You can only delete slices of lists using integer indices"]);
+            int to=[N(stack[stacktop--]) intValue];
+            int from=[N(stack[stacktop--]) intValue];
+            NSMutableArray *list=(NSMutableArray*)stack[stacktop--];
+            if(!ISLISTM(list)) TYPEERROR(list, @"NSMutableArray");
+            NSUInteger length=[list count];
+            if(from<0) from+=(int)length;
+            if(to<0) to+=(int)length;
+            if(from<0) from=0;
+            if((NSUInteger)to>length) to=(int)length;
+            if(to>from)
+              [list removeObjectsInRange:NSMakeRange((NSUInteger)from, (NSUInteger)(to-from))];
+            continue;
+          }
+
     case 33: // ASSIGN_INDEX
           {
             id<NSObject> value=stack[stacktop--], index=stack[stacktop--], collection=stack[stacktop--];
@@ -871,8 +890,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 10: // CALL
       {
         id<NSObject> func=stack[stacktop--];
-        if(![func isKindOfClass:[MiniPythonNativeMethod class]]
-           && ![func isKindOfClass:[MiniPythonMethod class]])
+        if(![self builtin_callable:func])
           TYPEERROR(func, @"function");
 
 
@@ -964,7 +982,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       }
 
     case 8: // UNARY_ADD
-    case 29: // DEL_SLICE
     case 35: // IS
     case 164: // DEL_NAME
     case 165: // STORE_ATTR_NAME
@@ -973,11 +990,40 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     default:
       ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
     }
+  }
+}
 
+- (id<NSObject>) call:(id<NSObject>)callable args:(NSArray*)args {
+  int savedsp=stacktop;
+  id<NSObject> res=nil;
 
+  if([callable isKindOfClass:[MiniPythonNativeMethod class]]) {
+    NSString *origmethod=currentmethod;
+    currentmethod=[callable description];
+    res=[(MiniPythonNativeMethod*)callable call:args];
+    currentmethod=origmethod;
+    stacktop=savedsp;
+    return res;
   }
 
+  if((NSUInteger)stacktop+[args count]+3>=(NSUInteger)stacklimit) ERROR(RuntimeError, @"Call would exceed stack bounds");
 
+  for(NSUInteger i=0; i<[args count]; i++)
+    stack[++stacktop]=[args objectAtIndex:i];
+  stack[++stacktop]=[NSNumber numberWithInt:(int)[args count]];
+
+  MiniPythonContext *savedcontext=context;
+  MiniPythonMethod *method=(MiniPythonMethod*)callable;
+  int savedpc=pc;
+  stack[++stacktop]=context;
+  stack[++stacktop]=[NSNumber numberWithInt:-1];
+  pc=[method pc];
+  context=[[MiniPythonContext alloc] initWithParent:[method context]];
+  res=[self mainLoop];
+  pc=savedpc;
+  stacktop=savedsp;
+  context=savedcontext;
+  return res;
 }
 
 + (NSString*) _toPyString:(id<NSObject>)value quote:(BOOL)quote seen:(NSMutableSet*)seen {
@@ -1050,6 +1096,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return [NSString stringWithFormat:@"fmt \"%@\" with %@", format, [MiniPython toPyString:args]];
 }
 
+- (id<NSObject>) builtin_apply:(id<NSObject>)func :(NSArray*)args {
+  if((NSUInteger)stacktop+(args?[args count]:0u)>=(NSUInteger)stacklimit)
+    ERROR(InternalError, @"stack overflow in call");
+  return [self call:func args:args];
+}
+
 - (BOOL) builtin_bool:(id<NSObject>)value {
   if(ISBOOL(value)) {
     return [N(value) boolValue];
@@ -1067,6 +1119,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   // treat unknown objects as true
   return YES;
+}
+
+- (BOOL) builtin_callable:(id<NSObject>)value {
+  return [value isKindOfClass:[MiniPythonNativeMethod class]]
+    || [value isKindOfClass:[MiniPythonMethod class]];
 }
 
 - (int) builtin_cmp:(id<NSObject>)left :(id<NSObject>)right {
@@ -1109,12 +1166,47 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return [self builtin_cmp:[MiniPython toPyString:left] :[MiniPython toPyString:right]];
 }
 
+- (NSArray*) builtin_filter:(id<NSObject>)func :(NSArray*)list {
+  if(![self builtin_callable:func])
+    TYPEERROR(func, @"function");
+  if(!ISLIST(list))
+    TYPEERROR(list, @"list");
+
+  id<NSObject> bvalue=nil;
+
+  NSMutableArray *res=[[NSMutableArray alloc] init];
+  for(id<NSObject> v in list) {
+    bvalue=[self call:func args:@[v]];
+    if([self getError]) return NULL;
+    if([self builtin_bool:bvalue])
+      [res addObject:v];
+  }
+  return res;
+}
+
+
 - (int) builtin_len:(id<NSObject>)value {
   if(ISDICT(value)) return (int)[D(value) count];
   if(ISLIST(value)) return (int)[L(value) count];
   if(ISSTRING(value)) return (int)[S(value) length];
   [self typeError:value expected:@"dict, list or str" details:nil];
   return 0;
+}
+
+- (id<NSObject>) builtin_map:(id<NSObject>)func :(NSArray*)list {
+  if(![self builtin_callable:func])
+    TYPEERROR(func, @"function");
+  if(!ISLIST(list))
+    TYPEERROR(list, @"list");
+
+  NSMutableArray *res=[[NSMutableArray alloc] init];
+  [args addObject:[NSNull null]];
+  for(id<NSObject> v in list) {
+    id<NSObject> value=[self call:func args:@[v]];
+    if([self getError]) return NULL;
+    [res addObject:value];
+  }
+  return res;
 }
 
 // We don't have varargs support so everything gets routed to this guy
