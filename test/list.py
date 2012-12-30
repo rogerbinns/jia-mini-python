@@ -85,7 +85,7 @@ l.sort()
 assert l==range(5)
 l.sort(None, None, True)
 assert l==range(4,-1,-1)
-l.sort(None, None, None)
+l.sort(None, None, False)
 assert l==range(5)
 
 # A list that can't do equals well
