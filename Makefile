@@ -47,7 +47,11 @@ otest: obin
 obin: bin/testminipython
 
 bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makefile
-	$(CC) -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
+	$(CC) -g -Weverything -fobjc-arc -fsanitize=address -fsanitize=integer -fsanitize=undefined \
+	-fsanitize=alignment -fsanitize=bool -fsanitize=bounds -fsanitize=enum -fsanitize=integer-divide-by-zero \
+	-fsanitize=null -fsanitize=object-size -fsanitize=return -fsanitize=shift -fsanitize=signed-integer-overflow \
+	-fsanitize=unreachable -fsanitize=unsigned-integer-overflow -fsanitize=vla-bound -fvptr \
+	src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
 
 # use -a with gcov to get each block
 ocoverage:
