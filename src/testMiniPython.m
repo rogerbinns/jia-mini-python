@@ -6,6 +6,44 @@ static void usage() {
   fprintf(stderr, "Usage: tester [--multi] [--clear] inputfile\n");
 }
 
+@interface Test1 : NSObject
+@end
+
+@interface ListBadEquals : NSArray
+@end
+
+@interface MapBadEquals : NSArray
+@end
+
+@implementation Test1
+{
+  MiniPython* mp;
+}
+- (id) init:(MiniPython*)mp_ {if((self=[super init])) { mp=mp_;} return self;}
+- (void) retNone {}
+- (void) takesAll:(BOOL)b :(BOOL)b2 :(NSDictionary*)dict :(NSArray*)list :(NSNumber*)int1 :(int)int2 :(Test1*)t1 {
+  (void)b; (void)b2; (void)dict; (void)list; (void)int1; (void)int2; (void)t1;
+}
+- (id<NSObject>) retSelf { return self; }
+- (id<NSObject>) call:(NSString*)name { return [mp callMethod:name args:nil];}
+- (id<NSObject>) call:(NSString*)name :(id)a0 { return [mp callMethod:name args:@[a0]];}
+- (id<NSObject>) call:(NSString*)name :(id)a0 :(id)a1 { return [mp callMethod:name args:@[a0, a1]];}
+- (id<NSObject>) call:(NSString*)name :(id)a0 :(id)a1 :(id)a2 { return [mp callMethod:name args:@[a0, a1, a2]];}
+- (int) add:(int)l :(int)r { return [(NSNumber*)[mp callMethod:@"add" args:@[@3, @4]] intValue]; }
+- (void) signalBatman { [mp setError:@"Batman" userInfo:nil];}
+- (id) badeqlist { return [[ListBadEquals alloc] init]; }
+- (id) badeqDict { return [[MapBadEquals alloc] init]; }
+@end
+
+@implementation ListBadEquals
+- (BOOL) isEqual:(id)other { return NO;}
+@end
+
+@implementation MapBadEquals
+- (BOOL) isEqual:(id)other { return NO;}
+@end
+
+
 @interface Client : NSObject <MiniPythonClientDelegate>
 @end
 

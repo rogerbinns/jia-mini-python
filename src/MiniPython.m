@@ -1311,6 +1311,86 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [list addObject:item];
 }
 
+- (void) instance_list_extend:(NSMutableArray*)list :(NSArray*)items {
+  if(!ISLISTM(list)) {[self typeError:list expected:@"NSMutableArray"]; return;}
+  if(!ISLIST(items)) {[self typeError:items expected:@"list"]; return;}
+  [list addObjectsFromArray:items];
+}
+
+- (int) instance_list_index:(NSArray*)list :(id<NSObject>)item {
+  NSUInteger location=[list indexOfObject:item];
+  if(location==NSNotFound) return -1;
+  return (int)location;
+}
+
+- (id<NSObject>) instance_list_pop:(NSMutableArray*)list {
+  if(!ISLISTM(list)) TYPEERROR(list, @"NSMutableArray");
+  id<NSObject> res=[list lastObject];
+  if(!res) ERROR(IndexError, @"pop from empty list");
+  [list removeLastObject];
+  return res;
+}
+
+- (void) instance_list_reverse:(NSMutableArray*)list {
+  if(!ISLISTM(list)) {[self typeError:list expected:@"NSMutableArray"]; return;}
+
+  if(![list count]) return;
+  NSUInteger i=0;
+  NSUInteger j=[list count]-1;
+  while(i<j) {
+    [list exchangeObjectAtIndex:i withObjectAtIndex:j];
+    i++; j--;
+  }
+ }
+
+
+- (void) instance_list_sort:(NSMutableArray*)list {
+  [self instance_list_sort:list :[NSNull null] :[NSNull null] :NO];
+}
+
+- (void) instance_list_sort:(NSMutableArray*)list :(id<NSObject>)cmp {
+  [self instance_list_sort:list :cmp :[NSNull null] :NO];
+}
+
+- (void) instance_list_sort:(NSMutableArray*)list :(id<NSObject>)cmp :(id<NSObject>)key {
+  [self instance_list_sort:list :cmp :key :NO];
+}
+
+- (void) instance_list_sort:(NSMutableArray*)list :(id<NSObject>)cmp :(id<NSObject>)key :(BOOL)reverse {
+  if(!ISLISTM(list)) {[self typeError:list expected:@"NSMutableArray"]; return;}
+  if(!(!cmp || ISNONE(cmp) || [self builtin_callable:cmp]))
+    {[self typeError:cmp expected:@"callable or None"]; return;}
+  if(!(!key || ISNONE(key) || [self builtin_callable:key]))
+    {[self typeError:key expected:@"callable or None"]; return;}
+
+  if(ISNONE(key)) key=nil;
+  if(ISNONE(cmp)) cmp=nil;
+
+  [list sortUsingComparator:^(id left, id right){
+      if([self getError]) return (NSComparisonResult)NSOrderedSame;
+
+      if(key) {
+        left=[self call:key args:@[left]];
+        right=[self call:key args:@[right]];
+      }
+
+      int cmpresult;
+
+      if(cmp) {
+        id<NSObject> res=[self call:cmp args:@[left, right]];
+        if(!ISINT(res)) {[self typeError:res expected:@"int"]; return (NSComparisonResult)NSOrderedSame;}
+        cmpresult=[N(res) intValue];
+      } else
+        cmpresult=[self builtin_cmp:left :right];
+
+      if(reverse) cmpresult=-cmpresult;
+
+      if(cmpresult<0) return (NSComparisonResult)NSOrderedAscending;
+      if(cmpresult>0) return (NSComparisonResult)NSOrderedDescending;
+      return (NSComparisonResult)NSOrderedSame;
+    }];
+}
+
 - (NSString*)instance_str_join:(NSString*)str :(id<NSObject>)with {
   if(!ISLIST(with)) TYPEERROR(with, @"list");
   NSArray *list=L(with);
@@ -1435,19 +1515,57 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   case MiniPythonEndOfStreamError:
     [res appendString:@"EndOfStreamError: Unexpected end of stream reading code"];
     break;
-  case MiniPythonAssertionError:
-    [res appendString:@"AssertionError:"];
+  case MiniPythonStreamError:
+    [res appendString:@"StreamError: error reading code stream"];
     break;
+  case MiniPythonUnknownVersionError:
+    [res appendString:@"UnknownVersionError: unknown jmp version"];
+    break;
+  case MiniPythonInternalError:
+    [res appendString:@"InternalError:"];
+    break;
+  case MiniPythonRuntimeError:
+    [res appendString:@"RuntimeError:"];
+    break;
+
   case MiniPythonTypeError:
     [res appendString:@"TypeError:"];
     if([ue objectForKey:@"got"]) {
-      [res appendFormat:@"TypeError: Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
+      [res appendFormat:@" Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
       [set addObject:@"got"];
       [set addObject:@"expected"];
+      if([ue objectForKey:@"arg"]) {
+        [res appendFormat:@" (argument #%@)", [ue objectForKey:@"arg"]];
+        [set addObject:@"arg"];
+      }
     }
     break;
+  case MiniPythonArithmeticError:
+    [res appendString:@"ArithmeticError:"];
+    break;
+  case MiniPythonAssertionError:
+    [res appendString:@"AssertionError:"];
+    break;
+  case MiniPythonNameError:
+    [res appendString:@"NameError:"];
+    break;
+  case MiniPythonGeneralError:
+    [res appendString:@"GeneralError:"];
+    break;
+  case MiniPythonIndexError:
+    [res appendString:@"IndexError:"];
+    break;
+  case MiniPythonKeyError:
+    [res appendString:@"KeyError:"];
+    break;
   case MiniPythonAttributeError:
-    [res appendFormat:@"AttributeError:"];
+    [res appendString:@"AttributeError:"];
+    break;
+  case MiniPythonSyntaxError:
+    [res appendString:@"SyntaxError:"];
+    break;
+  case MiniPythonValueError:
+    [res appendString:@"ValueError:"];
     break;
   }
 
@@ -1463,6 +1581,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   if([ue objectForKey:@"currentmethod"]) {
     [res appendFormat:@" in call to %@()", [ue objectForKey:@"currentmethod"]];
     [set addObject:@"currentmethod"];
+    if([[ue objectForKey:@"currentmethod"] isEqual:[ue objectForKey:@"function"]])
+      [set addObject:@"function"];
   }
 
   // line number and pc
@@ -1477,7 +1597,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   // stacktop will go away
   if([ue objectForKey:@"stacktop"]) {
-      [res appendFormat:@" stacktop = %d", [[ue objectForKey:@"stacktop"] intValue]];
       [set addObject:@"stacktop"];
   }
 
@@ -1519,28 +1638,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return context;
 }
 @end
-
-
-/*
- The return from the invocation is not retained so reference count
- ends up wrong.  We need to ensure it is retained hence the
- following additional method monkey patch for NSInvocation.
- MiniPython is added to avoid name clashes.
-
- http://stackoverflow.com/a/11874258/463462
-
- This solution also works: http://stackoverflow.com/a/11569236/463462
-*/
-@implementation NSInvocation (ObjectReturnValueMiniPython)
-
-- (id<NSObject>)objectReturnValueForMiniPython {
-    __unsafe_unretained id<NSObject> result;
-    [self getReturnValue:&result];
-    return result;
-}
-
-@end
-
 
 
 @implementation MiniPythonNativeMethod
@@ -1657,7 +1754,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     if(strcmp(type, "i")==0) {
       int ival;
       if(!ISINT(v)) {
-        [mp typeError:v expected:@"int" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i]}];
+        [mp typeError:v expected:@"int" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i+1]}];
         return NULL;
       }
       ival=[N(v) intValue];
@@ -1665,7 +1762,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     } else if (strcmp(type, "c")==0) {
       BOOL bval;
       if(!ISBOOL(v)) {
-        [mp typeError:v expected:@"bool" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i]}];
+        [mp typeError:v expected:@"bool" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i+1]}];
         return NULL;
       }
       bval=[N(v) boolValue];
@@ -1675,11 +1772,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(v==[NSNull null]) v=nil;
       [invocation setArgument:&v atIndex:INST((NSInteger)i+2)];
     } else {
-      [mp typeError:v expected:@"known type" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i], @"typesig":[NSString stringWithUTF8String:type]}];
+      [mp typeError:v expected:@"known type" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i+1], @"typesig":[NSString stringWithUTF8String:type]}];
       return NULL;
     }
-    if(instance) [invocation setArgument:&instance atIndex:2];
   }
+  if(instance) [invocation setArgument:&instance atIndex:2];
 
   // make the call
   [invocation invoke];
@@ -1699,7 +1796,18 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     [invocation getReturnValue:&bval];
     return [NSNumber numberWithBool:bval];
   } else if(strcmp(returntype, "@")==0) {
-    return [invocation objectReturnValueForMiniPython];
+    /*
+      The return value from the invocation is not retained so
+      reference count ends up wrong.  We need to ensure it is retained
+      but can't just call retain due to ARC, hence the following.
+
+      http://stackoverflow.com/a/11874258/463462
+
+      This solution also works: http://stackoverflow.com/a/11569236/463462
+    */
+    __unsafe_unretained id<NSObject> result;
+    [invocation getReturnValue:&result];
+    return result;
   } else if(strcmp(returntype, "v")==0) {
     return [NSNull null];
   } else {
