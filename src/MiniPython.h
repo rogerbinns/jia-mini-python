@@ -17,7 +17,7 @@
 - (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo;
 - (void) setNSError:(NSError*)error;
 - (NSError*) getError;
-- (void) addModule:(id<NSObject>)module;
+- (void) addModule:(id<NSObject>)module named:(NSString*)name;
 - (id<NSObject>) callMethod:(NSString*)name args:(NSArray*)args;
 @end
 

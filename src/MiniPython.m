@@ -8,6 +8,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 + (NSError*) withMiniPython:(MiniPython*)mp code:(NSInteger)code userInfo:(NSDictionary*)userinfo;
 @end
 
+@interface MiniPythonModule : NSObject
+- (id<NSObject>) initWithDelegate:(id<NSObject>)delegate name:(NSString*)name;
+- (BOOL) hasMethod:(NSString*)name;
+- (id<NSObject>) delegate;
+@end
 
 @interface MiniPythonContext : NSObject
 @end
@@ -152,8 +157,27 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 - (void) clear {
-  // ::TODO:: write this
-  context=[[MiniPythonContext alloc] initWithParent:nil];
+  context=nil;
+  if(strings) {
+    for(int i=0; i<nstrings; i++) {
+      strings[i]=nil;
+    }
+    free(strings);
+    strings=NULL;
+  }
+
+  if(stack) {
+    for(int i=0;i<stacklimit;i++)
+      stack[i]=nil;
+    free(stack);
+    stack=NULL;
+  }
+
+  free(linenotab);
+  linenotab=NULL;
+
+  free(code);
+  code=NULL;
 }
 
 
@@ -250,33 +274,17 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return YES;
 
  onerror:
-  [self setNSError:[NSError errorWithDomain:MiniPythonErrorDomain
-                                       code:(errorcode!=0)?errorcode:( (res<0)? MiniPythonStreamError:MiniPythonEndOfStreamError)
-                                   userInfo:(errorcode==0)?@{@"readresult": [NSNumber numberWithInteger:res]}
-                                           :nil]];
+  [self setNSError:[MiniPythonError withMiniPython:self
+                                              code:(errorcode!=0)?errorcode:( (res<0)? MiniPythonStreamError:MiniPythonEndOfStreamError)
+                                          userInfo:(errorcode==0)?@{@"readresult": [NSNumber numberWithInteger:res]}
+                                                  :nil]];
   if(error) *error=errorindicator;
   free(stringbuf);
   return NO;
 }
 
 - (void) dealloc {
-
-  if(strings) {
-    for(int i=0; i<nstrings; i++) {
-      strings[i]=nil;
-    }
-    free(strings);
-  }
-
-  if(stack) {
-    for(int i=0;i<stacklimit;i++)
-      stack[i]=nil;
-    free(stack);
-  }
-
-  free(linenotab);
-
-  free(code);
+  [self clear];
 }
 
 #define ERROR(c,s) do { [self internalError:MiniPython##c reason:(s)]; return nil; } while(0)
@@ -388,11 +396,14 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(stacktop+1>=stacklimit) stackerror=YES;
       break;
 
+    // N items
+    case 202: // POP_N
+      if(stacktop+1-val<0) stackerror=YES;
+      break;
 
     case 35: // IS
     case 164: // DEL_NAME
     case 165: // STORE_ATTR_NAME
-    case 202: // POP_N
     // -- check end : marker used by tool
     default:
       ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode check: %d", op]));
@@ -747,15 +758,20 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
             id<NSObject> o=stack[stacktop--], key=stack[stacktop--];
             if(!ISSTRING(key)) TYPEERROR(key, @"str");
 
-            // ISMODULE ... ::TODO::
-
-            // ISDICT ... ::TODO::
-
-            // Find an instance method
-            NSString *name=[NSString stringWithFormat:@"%@_%@", [MiniPython toPyTypeString:o], S(key)];
-            if ([instance_methods containsObject:name]) {
-              stack[++stacktop]=[[MiniPythonNativeMethod alloc] init:self name:name target:self instance:o];
-              continue;
+            if([o isKindOfClass:[MiniPythonModule class]]) {
+              if([(MiniPythonModule*)o hasMethod:(NSString*)key]) {
+                stack[++stacktop]=[[MiniPythonNativeMethod alloc] init:self name:(NSString*)key target:[(MiniPythonModule*)o delegate]];
+                continue;
+              }
+            } else if(ISDICT(o)) {
+              // ISDICT ... ::TODO::
+            } else {
+              // Find an instance method
+              NSString *name=[NSString stringWithFormat:@"%@_%@", [MiniPython toPyTypeString:o], S(key)];
+              if ([instance_methods containsObject:name]) {
+                stack[++stacktop]=[[MiniPythonNativeMethod alloc] init:self name:name target:self instance:o];
+                continue;
+              }
             }
 
             ERROR(AttributeError, ([NSString stringWithFormat:@"No attribute '%@' of %@ %@",
@@ -767,6 +783,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 11: // POP_TOP
       {
         stacktop--;
+        continue;
+      }
+    case 202: // POP_N
+      {
+        stacktop-=val;
         continue;
       }
 
@@ -988,7 +1009,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 35: // IS
     case 164: // DEL_NAME
     case 165: // STORE_ATTR_NAME
-    case 202: // POP_N
     // -- check end : marker used by tool
     default:
       ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
@@ -1069,8 +1089,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     return res;
   }
 
-  return [NSString stringWithFormat:@"Need toPyString of %@: %@", [value class], value];
-
+  return [value description];
 }
 
 + (NSString*) toPyString:(id<NSObject>)value {
@@ -1091,9 +1110,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   if([value isKindOfClass:[MiniPythonNativeMethod class]]) return @"modulemethod";
   if([value isKindOfClass:[MiniPythonMethod class]]) return @"method";
+  if([value isKindOfClass:[MiniPythonModule class]]) return @"module";
 
-  // ::TODO:: more type strings
-  return [NSString stringWithFormat:@"Need toPyTypeString of %@: %@", [value class], value];
+  return [[value class] description];
 }
 
 - (NSString*) format:(NSString*)format with:(NSArray*)args {
@@ -1493,6 +1512,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 
+- (void) addModule:(id<NSObject>)module named:(NSString*)name {
+  if(!context)
+    context=[[MiniPythonContext alloc] initWithParent:nil];
+  MiniPythonModule *mod=[[MiniPythonModule alloc] initWithDelegate:module name:name];
+  [context setValue:mod forName:name];
+}
+
 @end
 
 @implementation MiniPythonError
@@ -1513,7 +1539,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   switch((enum MiniPythonErrorCode)[self code]) {
   case MiniPythonEndOfStreamError:
-    [res appendString:@"EndOfStreamError: Unexpected end of stream reading code"];
+    [res appendString:@"Unexpected end of file"];
     break;
   case MiniPythonStreamError:
     [res appendString:@"StreamError: error reading code stream"];
@@ -1816,4 +1842,46 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   }
 }
 
+@end
+
+@implementation MiniPythonModule
+{
+  id<NSObject> delegate;
+  NSString *modname;
+  NSSet *available;
+}
+
+- (id<NSObject>) initWithDelegate:(id<NSObject>)delegate_  name:(NSString*)name_ {
+  if((self=[super init])) {
+    delegate=delegate_;
+    modname=name_;
+
+    available=[[NSMutableSet alloc] init];
+    Method *methods=class_copyMethodList([delegate class], NULL);
+    Method *m=methods;
+    while(*m) {
+      SEL sel=method_getName(*m);
+      const char*name=sel_getName(sel);
+      unsigned i;
+      for(i=0; name[i] && name[i]!=':' ; i++);
+      NSString *funcname=[[NSString alloc] initWithBytes:name length:i encoding:NSASCIIStringEncoding];
+      [(NSMutableSet*)available addObject:funcname];
+      m++;
+    }
+    free(methods);
+  }
+  return self;
+}
+
+- (NSString*) description {
+  return [NSString stringWithFormat:@"<module %@>", modname];
+}
+
+- (BOOL) hasMethod:(NSString*)name {
+  return [available containsObject:name];
+}
+
+- (id<NSObject>) delegate {
+  return delegate;
+}
 @end

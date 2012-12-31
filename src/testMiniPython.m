@@ -9,10 +9,10 @@ static void usage() {
 @interface Test1 : NSObject
 @end
 
-@interface ListBadEquals : NSArray
+@interface ListBadEquals : NSMutableArray
 @end
 
-@interface MapBadEquals : NSArray
+@interface MapBadEquals : NSMutableDictionary
 @end
 
 @implementation Test1
@@ -29,18 +29,30 @@ static void usage() {
 - (id<NSObject>) call:(NSString*)name :(id)a0 { return [mp callMethod:name args:@[a0]];}
 - (id<NSObject>) call:(NSString*)name :(id)a0 :(id)a1 { return [mp callMethod:name args:@[a0, a1]];}
 - (id<NSObject>) call:(NSString*)name :(id)a0 :(id)a1 :(id)a2 { return [mp callMethod:name args:@[a0, a1, a2]];}
-- (int) add:(int)l :(int)r { return [(NSNumber*)[mp callMethod:@"add" args:@[@3, @4]] intValue]; }
+- (int) add:(int)l :(int)r { (void)l;(void)r;return [(NSNumber*)[mp callMethod:@"add" args:@[@3, @4]] intValue]; }
 - (void) signalBatman { [mp setError:@"Batman" userInfo:nil];}
 - (id) badeqlist { return [[ListBadEquals alloc] init]; }
 - (id) badeqDict { return [[MapBadEquals alloc] init]; }
 @end
 
 @implementation ListBadEquals
-- (BOOL) isEqual:(id)other { return NO;}
+// we only need append support
+{
+  id items[10];
+  NSUInteger count;
+}
+
+- (BOOL) isEqual:(id)other { (void)other; return NO;}
+- (NSUInteger) count { return count; }
+- (id) objectAtIndex:(NSUInteger)c { return (c<count)?items[c]:nil;}
+- (void) insertObject:(id)obj atIndex:(NSUInteger)c {
+  items[c]=obj;
+  count++;
+}
 @end
 
 @implementation MapBadEquals
-- (BOOL) isEqual:(id)other { return NO;}
+- (BOOL) isEqual:(id)other { (void)other; return NO;}
 @end
 
 
@@ -75,7 +87,7 @@ static void usage() {
 
 // This needs to have the same semantics as Tester.java and has been
 // translated from the Java
-int main(int argc, char *argv[]) {
+static int main2(int argc, char *argv[]) {
 
   @autoreleasepool {
 
@@ -122,6 +134,11 @@ int main(int argc, char *argv[]) {
     if(!clear) {
       // needs print and onError
       [mp setClient:[[Client alloc] init:out :err]];
+    }
+
+    if(!clear) {
+      [mp addModule:[[Test1 alloc] init] named:@"test1"];
+      [mp addModule:[[Test1 alloc] init] named:@"test2"];
     }
 
     if(multimode)
@@ -174,4 +191,12 @@ int main(int argc, char *argv[]) {
   }
 
   return 0;
+}
+
+int main(int argc, char *argv[]) {
+  int res;
+  @autoreleasepool {
+    res=main2(argc, argv);
+  }
+  return res;
 }
