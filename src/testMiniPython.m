@@ -52,7 +52,12 @@ static void usage() {
 @end
 
 @implementation MapBadEquals
+{
+  NSMutableDictionary *underlying;
+}
+- (id) init { if((self=[super init])) {underlying=[[NSMutableDictionary alloc] init];} return self;}
 - (BOOL) isEqual:(id)other { (void)other; return NO;}
+- (void) setObject:(id)v forKey:(id)k { [underlying setObject:v forKey:k];}
 @end
 
 
@@ -131,8 +136,9 @@ static int main2(int argc, char *argv[]) {
     }
     MiniPython *mp=[[MiniPython alloc] init];
 
+#define EXIT(x) do { [mp clear]; return (x); } while(0)
+
     if(!clear) {
-      // needs print and onError
       [mp setClient:[[Client alloc] init:out :err]];
     }
 
@@ -156,21 +162,21 @@ static int main2(int argc, char *argv[]) {
         case MiniPythonEndOfStreamError:
           if(multimode) {
             printf("]\n");
-            return 0;
+            EXIT(0);
           }
           fprintf(stderr, "Unexpected end of file\n");
-          return 1;
+          EXIT(1);
         default:
           if(clear)
             fprintf(stderr, "%s\n", [[error description] UTF8String]);
           if(!multimode)
-            return 7;
+            EXIT(7);
           break;
         }
       }
 
       if(!multimode)
-        return 0;
+        EXIT(0);
 
       if(first)
         first=NO;
@@ -189,7 +195,6 @@ static int main2(int argc, char *argv[]) {
       [err setString:@""];
     } while(multimode);
   }
-
   return 0;
 }
 

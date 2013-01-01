@@ -11,14 +11,14 @@
 - (void) clear;
 // inputstream must already be opened
 - (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
-+ (NSString*) toPyString:(id<NSObject>) value;
-+ (NSString*) toPyTypeString:(id<NSObject>)value;
-+ (NSString*) toPyReprString:(id<NSObject>)value;
++ (NSString*) toPyString:(NSObject*) value;
++ (NSString*) toPyTypeString:(NSObject*)value;
++ (NSString*) toPyReprString:(NSObject*)value;
 - (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo;
 - (void) setNSError:(NSError*)error;
 - (NSError*) getError;
-- (void) addModule:(id<NSObject>)module named:(NSString*)name;
-- (id<NSObject>) callMethod:(NSString*)name args:(NSArray*)args;
+- (void) addModule:(NSObject*)module named:(NSString*)name;
+- (NSObject*) callMethod:(NSString*)name args:(NSArray*)args;
 @end
 
 // Error handling
