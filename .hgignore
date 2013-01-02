@@ -12,3 +12,4 @@ test/*.i
 *.gcda
 *.gcno
 *.gcov
+*.orig

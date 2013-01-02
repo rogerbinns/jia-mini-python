@@ -25,12 +25,18 @@
 extern NSString * const MiniPythonErrorDomain;
 
 enum MiniPythonErrorCode {
+  // these errors occur during loading
+  MiniPythonOutOfMemory=0,
   MiniPythonEndOfStreamError=1,    // unexpected end of stream reading data
   MiniPythonStreamError=2,         // error reading from stream
   MiniPythonUnknownVersionError=3, // unknown jmp bytecode version
+
+  // not because of well formed code
   MiniPythonInternalError=4,       // various out of bounds and similar errors which are only
                                    // possible from malformed bytecode
   MiniPythonRuntimeError=5,        // exceeding stack bounds etc
+
+  /// various things
   MiniPythonTypeError=100,         // incorrect types
   MiniPythonArithmeticError=101,   // division/mod by zero etc
   MiniPythonAssertionError=102,    // assertion failed

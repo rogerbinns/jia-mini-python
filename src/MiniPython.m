@@ -18,8 +18,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 @interface MiniPythonContext : NSObject <NSCopying>
 - (id)initWithParent:(MiniPythonContext*)p;
-- (void) setValue:(NSObject<NSCopying>*)v forName:(NSString*)n;
-- (NSObject<NSCopying>*) getName:(NSString*)n;
+- (void) setValue:(NSObject*)v forName:(NSString*)n;
+- (NSObject*) getName:(NSString*)n;
 - (MiniPythonContext*) parent;
 - (BOOL) hasLocal:(NSString*)name;
 - (void) markGlobal:(NSString*) name;
@@ -30,7 +30,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (NSObject*) init:(MiniPython*)mp name:(NSString*)name target:(NSObject*)object;
 // method on an instance of something (dict, list etc)
 - (NSObject*) init:(MiniPython*)mp name:(NSString*)name target:(NSObject*)object instance:(NSObject*)instance;
-- (NSObject<NSCopying>*) call:(NSArray*)args;
+- (NSObject*) call:(NSArray*)args;
 - (BOOL) isEqual:(id)other;
 - (NSUInteger) hash;
 
@@ -38,8 +38,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 @interface MiniPythonMethod : NSObject <NSCopying>
 - (NSObject*) initWithPC:(int)pc context:(MiniPythonContext*)context;
-- (NSObject<NSCopying>*) instance;
-- (void) setInstance:(NSObject<NSCopying>*)instance;
+- (NSObject*) instance;
+- (void) setInstance:(NSObject*)instance;
 - (int) pc;
 - (MiniPythonContext*) context;
 - (void) setName:(NSString*)name;
@@ -47,25 +47,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (NSUInteger) hash;
 @end
 
-@interface MiniPython (Private)
-- (NSObject*) mainLoop;
-- (void) internalError:(int)errcode reason:(NSString*)str;
-- (void) typeError:(NSObject*)val expected:(NSString*)type;
-- (void) binaryOpError:(NSString*)op left:(NSObject*)l right:(NSObject*)r;
-- (void) outOfMemory;
-- (NSDictionary*) stateForError;
-- (void) addBuiltins;
-- (NSString*) format:(NSString*)format with:(NSArray*)args;
-- (int) builtin_cmp:(NSObject*)left :(NSObject*)right;
-- (BOOL) builtin_bool:(NSObject*)value;
-@end
-
 @implementation MiniPython
 {
   int stacklimit;
   id <MiniPythonClientDelegate> client;
   __strong NSString **strings;
-  __strong NSObject<NSCopying> **stack;
+  __strong NSObject  **stack;
   uint16_t *linenotab;
   int nlineno;
   int nstrings;
@@ -132,6 +119,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 
+#define ERRORNOMEM(x) do { [self clear]; [self internalError:MiniPythonOutOfMemory reason:x]; if(error) *error=[self getError]; return NO; } while(0)
+
 #define read16(v) { \
    uint8_t buf[2]; \
    res=[stream read:buf maxLength:2]; \
@@ -159,8 +148,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     free(stack);
     stack=NULL;
   }
-  stack=(__strong NSObject<NSCopying>**) calloc((size_t)stacklimit, sizeof(NSObject*));
-  if(!stack) [self outOfMemory];
+  stack=(__strong NSObject**) calloc((size_t)stacklimit, sizeof(NSObject*));
+  if(!stack) ERRORNOMEM(@"allocating stack");
 
   int version;
   read16(version);
@@ -172,7 +161,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   // Strings
   read16(nstrings);
   strings=(__strong NSString**)calloc((size_t)nstrings, sizeof(NSString*));
-  if(!strings) [self outOfMemory];
+  if(!strings) ERRORNOMEM(@"allocating string table");
 
   for(int i=0; i<nstrings; i++) {
     int len;
@@ -180,7 +169,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     if(len>stringbuflen) {
       stringbuflen=len+256;
       stringbuf=realloc(stringbuf, (size_t)stringbuflen);
-      if(!stringbuf) [self outOfMemory];
+      if(!stringbuf) ERRORNOMEM(@"allocating string");
     }
     if(len) {
       res=[stream read:stringbuf maxLength:(NSUInteger)len];
@@ -205,7 +194,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   // code
   read16(codesize);
   code=malloc((size_t)codesize);
-  if(!code) [self outOfMemory];
+  if(!code) ERRORNOMEM(@"allocating code");
   res=[stream read:code maxLength:(NSUInteger)codesize];
   if(res!=(NSInteger)codesize)
     goto onerror;
@@ -305,6 +294,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 5: // LT
     case 6: // EQ
     case 7: // IN
+    case 35: // IS
     case 31: // GTE
     case 32: // LTE
     case 26: // NOT_EQ
@@ -312,6 +302,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 14: // SUBSCRIPT
     case 12: // ATTR
     case 28: // DEL_INDEX
+    case 165: // STORE_ATTR_NAME
     case 23: // PRINT  (further checking in implementation)
     case 10: // CALL (further checking in implementation)
       if(stacktop-1<0 || stacktop>=stacklimit) stackerror=YES;
@@ -352,9 +343,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(stacktop+1-val<0) stackerror=YES;
       break;
 
-    case 35: // IS
     case 164: // DEL_NAME
-    case 165: // STORE_ATTR_NAME
     // -- check end : marker used by tool
     default:
       ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode check: %d", op]));
@@ -519,6 +508,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         continue;
       }
 
+    case 35: // IS
+      {
+        NSObject *l=stack[stacktop--], *r=stack[stacktop--];
+        stack[++stacktop]=[NSNumber numberWithBool:l==r];
+        continue;
+      }
 
     // lists, dicts, complex operations
     case 16: // DICT
@@ -571,9 +566,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       {
         NSObject* object=stack[stacktop--];
         if(ISLIST(object))
-          stack[++stacktop]=(NSObject<NSCopying>*)[L(object) objectEnumerator];
+          stack[++stacktop]=(NSObject*)[L(object) objectEnumerator];
         else if(ISDICT(object))
-          stack[++stacktop]=(NSObject<NSCopying>*)[D(object) keyEnumerator];
+          stack[++stacktop]=(NSObject*)[D(object) keyEnumerator];
         else TYPEERROR(object, @"iterable");
         continue;
       }
@@ -583,7 +578,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         NSObject* iter=stack[stacktop];
         if(![iter isKindOfClass:[NSEnumerator class]])
           ERROR(InternalError, @"Non-iterator for next");
-        NSObject<NSCopying>* v=[(NSEnumerator*)iter nextObject];
+        NSObject* v=[(NSEnumerator*)iter nextObject];
         if(v) stack[++stacktop]=v;
         else pc=val;
         continue;
@@ -603,7 +598,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
           stack[++stacktop]=[list objectAtIndex:(NSUInteger)index];
           continue;
         } else if(ISDICT(object)) {
-          NSObject<NSCopying>* v=[D(object) objectForKey:key];
+          NSObject* v=[D(object) objectForKey:key];
           if(!v) ERROR(KeyError, [MiniPython toPyReprString:key]);
           stack[++stacktop]=v;
           continue;
@@ -716,7 +711,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
               }
             } else if(ISDICT(o)) {
               // instance value or method?
-              NSObject<NSCopying>* v=[(NSDictionary*)o objectForKey:key];
+              NSObject* v=[(NSDictionary*)o objectForKey:key];
               if(v) {
                 if([v isKindOfClass:[MiniPythonMethod class]]) {
                   v=[(MiniPythonMethod*)v copy];
@@ -738,6 +733,18 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
                                        [MiniPython toPyString:key], [MiniPython toPyTypeString:o],
                                              [MiniPython toPyReprString:o]]));
           }
+
+    case 165: // STORE_ATTR_NAME
+      {
+        STRINGCHECK(val);
+        NSObject *o=stack[stacktop--], *v=stack[stacktop--];
+
+        if(ISDICTM(o)) {
+          [(NSMutableDictionary*)o setObject:v forKey:strings[val]];
+          continue;
+        }
+        TYPEERROR(o, @"dict");
+      }
 
     // stack things
     case 11: // POP_TOP
@@ -852,7 +859,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 160: // LOAD_NAME
       {
         STRINGCHECK(val);
-        NSObject<NSCopying>* v=[context getName:strings[val]];
+        NSObject* v=[context getName:strings[val]];
         if(v) {
           stack[++stacktop]=v;
           continue;
@@ -865,7 +872,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         STRINGCHECK(val);
         if([context parent]) {
           if([context hasLocal:strings[val]])
-            ERROR(SyntaxError, ([NSString stringWithFormat:@"Name '%@' us assigned to before 'global' declaration",
+            ERROR(SyntaxError, ([NSString stringWithFormat:@"Name '%@' is assigned to before 'global' declaration",
                                            strings[val]]));
           [context markGlobal:strings[val]];
         }
@@ -887,7 +894,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         if([func isKindOfClass:[MiniPythonNativeMethod class]]) {
           stacktop--;
           stacktop -= nargs;
-          if(nargs && (stacktop+1<0 || stacktop+nargs>=stacklimit))
+          if(nargs && (stacktop+1<0 || stacktop+nargs+1>=stacklimit))
             ERROR(RuntimeError, @"Exceeded stack bounds in call");
 
           NSMutableArray *args=[NSMutableArray arrayWithCapacity:(NSUInteger)nargs];
@@ -897,7 +904,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
           NSString *origmethod=currentmethod;
           currentmethod=[func description];
-          NSObject<NSCopying>* res=[(MiniPythonNativeMethod*)func call:args];
+          NSObject* res=[(MiniPythonNativeMethod*)func call:args];
           currentmethod=origmethod;
           if(errorindicator) return nil;
           stack[++stacktop]=res;
@@ -909,7 +916,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
         // regular python method
         MiniPythonMethod *method=(MiniPythonMethod*)func;
-        NSAssert(![method instance], @"instance not supported yet");
+        if([method instance]) [self adjustArgsForBoundMethod:[method instance]];
         stack[++stacktop]=context;
         stack[++stacktop]=[NSNumber numberWithInt:pc];
         pc=[method pc];
@@ -922,8 +929,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         if(!ISINT(stack[stacktop]) || !ISINT(stack[stacktop-1]) || ![stack[stacktop-2] isKindOfClass:[MiniPythonContext class]]
            || !ISINT(stack[stacktop-3])) ERROR(InternalError, @"Bad call sequence at function prolog");
         int argsexpected=[N(stack[stacktop--]) intValue];
-        NSObject<NSCopying>* returnpc=stack[stacktop--];
-        NSObject<NSCopying>* returncontext=stack[stacktop--];
+        NSObject* returnpc=stack[stacktop--];
+        NSObject* returncontext=stack[stacktop--];
         int argsprovided=[N(stack[stacktop--]) intValue];
         if(argsexpected<0 || argsexpected>stacklimit || argsprovided<0 || argsprovided>stacklimit)
           ERROR(InternalError, @"Bad call nargs provision");
@@ -944,7 +951,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 9: // RETURN
       {
         if(![context parent]) ERROR(SyntaxError, @"'return' outside function");
-        NSObject<NSCopying>* retval=stack[stacktop--];
+        NSObject* retval=stack[stacktop--];
         if(!ISINT(stack[stacktop]) || ![stack[stacktop-1] isKindOfClass:[MiniPythonContext class]])
           ERROR(InternalError, @"bad return sequence");
         int returnpc=[N(stack[stacktop--]) intValue];
@@ -969,14 +976,23 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       }
 
     case 8: // UNARY_ADD
-    case 35: // IS
     case 164: // DEL_NAME
-    case 165: // STORE_ATTR_NAME
     // -- check end : marker used by tool
     default:
       ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
     }
   }
+}
+
+- (void) adjustArgsForBoundMethod:(NSObject*)instance {
+  // we need to insert instance at the beginning of arg list and
+  // increase number of args by one
+  int nargs=[(NSNumber*)stack[stacktop] intValue];
+  stack[stacktop]=[NSNumber numberWithInt:1+nargs];
+  stacktop++;
+  for(int i=0; i<nargs+1; i++)
+    stack[stacktop-i]=stack[stacktop-i-1];
+  stack[stacktop-nargs-1]=instance;
 }
 
 - (NSObject*) call:(NSObject*)callable args:(NSArray*)args {
@@ -992,7 +1008,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     return res;
   }
 
-  if((NSUInteger)stacktop+[args count]+3>=(NSUInteger)stacklimit) ERROR(RuntimeError, @"Call would exceed stack bounds");
+  if((NSUInteger)stacktop+[args count]+4>=(NSUInteger)stacklimit) ERROR(RuntimeError, @"Call would exceed stack bounds");
 
   for(NSUInteger i=0; i<[args count]; i++)
     stack[++stacktop]=[args objectAtIndex:i];
@@ -1000,6 +1016,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   MiniPythonContext *savedcontext=context;
   MiniPythonMethod *method=(MiniPythonMethod*)callable;
+  if([method instance]) [self adjustArgsForBoundMethod:[method instance]];
+
   int savedpc=pc;
   stack[++stacktop]=context;
   stack[++stacktop]=[NSNumber numberWithInt:-1];
@@ -1434,7 +1452,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 - (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo {
   NSMutableDictionary *d=[[NSMutableDictionary alloc] init];
-  [d setObject:description forKey:@"description"];
+  [d setObject:description forKey:@"reason"];
   [d addEntriesFromDictionary:userinfo];
   [self setNSError:[MiniPythonError withMiniPython:self
                                               code:MiniPythonGeneralError
@@ -1523,7 +1541,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [use->variables setObject:v forKey:n];
 }
 
-- (NSObject<NSCopying>*) getName:(NSString*)n {
+- (NSObject*) getName:(NSString*)n {
   MiniPythonContext *use=self;
 
   if(use->parent && globals && [globals containsObject:n]) {
@@ -1531,7 +1549,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       use=use->parent;
   }
 
-  NSObject<NSCopying>* v=nil;
+  NSObject* v=nil;
   do {
     v=(use->variables)?[use->variables objectForKey:n]:nil;
     if(v) return v;
@@ -1557,9 +1575,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (id)copyWithZone:(NSZone*)zone {
   MiniPythonContext *new=[[[self class] allocWithZone:zone] init];
   if(new) {
-    new->parent=[parent copyWithZone:zone];
-    new->variables=[variables copyWithZone:zone];
-    new->globals=[globals copyWithZone:zone];
+    new->parent=parent;
+    new->variables=variables;
+    new->globals=globals;
   }
   return new;
 }
@@ -1572,7 +1590,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 + (NSError*) withMiniPython:(MiniPython*)mp code:(NSInteger)code userInfo:(NSDictionary*)userinfo {
   NSMutableDictionary *d=[[NSMutableDictionary alloc] init];
   [d addEntriesFromDictionary:[mp stateForError]];
-  [d addEntriesFromDictionary:userinfo];
+  if(userinfo)
+    [d addEntriesFromDictionary:userinfo];
   return [super errorWithDomain:MiniPythonErrorDomain
                            code:code
                        userInfo:d];
@@ -1584,11 +1603,18 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   NSDictionary *ue=[self userInfo];
 
   switch((enum MiniPythonErrorCode)[self code]) {
+  case MiniPythonOutOfMemory:
+    [res appendString:@"Out of memory:"];
+    break;
   case MiniPythonEndOfStreamError:
     [res appendString:@"Unexpected end of file"];
+    if([ue objectForKey:@"readresult"])
+      [set addObject:@"readresult"];
     break;
   case MiniPythonStreamError:
     [res appendString:@"StreamError: error reading code stream"];
+    if([ue objectForKey:@"readresult"])
+      [set addObject:@"readresult"];
     break;
   case MiniPythonUnknownVersionError:
     [res appendString:@"UnknownVersionError: unknown jmp version"];
@@ -1610,10 +1636,20 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         [res appendFormat:@" (argument #%@)", [ue objectForKey:@"arg"]];
         [set addObject:@"arg"];
       }
+      if([ue objectForKey:@"function"])
+        [set addObject:@"function"];
+    }
+    if([ue objectForKey:@"op"]) {
+      [res appendFormat:@"can't perform %@ on %@ and %@", [ue objectForKey:@"op"],
+           [MiniPython toPyTypeString:[ue objectForKey:@"left"]],
+           [MiniPython toPyTypeString:[ue objectForKey:@"right"]]];
+      [set addObject:@"op"];
+      [set addObject:@"left"];
+      [set addObject:@"right"];
     }
     break;
   case MiniPythonArithmeticError:
-    [res appendString:@"ArithmeticError:"];
+    [res appendString:@"ArithmeticException:"];
     break;
   case MiniPythonAssertionError:
     [res appendString:@"AssertionError:"];
@@ -1673,7 +1709,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   }
 
   if([set count]!=[ue count]) {
-    NSLog(@"Did not use all keys of %@\nUsed %@", ue, set);
+    NSLog(@"Did not use all keys of %@\nUsed %@\n%@", ue, set, res);
   }
   return res;
 }
@@ -1684,10 +1720,10 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   int pc;
   MiniPythonContext* context;
   NSString *name;
-  NSObject<NSCopying>* instance;
+  NSObject* instance;
 }
 
-- (BOOL) isEqual:(NSObject*)other {
+- (BOOL) isEqual:(id)other {
   if([other isMemberOfClass:[self class]]) {
     MiniPythonMethod *o=other;
     return pc==o->pc && instance==o->instance;
@@ -1706,10 +1742,15 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 - (NSString*) description {
-  return name?[NSString stringWithFormat:@"<method %@>", name]:@"<method>";
+  return [NSString stringWithFormat:@"<%@method%@%@%@%@>",
+                 instance?@"bound ":@"",
+                          name?@" ":@"",
+                          name?name:@"",
+                instance?@" of id ":@"",
+                instance?[NSNumber numberWithInt:(int)instance]:@""];
 }
 
-- (NSObject<NSCopying>*) instance {
+- (NSObject*) instance {
   return instance;
 }
 
@@ -1718,8 +1759,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     name=name_;
 }
 
-- (void) setInstance:(NSObject<NSCopying>*)instance_ {
-  instance=instance_;
+- (void) setInstance:(NSObject*)instance_ {
+  if(!instance)
+    instance=instance_;
 }
 
  - (int) pc {
@@ -1734,9 +1776,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   MiniPythonMethod *new=[[[self class] allocWithZone:zone] init];
   if(new) {
     new->pc=pc;
-    new->context=[context copyWithZone:zone];
-    new->name=[name copyWithZone:zone];
-    new->instance=[instance copyWithZone:zone];
+    new->context=context;
+    new->name=name;
+    new->instance=instance;
   }
   return new;
 }
@@ -1756,6 +1798,28 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   NSUInteger nargsininvocation;
 }
 
+- (BOOL) isEqual:(id)other {
+  if([other isMemberOfClass:[self class]]) {
+    MiniPythonNativeMethod *o=other;
+    return mp==o->mp && object==o->object && instance==o->instance;
+  }
+  return NO;
+}
+
+- (NSUInteger) hash { return 1; }
+
+- (id)copyWithZone:(NSZone*)zone {
+  MiniPythonNativeMethod *new=[[[self class] allocWithZone:zone] init];
+  if(new) {
+    new->mp=mp;
+    new->name=name;
+    new->object=object;
+    new->instance=instance;
+  }
+  return new;
+}
+
+
 - (NSObject*) init:(MiniPython*)mp_ name:(NSString*)name_ target:(NSObject*)object_ {
   return [self init:mp_ name:name_ target:object_ instance:nil];
 }
@@ -1771,7 +1835,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 - (NSString*) description {
-  return name;
+  return [NSString stringWithFormat:@"<%@method %@%@%@>",
+                 instance?@"bound ":@"",
+                   name,
+                instance?@" of id ":@"",
+                   instance?[NSNumber numberWithInt:(int)instance]:@""];
 }
 
 - (void) wrongNumberOfArguments:(NSUInteger)provided {
@@ -1824,7 +1892,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
                                         userInfo:@{@"reason": res}]];
 }
 
-- (NSObject<NSCopying>*) call:(NSArray*)args {
+- (NSObject*) call:(NSArray*)args {
 #define INST(x) ((x)+(instance!=nil))
   if(!invocation || INST([args count])!=nargsininvocation) {
     NSMutableString *selname;
@@ -1908,7 +1976,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
       This solution also works: http://stackoverflow.com/a/11569236/463462
     */
-    __unsafe_unretained NSObject<NSCopying>* result;
+    __unsafe_unretained NSObject* result;
     [invocation getReturnValue:&result];
     return result;
   } else if(strcmp(returntype, "v")==0) {
@@ -1961,4 +2029,25 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (NSObject*) delegate {
   return delegate;
 }
+
+- (BOOL) isEqual:(id)other {
+  if([other isMemberOfClass:[self class]]) {
+    MiniPythonModule *o=other;
+    return delegate==o->delegate && [modname isEqual:o->modname];
+  }
+  return NO;
+}
+
+- (NSUInteger) hash { return 2;}
+
+- (id)copyWithZone:(NSZone*)zone {
+  MiniPythonModule *new=[[[self class] allocWithZone:zone] init];
+  if(new) {
+    new->delegate=delegate;
+    new->modname=modname;
+    new->available=available;
+  }
+  return new;
+}
+
 @end
