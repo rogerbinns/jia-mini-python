@@ -61,7 +61,7 @@ ocoverage:
 	gcov src/MiniPython.m
 
 valgrind: obin
-	valgrind --dsymutil=yes --redzone-size=4096 --track-origins=yes --freelist-vol=1000000000 --leak-check=full --show-reachable=yes bin/testminipython
+	valgrind --dsymutil=yes --redzone-size=4096 --track-origins=yes --freelist-vol=1000000000 --leak-check=full --show-reachable=yes bin/testminipython $(TEST)
 
 JAVADOCDIR="doc/_build/javadoc"
 
