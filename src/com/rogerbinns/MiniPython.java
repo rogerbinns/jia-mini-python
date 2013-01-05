@@ -98,7 +98,7 @@ public class MiniPython {
 		int version = get16(stream);
 		if (version != 0)
 			throw new IOException(String.format(
-					"Unknown JMP version number %d", version));
+					"Unknown JMP version %d", version));
 
 		// string table
 		int stablen = get16(stream);
@@ -1572,12 +1572,10 @@ public class MiniPython {
 			return false;
 		if (o instanceof List)
 			return ((List) o).size() > 0;
-
-			// Eclipse is retarded and screws up indentation from here on
-			if (o instanceof Map)
-				return ((Map) o).size() > 0;
-
-				throw internalError("TypeError", "Can't 'bool' " + toPyString(o));
+		if (o instanceof Map)
+                    return ((Map) o).size() > 0;
+                // treat all other non-null items as true
+		return true;
 	}
 
 	private boolean builtin_callable(Object o) {
@@ -1872,7 +1870,7 @@ public class MiniPython {
 		case 2: {
 			if (args[1] != null) {
 				if (!builtin_callable(args[1]))
-					throw internalError("ValueError",
+					throw internalError("TypeError",
 							"list.sort key parameter must be callable");
 				key = (Callable) args[1];
 			}
@@ -1880,7 +1878,7 @@ public class MiniPython {
 		case 1: {
 			if (args[0] != null) {
 				if (!builtin_callable(args[0]))
-					throw internalError("ValueError",
+					throw internalError("TypeError",
 							"list.sort cmp parameter must be callable");
 				cmp = (Callable) args[0];
 			}
