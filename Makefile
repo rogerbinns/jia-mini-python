@@ -33,7 +33,7 @@ publish: doc
 	cd ../jmp-doc && hg status
 
 ant:
-	ant
+	ant -q
 
 test: ant
 	python test/main_test.py
