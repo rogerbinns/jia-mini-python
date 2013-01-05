@@ -108,8 +108,17 @@ l=[1,2]
 l.append(l)
 assert "..." in str(l)
 
-assert map(type, [None, True, {}, [], 3, "", meth, cmp, test1.retSelf, test1, [].sort])  \
-                  ==["NoneType", "bool", "dict", "list", "int", "str", "method", "modulemethod", "modulemethod", "module", "instancemethod"]
+
+assert type(None)=="NoneType"
+assert type(True)=="bool"
+assert type({})=="dict"
+assert type([])=="list"
+assert type(3)=="int"
+assert type("")=="str"
+assert "method" in type(meth)
+assert "modulemethod" in type(test1.retSelf)
+assert "module" in type(test1)
+assert "instancemethod" in type([].sort)
 
 def meth(a,b):
     return a+b
@@ -146,7 +155,6 @@ assert l.index!=[3].index
 assert l.index!="".replace
 
 assert id(meth)==id(meth)
-assert id(test1.retSelf)!=id(test1.retSelf)
 
 assert int(3)==3
 assert int(2+2)==4
@@ -188,8 +196,12 @@ assert "aeiouaeiou".replace("iou", "OU")=="aeOUaeOU"
 
 assert "fsdafdsaf".split("343")==["fsdafdsaf"]
 assert "edward    is a   \nvampire   ".split()==["edward", "is", "a", "vampire"]
-assert "abc.*abc.*".split(".*")==["abc", "abc"]
+assert "abc.*abc.*".split(".*")==["abc", "abc", ""]
+assert "abc.*abc.*".split("abc", 0)==["abc.*abc.*"]
+assert "abc.*abc.*".split("abc", 1)==["", ".*abc.*"]
+assert "abc.*abc.*".split("abc", 2)==["", ".*", ".*"]
 assert "a1a2a3a4".split("a", 2)==['', '1', '2a3a4']
+assert "1a2a3a4a".split("a", -2)==['1', '2', '3', '4', '']
 
 assert "".strip()==""
 assert "     ".strip()==""
@@ -237,3 +249,8 @@ def foo(opop):
     assert len(locals())==2
 
 foo(1)
+
+
+assert bool(test1.retSelf())
+assert not bool(None)
+

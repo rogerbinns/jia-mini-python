@@ -148,11 +148,11 @@ def meth():
 
 meth()
 
-#> TypeError:.*not callable.*
+#> TypeError
 d={}
 d()
 
-#> TypeError.*takes exactly.*
+#> TypeError.*takes.*arg.*
 def meth(a,b,c):
     pass
 
@@ -166,24 +166,21 @@ meth()
 
 ### Exercise the toPyTypeString code
 #> TypeError.*bool.*
-test1.takesAll(3)
+test1.takesAll(3, 0, 0, 0, 0, 0, 0)
 #> TypeError.*bool.*
-test1.takesAll(True, 3)
+test1.takesAll(True, 3, 0, 0, 0, 0, 0)
 #> TypeError.*dict.*
-test1.takesAll(False, True, 4)
+test1.takesAll(False, True, 4, 0, 0, 0, 0)
 #> TypeError.*list.*
-test1.takesAll(False, True, {}, {})
+test1.takesAll(False, True, {}, {}, 0, 0, 0)
 #> TypeError.*int.*
-test1.takesAll(False, True, {}, [], "fff")
+test1.takesAll(False, True, {}, [], "fff", 0, 0)
 #> TypeError.*int.*
-test1.takesAll(False, True, {}, [], 3, "")
+test1.takesAll(False, True, {}, [], 3, "", 0)
 #> TypeError.*Test1.*
 test1.takesAll(False, True, {}, [], 3, 3, "")
-#> TypeError.*Test1.*
+#> TypeError.*(Test1|takesAll).*
 test1.takesAll(test1.retSelf())
-
-#> TypeError
-bool(test1.retSelf())
 
 #> ValueError
 int("fred")
@@ -200,13 +197,13 @@ range(0,10,0)
 #> TypeError
 range(1,2,3,4,5,6)
 
-#> java.lang.NullPointerException
+#> .*(java.lang.NullPointerException|NoneType).*
 "fdasfdsa".endswith(None)
 
 #> TypeError
 "".join(["sfds", "sas", 1])
 
-#> TypeError.*too many.*
+#> TypeError.*(too many|incorrect number).*
 "".split(1,2,3,4,5)
 
 #> TypeError
@@ -218,7 +215,7 @@ range(1,2,3,4,5,6)
 #> ValueError
 "afdsfads".split("")
 
-#> java.lang.NullPointerException
+#> .*(java.lang.NullPointerException|NoneType).*
 [].extend(None)
 
 #> TypeError
@@ -233,10 +230,10 @@ range(1,2,3,4,5,6)
 #> TypeError
 [].sort(None, None, 1)
 
-#> ValueError.*callable.*
+#> TypeError.*callable.*
 [].sort(None, True)
 
-#> ValueError.*callable.*
+#> TypeError.*callable.*
 [].sort(True)
 
 #> AssertionError
@@ -265,13 +262,13 @@ apply(test1.call, ["x"]*65536)
 test1.vacall(3)
 #> TypeError
 test1.vacall("foo", 4)
-#> TypeError.*takes.*args.*
+#> TypeError.*(takes.*args|number of arguments).*
 test1.vacall()
 
-#> Batman
+#> .*Batman.*
 test1.signalBatman()
 
-#> Batman
+#> .*Batman.*
 test2.signalBatman()
 
 #> TypeError

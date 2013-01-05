@@ -23,6 +23,10 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (MiniPythonContext*) parent;
 - (BOOL) hasLocal:(NSString*)name;
 - (void) markGlobal:(NSString*) name;
+- (BOOL) delName:(NSString*)name;
+- (NSObject*) getGlobalName:(NSString*)name;
+- (NSDictionary*) globals;
+- (NSDictionary*) locals;
 @end
 
 @interface MiniPythonNativeMethod : NSObject <NSCopying>
@@ -33,7 +37,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (NSObject*) call:(NSArray*)args;
 - (BOOL) isEqual:(id)other;
 - (NSUInteger) hash;
-
+- (BOOL) hasInstance;
 @end
 
 @interface MiniPythonMethod : NSObject <NSCopying>
@@ -133,21 +137,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   void * stringbuf=malloc((size_t)stringbuflen);
   if(!stringbuf) stringbuflen=0;
 
-  // reset internal state
-  [self addBuiltins];
-  stacktop=-1;
-  pc=-1;
-  free(linenotab);
-  linenotab=NULL;
-  free(code);
-  code=NULL;
-  errorindicator=nil;
+  // check clear was called
   if(stack) {
-    for(int i=0;i<stacklimit;i++)
-      stack[i]=nil;
-    free(stack);
-    stack=NULL;
+    [self internalError:MiniPythonNeedsClear reason:@"You must clear to reuse this instance"];
+    *error=[self getError]; return NO;
   }
+  [self addBuiltins];
+
   stack=(__strong NSObject**) calloc((size_t)stacklimit, sizeof(NSObject*));
   if(!stack) ERRORNOMEM(@"allocating stack");
 
@@ -201,10 +197,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   {
     pc=0;
+    stacktop=-1;
     @autoreleasepool {
       [self mainLoop];
     }
     stacktop=-1;
+    pc=0;
     if(errorindicator) {
       if(error) *error=errorindicator;
       return NO;
@@ -253,7 +251,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     if(!code || pc>=codesize || pc<0) ERROR(InternalError,@"invalid pc");
     op=code[pc++];
     if(op>=128) {
-      if(pc+2>=codesize) ERROR(InternalError, @"invalid pc val");
       val=code[pc] | (code[pc+1]<<8);
       pc+=2;
     }
@@ -266,6 +263,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 19: // EXIT_LOOP
     case 129: // GOTO
     case 163: // GLOBAL
+    case 164: // DEL_NAME
       break;
 
     // Use top item
@@ -282,6 +280,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 25: // ITER
     case 161: // STORE_NAME
     case 11: // POP_TOP
+    case 9: // RETURN (further checking in implementation)
       if(stacktop<0 || stacktop>=stacklimit) stackerror=YES;
       break;
 
@@ -309,7 +308,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       break;
 
     // use top 3 items
-    case 9: // RETURN
     case 15: // SUBSCRIPT_SLICE
     case 33: // ASSIGN_INDEX
     case 29: // DEL_SLICE
@@ -343,10 +341,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(stacktop+1-val<0) stackerror=YES;
       break;
 
-    case 164: // DEL_NAME
     // -- check end : marker used by tool
     default:
-      ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode check: %d", op]));
+      ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
     }
 
     if(!stack || stackerror)
@@ -360,6 +357,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 24: // NOT
       {
         stack[stacktop]=[NSNumber numberWithBool:![self builtin_bool:stack[stacktop]]];
+        continue;
+      }
+
+    case 8: // UNARY_ADD
+      {
+        if(!ISINT(stack[stacktop])) TYPEERROR(stack[stacktop], @"int");
         continue;
       }
 
@@ -466,7 +469,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
           stack[++stacktop] = [NSNumber numberWithInt:res];
           continue;
         } else if(ISSTRING(left) && ISLIST(right)) {
-          stack[++stacktop] = [self format:S(left) with:L(right)];
+          NSString *fmt=[self format:S(left) with:L(right)];
+          if(!fmt) return nil;
+          stack[++stacktop] = fmt;
           continue;
         }
         BINARYOPERROR(@"%", left, right);
@@ -879,16 +884,22 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         continue;
       }
 
+    case 164: // DEL_NAME
+      {
+        STRINGCHECK(val);
+        if(![context delName:strings[val]]) ERROR(NameError, ([NSString stringWithFormat:@"Name '%@' is not defined", strings[val]]));
+        continue;
+      }
 
     // function calls
     case 10: // CALL
       {
         NSObject* func=stack[stacktop--];
         if(![self builtin_callable:func])
-          TYPEERROR(func, @"function");
+          TYPEERROR(func, @"method");
 
 
-        if(!ISINT(stack[stacktop])) ERROR(InternalError, @"bad function call sequence");
+        if(!ISINT(stack[stacktop])) ERROR(InternalError, @"bad method call sequence");
         int nargs = [N(stack[stacktop]) intValue];
 
         if([func isKindOfClass:[MiniPythonNativeMethod class]]) {
@@ -927,7 +938,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     case 0: // FUNCTION_PROLOG
       {
         if(!ISINT(stack[stacktop]) || !ISINT(stack[stacktop-1]) || ![stack[stacktop-2] isKindOfClass:[MiniPythonContext class]]
-           || !ISINT(stack[stacktop-3])) ERROR(InternalError, @"Bad call sequence at function prolog");
+           || !ISINT(stack[stacktop-3])) ERROR(InternalError, @"Bad call sequence at method prolog");
         int argsexpected=[N(stack[stacktop--]) intValue];
         NSObject* returnpc=stack[stacktop--];
         NSObject* returncontext=stack[stacktop--];
@@ -950,7 +961,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
     case 9: // RETURN
       {
-        if(![context parent]) ERROR(SyntaxError, @"'return' outside function");
+        if(![context parent]) ERROR(SyntaxError, @"'return' outside method");
+        if(stacktop-2<0 || stacktop>=stacklimit) ERROR(InternalError, @"incomplete stack for return");
         NSObject* retval=stack[stacktop--];
         if(!ISINT(stack[stacktop]) || ![stack[stacktop-1] isKindOfClass:[MiniPythonContext class]])
           ERROR(InternalError, @"bad return sequence");
@@ -975,8 +987,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         continue;
       }
 
-    case 8: // UNARY_ADD
-    case 164: // DEL_NAME
     // -- check end : marker used by tool
     default:
       ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
@@ -1089,7 +1099,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   if(ISLIST(value)) return @"list";
   if(ISDICT(value)) return @"dict";
 
-  if([value isKindOfClass:[MiniPythonNativeMethod class]]) return @"modulemethod";
+  if([value isKindOfClass:[MiniPythonNativeMethod class]]) {
+    return [(MiniPythonNativeMethod*)value hasInstance]?@"instancemethod":@"modulemethod";
+  }
   if([value isKindOfClass:[MiniPythonMethod class]]) return @"method";
   if([value isKindOfClass:[MiniPythonModule class]]) return @"module";
 
@@ -1097,8 +1109,92 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 - (NSString*) format:(NSString*)format with:(NSArray*)args {
-  // ::TODO:: write a printf equivalent
-  return [NSString stringWithFormat:@"fmt \"%@\" with %@", format, [MiniPython toPyString:args]];
+  NSMutableString *res=[[NSMutableString alloc] init];
+  NSUInteger pos=0;
+  NSUInteger argpos=0;
+
+#define ADDCHAR(x) do { [res appendFormat:@"%C", (x)]; } while(0)
+  while(pos<[format length]) {
+    unichar c=[format characterAtIndex:pos];
+    pos++;
+    if(c!='%') {
+      ADDCHAR(c); continue;
+    }
+
+    BOOL flag_left=NO, flag_plus=NO, flag_space=NO, flag_zero=NO, flag_done=NO;
+    do {
+      if(pos>=[format length])
+        ERROR(TypeError, @"incomplete format specifier");
+      c=[format characterAtIndex:pos];
+      switch(c) {
+      case '-': flag_left=YES; break;
+      case '+': flag_plus=YES; break;
+      case ' ': flag_space=YES; break;
+      case '0': flag_zero=YES; break;
+      default: flag_done=YES;
+      }
+      if(!flag_done) pos++;
+    } while(!flag_done);
+
+    NSUInteger width=0;
+    while(pos<[format length] && (c=[format characterAtIndex:pos]) && c>='0' && c<='9') {
+      width=width*10+(c-'0');
+      pos++;
+    }
+
+    if(pos>=[format length])
+      ERROR(TypeError, @"incomplete format specifier");
+    c=[format characterAtIndex:pos];
+    pos++;
+
+    if(argpos>=[args count])
+      ERROR(TypeError, @"insufficient arguments for format string");
+    NSObject *arg=[args objectAtIndex:argpos];
+    argpos++;
+    switch(c) {
+    case '%': ADDCHAR((unichar)'%'); continue;
+    case 's': {
+      NSString *s=[MiniPython toPyString:arg];
+      if([s length]>=width) {
+        [res appendString:s];
+        continue;
+      }
+      if(flag_left) {
+        [res appendString:s];
+        for(NSUInteger i=0; i<width-[s length]; i++)
+          ADDCHAR((unichar)' ');
+        continue;
+      }
+      for(NSUInteger i=0; i<width-[s length]; i++)
+        ADDCHAR((unichar)' ');
+      [res appendString:s];
+      continue;
+    }
+    case 'X':
+    case 'x':
+    case 'd':
+      if(!ISINT(arg)) TYPEERROR(arg, @"int for formatting");
+      int i=[N(arg) intValue];
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+      [res appendFormat:[NSString stringWithFormat:@"%%%@%@%@%@%@%C",
+                                    flag_left?@"-":@"",
+                                    flag_plus?@"+":@"",
+                                   flag_space?@" ":@"",
+                                    flag_zero?@"0":@"",
+                                  width?[NSNumber numberWithInt:(int)width]:@"",
+                                  c], i];
+#pragma clang diagnostic pop
+
+      continue;
+    default: ERROR(TypeError, ([NSString stringWithFormat:@"Unknown format '%C'", c]));
+    }
+  }
+
+
+  return res;
+#undef ADDCHAR
 }
 
 - (NSObject*) builtin_apply:(NSObject*)func :(NSArray*)args {
@@ -1110,7 +1206,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 - (BOOL) builtin_bool:(NSObject*)value {
   if(ISBOOL(value)) {
     return [N(value) boolValue];
-  } else if(ISNONE(value)) {
+  } else if(!value || ISNONE(value)) {
     return NO;
   } else if(ISINT(value)) {
     return 0!=[N(value) intValue];
@@ -1168,12 +1264,19 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     return [self builtin_cmp:[MiniPython toPyTypeString:left] :[MiniPython toPyTypeString:right]];
   }
   // just compare as strings then
-  return [self builtin_cmp:[MiniPython toPyString:left] :[MiniPython toPyString:right]];
+  NSString *ls=[MiniPython toPyString:left], *rs=[MiniPython toPyString:right];
+  // we know they aren't equal so use address if strings are equal
+  if([ls isEqual: rs]) {
+    uintptr_t l=(uintptr_t)left, r=(uintptr_t)right;
+    return (l<r)?-1:1;
+  }
+
+  return [self builtin_cmp:ls :rs];
 }
 
 - (NSArray*) builtin_filter:(NSObject*)func :(NSArray*)list {
   if(![self builtin_callable:func])
-    TYPEERROR(func, @"function");
+    TYPEERROR(func, @"method");
   if(!ISLIST(list))
     TYPEERROR(list, @"list");
 
@@ -1189,8 +1292,29 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return res;
 }
 
+- (NSDictionary*) builtin_globals {
+  return [context globals];
+}
+
 - (int) builtin_id:(NSObject*)value {
   return (int)(value?value:[NSNull null]);
+}
+
+- (int) builtin_int:(NSObject*)value {
+  if(ISINT(value)) return [N(value) intValue];
+  if(ISBOOL(value)) return !![N(value) boolValue];
+  if(ISSTRING(value)) {
+    int ival=[S(value) intValue];
+    if(ival==0) {
+      if(![value isEqual:@"0"]) {
+        [self internalError:MiniPythonValueError reason:[NSString stringWithFormat:@"'%@' could not be converted to int", value]];
+        return 0;
+      }
+    }
+    return ival;
+  }
+  [self typeError:value expected:@"int, bool or string"];
+  return 0;
 }
 
 - (int) builtin_len:(NSObject*)value {
@@ -1201,9 +1325,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return 0;
 }
 
+- (NSDictionary*) builtin_locals {
+  return [context locals];
+}
+
 - (NSObject*) builtin_map:(NSObject*)func :(NSArray*)list {
   if(![self builtin_callable:func])
-    TYPEERROR(func, @"function");
+    TYPEERROR(func, @"method");
   if(!ISLIST(list))
     TYPEERROR(list, @"list");
 
@@ -1403,6 +1531,11 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     }];
 }
 
+- (BOOL) instance_str_endswith:(NSString*)str :(NSString*)suffix {
+  if(!ISSTRING(suffix)) { [self typeError:suffix expected:@"str"]; return NO; }
+  return [suffix length]?[str hasSuffix:suffix]:YES;
+}
+
 - (NSString*)instance_str_join:(NSString*)str :(NSObject*)with {
   if(!ISLIST(with)) TYPEERROR(with, @"list");
   NSArray *list=L(with);
@@ -1415,6 +1548,91 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     [res appendString: S(item)];
   }
   return res;
+}
+
+- (NSString*)instance_str_lower:(NSString*)str {
+  return [str lowercaseString];
+}
+
+- (NSString*)instance_str_replace:(NSString*)str :(NSString*)find :(NSString*)replacement {
+  if(!ISSTRING(find)) TYPEERROR(find, @"str");
+  if(!ISSTRING(replacement)) TYPEERROR(find, @"replacement");
+  if ([find length])
+    return [str stringByReplacingOccurrencesOfString:find withString:replacement];
+  NSMutableString *res=[[NSMutableString alloc] init];
+  for(NSUInteger pos=0; pos<[str length]; pos++)
+    [res appendFormat:@"%@%C", replacement, [str characterAtIndex:pos]];
+  return res;
+}
+
+- (NSArray*)internal_str_split:(NSString*)str sep:(NSString*)sep maxCount:(int)maxcount {
+  NSMutableArray *res=[[NSMutableArray alloc] init];
+  NSUInteger pos=0;
+
+  if(!sep) {
+    // any whitespace and different semantics
+    unichar c;
+    for(;;) {
+      while(pos<[str length] && (c=[str characterAtIndex:pos], c==' ' || c=='\t' || c=='\r' || c=='\n'))
+        pos++;
+      if(pos==[str length]) return res;
+      NSUInteger pos2=pos;
+      while(pos2<[str length] && (c=[str characterAtIndex:pos2], c!=' ' && c!='\t' && c!='\r' && c!='\n'))
+        pos2++;
+      [res addObject:[str substringWithRange:NSMakeRange(pos, pos2-pos)]];
+      pos=pos2;
+    }
+  }
+
+
+  while(pos<[str length]) {
+    if(maxcount>=0 && [res count]>=(NSUInteger)maxcount) {
+      [res addObject:[str substringWithRange:NSMakeRange(pos, [str length]-pos)]];
+      return res;
+    }
+
+    NSRange found=[str rangeOfString:sep options:NSLiteralSearch range:NSMakeRange(pos, [str length]-pos)];
+    if(found.location==NSNotFound) {
+      [res addObject:[str substringWithRange:NSMakeRange(pos, [str length]-pos)]];
+      return res;
+    }
+
+    [res addObject:[str substringWithRange:NSMakeRange(pos, found.location-pos)]];
+    pos=found.location+found.length;
+  }
+
+  if([str hasSuffix:sep])
+    [res addObject:@""];
+
+  return res;
+}
+
+- (NSArray*)instance_str_split:(NSString*)str {
+  return [self internal_str_split:str sep:nil maxCount:-1];
+}
+
+- (NSArray*)instance_str_split:(NSString*)str :(NSString*)sep {
+  return [self instance_str_split:str :sep :-1];
+}
+
+- (NSArray*)instance_str_split:(NSString*)str :(NSString*)sep :(int)maxsep {
+  if(!ISSTRING(sep)) TYPEERROR(sep, @"str");
+  if(![sep length]) ERROR(ValueError, @"empty separator");
+  return [self internal_str_split:str sep:sep maxCount:maxsep];
+}
+
+- (BOOL) instance_str_startswith:(NSString*)str :(NSString*)prefix {
+  if(!ISSTRING(prefix)) { [self typeError:prefix expected:@"str"]; return NO; }
+  return [prefix length]?[str hasPrefix:prefix]:YES;
+}
+
+- (NSString*) instance_str_strip:(NSString*)str {
+  // builtin objc whitespace set includes U+0085 which python doesn't
+  return [str stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \t\r\n"]];
+}
+
+- (NSString*)instance_str_upper:(NSString*)str {
+  return [str uppercaseString];
 }
 
 - (void) internalError:(int)errcode reason:(NSString*)str {
@@ -1450,12 +1668,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [client onError:errorindicator];
 }
 
-- (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo {
+- (void) setError:(enum MiniPythonErrorCode)code_ reason:(NSString*)reason userInfo:(NSDictionary*)userinfo {
   NSMutableDictionary *d=[[NSMutableDictionary alloc] init];
-  [d setObject:description forKey:@"reason"];
-  [d addEntriesFromDictionary:userinfo];
+  [d setObject:reason forKey:@"reason"];
+  if(userinfo)
+    [d addEntriesFromDictionary:userinfo];
   [self setNSError:[MiniPythonError withMiniPython:self
-                                              code:MiniPythonGeneralError
+                                              code:code_
                                           userInfo:d]];
 }
 
@@ -1512,6 +1731,37 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [context setValue:mod forName:name];
 }
 
+- (NSObject*) callMethod:(NSString*)name args:(NSArray*)args error:(NSError**)error {
+  NSObject *retval;
+
+  int savedsp=stacktop, savedpc=pc;
+  MiniPythonContext *savedcontext=context;
+
+  NSObject *meth=[context getGlobalName:name];
+  if(!meth) {
+    [self internalError:MiniPythonNameError reason:[NSString stringWithFormat:@"No name '%@' found", name]];
+    goto end;
+  }
+
+  if([self builtin_callable:meth])
+    retval=[self call:meth args:args];
+  else
+    [self typeError:meth expected:@"method"];
+
+ end:
+  if([self getError]) {
+    if(error)
+      *error=[self getError];
+    errorindicator=nil;
+    retval=nil;
+  }
+  pc=savedpc;
+  stacktop=savedsp;
+  context=savedcontext;
+
+  return retval;
+}
+
 @end
 
 @implementation MiniPythonContext
@@ -1558,6 +1808,25 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return v;
 }
 
+- (NSObject*) getGlobalName:(NSString*)n {
+  return [[self globals] objectForKey:n];
+}
+
+- (NSDictionary*) globals {
+  MiniPythonContext *use=self;
+  while(use->parent)
+    use=use->parent;
+  if(!use->variables)
+    use->variables=[[NSMutableDictionary alloc] init];
+  return use->variables;
+}
+
+- (NSDictionary*) locals {
+  if(!variables)
+    variables=[[NSMutableDictionary alloc] init];
+  return variables;
+}
+
 - (MiniPythonContext*) parent {
   return parent;
 }
@@ -1582,6 +1851,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return new;
 }
 
+- (BOOL)delName:(NSString*) name {
+  // note this has to provide python semantics, not what you consider sensible!
+  if(globals && [globals containsObject:name]) return YES;
+  if(!variables || ![variables objectForKey:name]) return NO;
+  [variables removeObjectForKey:name];
+  return YES;
+}
 
 @end
 
@@ -1605,6 +1881,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   switch((enum MiniPythonErrorCode)[self code]) {
   case MiniPythonOutOfMemory:
     [res appendString:@"Out of memory:"];
+    break;
+  case MiniPythonNeedsClear:
+    [res appendString:@"Needs clear:"];
     break;
   case MiniPythonEndOfStreamError:
     [res appendString:@"Unexpected end of file"];
@@ -1636,8 +1915,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         [res appendFormat:@" (argument #%@)", [ue objectForKey:@"arg"]];
         [set addObject:@"arg"];
       }
-      if([ue objectForKey:@"function"])
-        [set addObject:@"function"];
+      if([ue objectForKey:@"method"])
+        [set addObject:@"method"];
     }
     if([ue objectForKey:@"op"]) {
       [res appendFormat:@"can't perform %@ on %@ and %@", [ue objectForKey:@"op"],
@@ -1689,8 +1968,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   if([ue objectForKey:@"currentmethod"]) {
     [res appendFormat:@" in call to %@()", [ue objectForKey:@"currentmethod"]];
     [set addObject:@"currentmethod"];
-    if([[ue objectForKey:@"currentmethod"] isEqual:[ue objectForKey:@"function"]])
-      [set addObject:@"function"];
+    if([[ue objectForKey:@"currentmethod"] isEqual:[ue objectForKey:@"method"]])
+      [set addObject:@"method"];
   }
 
   // line number and pc
@@ -1797,6 +2076,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   NSInvocation *invocation;
   NSUInteger nargsininvocation;
 }
+
+- (BOOL) hasInstance { return !!instance; }
 
 - (BOOL) isEqual:(id)other {
   if([other isMemberOfClass:[self class]]) {
@@ -1925,7 +2206,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     if(strcmp(type, "i")==0) {
       int ival;
       if(!ISINT(v)) {
-        [mp typeError:v expected:@"int" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i+1]}];
+        [mp typeError:v expected:@"int" details:@{@"method": name, @"arg":[NSNumber numberWithInt:(int)i+1]}];
         return NULL;
       }
       ival=[N(v) intValue];
@@ -1933,7 +2214,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     } else if (strcmp(type, "c")==0) {
       BOOL bval;
       if(!ISBOOL(v)) {
-        [mp typeError:v expected:@"bool" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i+1]}];
+        [mp typeError:v expected:@"bool" details:@{@"method": name, @"arg":[NSNumber numberWithInt:(int)i+1]}];
         return NULL;
       }
       bval=[N(v) boolValue];
@@ -1943,7 +2224,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(v==[NSNull null]) v=nil;
       [invocation setArgument:&v atIndex:INST((NSInteger)i+2)];
     } else {
-      [mp typeError:v expected:@"known type" details:@{@"function": name, @"arg":[NSNumber numberWithInt:(int)i+1], @"typesig":[NSString stringWithUTF8String:type]}];
+      [mp typeError:v expected:@"known type" details:@{@"method": name, @"arg":[NSNumber numberWithInt:(int)i+1], @"typesig":[NSString stringWithUTF8String:type]}];
       return NULL;
     }
   }
@@ -1982,7 +2263,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   } else if(strcmp(returntype, "v")==0) {
     return [NSNull null];
   } else {
-    [mp typeError:self expected:@"known type" details:@{@"function": name, @"returntypesig":[NSString stringWithUTF8String:returntype]}];
+    [mp typeError:self expected:@"known type" details:@{@"method": name, @"returntypesig":[NSString stringWithUTF8String:returntype]}];
     return NULL;
   }
 }

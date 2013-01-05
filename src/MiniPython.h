@@ -6,35 +6,18 @@
 @end
 
 
-@interface MiniPython : NSObject
-- (void) setClient:(id <MiniPythonClientDelegate>)client;
-- (void) clear;
-// inputstream must already be opened
-- (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
-+ (NSString*) toPyString:(NSObject*) value;
-+ (NSString*) toPyTypeString:(NSObject*)value;
-+ (NSString*) toPyReprString:(NSObject*)value;
-- (void) setError:(NSString*)description userInfo:(NSDictionary*)userinfo;
-- (void) setNSError:(NSError*)error;
-- (NSError*) getError;
-- (void) addModule:(NSObject*)module named:(NSString*)name;
-- (NSObject*) callMethod:(NSString*)name args:(NSArray*)args;
-@end
-
-// Error handling
-extern NSString * const MiniPythonErrorDomain;
-
 enum MiniPythonErrorCode {
   // these errors occur during loading
   MiniPythonOutOfMemory=0,
-  MiniPythonEndOfStreamError=1,    // unexpected end of stream reading data
-  MiniPythonStreamError=2,         // error reading from stream
-  MiniPythonUnknownVersionError=3, // unknown jmp bytecode version
+  MiniPythonNeedsClear=1,          // you need to call clear to reuse the instance
+  MiniPythonEndOfStreamError=2,    // unexpected end of stream reading data
+  MiniPythonStreamError=3,         // error reading from stream
+  MiniPythonUnknownVersionError=4, // unknown jmp bytecode version
 
   // not because of well formed code
-  MiniPythonInternalError=4,       // various out of bounds and similar errors which are only
-                                   // possible from malformed bytecode
-  MiniPythonRuntimeError=5,        // exceeding stack bounds etc
+  MiniPythonInternalError=10,       // various out of bounds and similar errors which are only
+                                    // possible from malformed bytecode
+  MiniPythonRuntimeError=11,        // exceeding stack bounds etc
 
   /// various things
   MiniPythonTypeError=100,         // incorrect types
@@ -48,3 +31,22 @@ enum MiniPythonErrorCode {
   MiniPythonSyntaxError=108,       // return outside a function
   MiniPythonValueError=109         // correct type, wrong contents
 };
+
+@interface MiniPython : NSObject
+- (void) setClient:(id <MiniPythonClientDelegate>)client;
+- (void) clear;
+// inputstream must already be opened
+- (BOOL) setCode:(NSInputStream*)code error:(NSError**)error;
++ (NSString*) toPyString:(NSObject*) value;
++ (NSString*) toPyTypeString:(NSObject*)value;
++ (NSString*) toPyReprString:(NSObject*)value;
+- (void) setError:(enum MiniPythonErrorCode)code reason:(NSString*)reason userInfo:(NSDictionary*)userinfo;
+- (void) setNSError:(NSError*)error;
+- (NSError*) getError;
+- (void) addModule:(NSObject*)module named:(NSString*)name;
+- (NSObject*) callMethod:(NSString*)name args:(NSArray*)args error:(NSError**)error;
+@end
+
+// Error handling
+extern NSString * const MiniPythonErrorDomain;
+

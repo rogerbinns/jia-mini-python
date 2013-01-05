@@ -150,13 +150,21 @@ class MiniPython(unittest.TestCase):
         self.assertEqual(err, "")
         results=json.loads(out)
         self.assertEqual(len(results), len(tests))
+
+        allok=True
         for num, (lineno, pattype, pat, _) in enumerate(tests):
             out,err=results[num]
             against=[out,err][pattype=="err"]
             if "*" in pat:
-                self.assert_(re.match(pat, against, re.DOTALL|re.IGNORECASE), "Failed to match at line %d of errors.py\n%s = %s" % (lineno, pattype, against))
+                if not re.match(pat, against, re.DOTALL|re.IGNORECASE):
+                    print >> sys.stderr, "\nFailed to match at line %d of errors.py. Expected %r\n%s = %s" % (lineno, pat, pattype, against)
+                    allok=False
             else:
-                self.assert_(against.startswith(pat), "Failed to prefix at line %d of errors.py\n%s = %s" % (lineno,pattype, against))
+                if not against.startswith(pat):
+                    print >> sys.stderr,  "\nFailed to prefix at line %d of errors.py.  Expected %r\n%s = %s" % (lineno,pat,pattype, against)
+                    allok=False
+        assert allok
+
 
     def testPrintFunction(self):
         "Test print function"
@@ -183,13 +191,13 @@ class MiniPython(unittest.TestCase):
         if False:
             # Cobertura bug: doesn't see these so no point running them
             for i in [20]+range(35,128)+range(134,160)+range(165,200)+range(202,56):
-                testpats.append(("RuntimeError: Unknown/unimplemented opcode: "+str(i),
+                testpats.append(("(Runtime|Internal)Error: Unknown/unimplemented opcode: "+str(i),
                                  array.array('B', [0,0,0,0, 0,0, 3,0, i,0,0])))
 
-        testpats.append(("RuntimeError: Unknown/unimplemented opcode: 245",
+        testpats.append(("(Runtime|Internal)Error: Unknown/unimplemented opcode: 245",
                          array.array('B', [0,0,0,0, 0,0, 3,0, 245,0,0])))
 
-        testpats.append(("Failure: java.io.IOException: Unknown JMP version number 1",
+        testpats.append(("(Failure|UnknownVersionError).*Unknown JMP version( 1)?",
                          array.array('B', [1,0])))
 
         testpats.append(("Unexpected end of file",
@@ -202,7 +210,7 @@ class MiniPython(unittest.TestCase):
                 # array decides tempfiles are not open files
                 code.tofile(open(tmpf.name, "wb"))
                 out,err=self.run_mp(tmpf.name)
-                self.assert_(err.startswith(expect), "Expected: %r, Got: %r" % (expect,err))
+                self.assert_(re.match(expect+".*", err, re.DOTALL|re.IGNORECASE), "Expected: %r, Got: %r" % (expect,err))
 
     def testSource(self):
         "Source checks"
