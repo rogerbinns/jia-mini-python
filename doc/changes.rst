@@ -8,6 +8,9 @@ There is now a compatible Objective C solution that works on iOS and Mac
 
 Added :jdoc:`toPyReprString` for Java
 
+``bool`` now always returns a value.  Before it would give TypeError
+for unknown types, which now give True.
+
 1.2
 ===
 
