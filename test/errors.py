@@ -254,7 +254,7 @@ test1.call("doesn't exist")
 #> TypeError
 apply(None, [])
 
-#> RuntimeError
+#> (RuntimeError|.*stack overflow).*
 x=test1.call
 apply(test1.call, ["x"]*65536)
 
