@@ -4,6 +4,10 @@ DATE = "5 September 2012"
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
+# You need the version of clang in llvm32 to get correct coverage.  Older versions
+# overwrite the tracking files instead of appending on each run
+COVERAGECC=/Users/rogerb/llvm32/bin/clang
+
 .PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind ocoverage clean
 
 help:
@@ -47,17 +51,15 @@ otest: obin
 obin: bin/testminipython
 
 bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makefile
-	$(CC) -g -Weverything -fobjc-arc -fsanitize=address -fsanitize=integer -fsanitize=undefined \
-	-fsanitize=alignment -fsanitize=bool -fsanitize=bounds -fsanitize=enum -fsanitize=integer-divide-by-zero \
-	-fsanitize=null -fsanitize=object-size -fsanitize=return -fsanitize=shift -fsanitize=signed-integer-overflow \
-	-fsanitize=unreachable -fsanitize=unsigned-integer-overflow -fsanitize=vla-bound -fvptr \
+	$(CC) -g -Weverything -fobjc-arc \
 	src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
 
 # use -a with gcov to get each block
 ocoverage:
 	-rm -f *.gcda *.gcno *.gcov
-	$(CC) --coverage -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
-	-python test/main_test.py objc
+	$(COVERAGECC) --version | grep 3.2 # Requires clang/llvm3.2 http://stackoverflow.com/questions/8826682/
+	$(COVERAGECC) --coverage -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
+	python test/main_test.py objc
 	gcov src/MiniPython.m
 
 valgrind: obin

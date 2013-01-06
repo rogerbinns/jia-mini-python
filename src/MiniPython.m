@@ -1,3 +1,7 @@
+
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
+
 #import "MiniPython.h"
 // #import <Foundation/NSObjCRuntime.h>
 #import <objc/runtime.h>
@@ -133,7 +137,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
    if(res!=2) goto onerror; \
    v=(buf[0] | (buf[1]<<8)); }
 
-- (BOOL) setCode:(NSInputStream*)stream error:(NSError**)error {
+- (BOOL) setCode:(NSInputStream*)stream error:(NSError* __autoreleasing*)error {
   NSInteger res=0, errorcode=0;
   int stringbuflen=256;
   void * stringbuf=malloc((size_t)stringbuflen);
@@ -142,7 +146,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   // check clear was called
   if(stack) {
     [self internalError:MiniPythonNeedsClear reason:@"You must clear to reuse this instance"];
-    *error=[self getError]; return NO;
+    if(error) *error=[self getError]; return NO;
   }
   [self addBuiltins];
 
@@ -1737,7 +1741,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [context setValue:mod forName:name];
 }
 
-- (NSObject*) callMethod:(NSString*)name args:(NSArray*)args error:(NSError**)error {
+- (NSObject*) callMethod:(NSString*)name args:(NSArray*)args error:(NSError* __autoreleasing*)error {
   NSObject *retval;
 
   int savedsp=stacktop, savedpc=pc;

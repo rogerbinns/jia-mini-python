@@ -1,3 +1,6 @@
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
+
 #import "MiniPython.h"
 
 #include <stdio.h>
