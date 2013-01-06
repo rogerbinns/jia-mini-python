@@ -120,6 +120,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   free(code);
   code=NULL;
+
+  errorindicator=nil;
 }
 
 
@@ -251,6 +253,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     if(!code || pc>=codesize || pc<0) ERROR(InternalError,@"invalid pc");
     op=code[pc++];
     if(op>=128) {
+      if(pc+1>=codesize) ERROR(InternalError,@"invalid pc supplemental");
       val=code[pc] | (code[pc+1]<<8);
       pc+=2;
     }
@@ -1198,7 +1201,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 - (NSObject*) builtin_apply:(NSObject*)func :(NSArray*)args {
-  if((NSUInteger)stacktop+(args?[args count]:0u)>=(NSUInteger)stacklimit)
+  if(![self builtin_callable:func]) TYPEERROR(func, @"method");
+  if(!ISLIST(args)) TYPEERROR(args, @"list");
+  if(stacktop+(int)[args count]>=stacklimit)
     ERROR(InternalError, @"stack overflow in call");
   return [self call:func args:args];
 }
@@ -1518,6 +1523,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
       if(cmp) {
         NSObject* res=[self call:cmp args:@[left, right]];
+        if([self getError]) return (NSComparisonResult)NSOrderedSame;
         if(!ISINT(res)) {[self typeError:res expected:@"int"]; return (NSComparisonResult)NSOrderedSame;}
         cmpresult=[N(res) intValue];
       } else
