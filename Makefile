@@ -57,8 +57,8 @@ bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makef
 # use -a with gcov to get each block
 ocoverage:
 	-rm -f *.gcda *.gcno *.gcov
-	$(COVERAGECC) --version | grep 3.2 # Requires clang/llvm3.2 http://stackoverflow.com/questions/8826682/
-	$(COVERAGECC) --coverage -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
+	$(COVERAGECC) --version | grep -q 3.2 # Requires clang/llvm3.2 http://stackoverflow.com/questions/8826682/
+	$(COVERAGECC) --coverage -fsanitize -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
 	python test/main_test.py objc
 	gcov src/MiniPython.m
 

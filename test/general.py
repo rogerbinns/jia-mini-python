@@ -49,6 +49,7 @@ assert toplevel==6
 
 # make sure all types can end up as dict keys
 x={}
+thelist=[]
 x.update({
         None: 1,
         True: 2,
@@ -60,7 +61,7 @@ x.update({
         cmp: 8,
         test1.retSelf: 9,
         test1: 10,
-        [].sort: 11
+        thelist.sort: 11
 })
 
 assert len(x)==11
@@ -72,8 +73,9 @@ assert x[3]     ==5
 assert x[""]    ==6
 assert x[meth]  ==7
 assert x[cmp]   ==8
-assert x[test1.retSelf] ==9
 assert x[test1] ==10
+assert x[test1.retSelf] ==9
+assert x[thelist.sort]==11
 assert [].sort not in x # different instance
 
 #  multi globals

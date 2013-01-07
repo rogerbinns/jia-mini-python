@@ -40,7 +40,7 @@ def jmp_compile_internal(infile, outfile=None):
         print_function=False
         asserts=True
         line_table=True
-        annotate=True
+        annotate=False
         jmpoutput=True
     if outfile is None:
         outfile=os.path.splitext(infile)[1]+".jmp"
@@ -111,11 +111,21 @@ class MiniPython(unittest.TestCase):
         "Test issue 10"
         self.run_py("test/issue10.py")
 
+    def testStringLengths(self):
+        with tempfile.NamedTemporaryFile(suffix=".py") as tmpf:
+            for i in range(0, 65536, 257):
+                print >> tmpf, "print len('"+'a'*i+"')"
+            tmpf.flush()
+            out=self.run_py(tmpf.name)
+            expect="\n".join([str(i) for i in range(0, 65536, 257)])+"\n"
+            self.assertEqual(out, expect)
+
     def run_py(self, name):
         out,err=self.jmp_compile(name)
         self.assertEqual("", err)
         out,err=self.run_mp(os.path.splitext(name)[0]+".jmp")
         self.assertEqual("", err)
+        return out
 
     def testErrors(self):
         "Test various operations that should result in errors"
@@ -213,7 +223,7 @@ class MiniPython(unittest.TestCase):
                 self.assert_(re.match(expect+".*", err, re.DOTALL|re.IGNORECASE), "Expected: %r, Got: %r" % (expect,err))
 
     def testSource(self):
-        "Source checks"
+        "Source checks (Java)"
         for lineno,line in enumerate(open("src/com/rogerbinns/MiniPython.java", "rtU")):
             if "internalError" in line and "private" not in line and "SOURCECHECKOK" not in line:
                 self.assert_("throw internalError" in line, "Line %d doesn't throw internalError" % (lineno+1,))
