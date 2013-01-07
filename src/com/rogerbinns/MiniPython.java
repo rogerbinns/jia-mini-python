@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 
 /**
  * Encapsulates running a Python syntax file.
- *
+ * 
  * The source should have been transformed using jmp-compile. The class cannot
  * be used concurrently. There is no shared state between instances.
  */
@@ -51,7 +51,7 @@ public class MiniPython {
 
 	/**
 	 * Removes all internal state.
-	 *
+	 * 
 	 * This ensures that garbage collection is easier. You can reuse this
 	 * instance by calling addModule to reregister modules and setCode to run
 	 * new code.
@@ -67,11 +67,11 @@ public class MiniPython {
 
 	/**
 	 * Reads and executes code from the supplied stream
-	 *
+	 * 
 	 * The stream provided must satisfy reads completely (eg if 27 bytes is
 	 * asked for then that number should be returned in the read() call unless
 	 * end of file is reached.)
-	 *
+	 * 
 	 * @param stream
 	 *            The stream is not closed and you can have additional content
 	 *            after the jmp.
@@ -97,8 +97,8 @@ public class MiniPython {
 		// version
 		int version = get16(stream);
 		if (version != 0)
-			throw new IOException(String.format(
-					"Unknown JMP version %d", version));
+			throw new IOException(String.format("Unknown JMP version %d",
+					version));
 
 		// string table
 		int stablen = get16(stream);
@@ -262,7 +262,7 @@ public class MiniPython {
 		}
 	}
 
-	private final class TModuleNativeMethod implements TNativeMethod {
+	private final class TModuleNativeMethod implements TNativeMethod, Comparable<TModuleNativeMethod> {
 		TModule mod;
 		String name;
 		Method nativeMethod;
@@ -294,7 +294,7 @@ public class MiniPython {
 		public boolean equals(Object other) {
 			return other instanceof TModuleNativeMethod
 					&& this.name.equals(((TModuleNativeMethod) other).name)
-					&& this.mod.o.equals(((TModuleNativeMethod) other).mod.o);
+					&& this.mod.o == (((TModuleNativeMethod) other).mod.o);
 		}
 
 		@Override
@@ -316,6 +316,20 @@ public class MiniPython {
 		public Object[] getPrefixArgs() {
 			return null;
 		}
+
+		public int compareTo(TModuleNativeMethod o) {
+			try {
+				return builtin_cmp(this.toString(), o.toString());
+			} catch (ExecutionError e) {
+				return 0;
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			return 7;
+		}
+
 	}
 
 	private final void addBuiltins() {
@@ -331,7 +345,7 @@ public class MiniPython {
 
 	/**
 	 * Calls a method in Python and returns the result
-	 *
+	 * 
 	 * @param name
 	 *            Global method name
 	 * @param args
@@ -1203,8 +1217,8 @@ public class MiniPython {
 			Throwable cause = (e.getCause() != null) ? e.getCause() : e;
 			if (cause instanceof ExecutionError)
 				throw (ExecutionError) cause;
-			throw internalError(cause.getClass().getName(),
-					tm.toString(), cause);
+			throw internalError(cause.getClass().getName(), tm.toString(),
+					cause);
 		}
 		stack[++stacktop] = result;
 	}
@@ -1249,11 +1263,11 @@ public class MiniPython {
 	/**
 	 * Call this method when your callbacks need to halt execution due to an
 	 * error
-	 *
+	 * 
 	 * This method will do the internal bookkeeping necessary in order to
 	 * provide diagnostics to the original caller and then throw an
 	 * ExecutionError which you should not catch.
-	 *
+	 * 
 	 * @param exctype
 	 *            Best practise is to use the name of a Python exception (eg
 	 *            "TypeError")
@@ -1270,11 +1284,11 @@ public class MiniPython {
 	/**
 	 * Call this method when your callbacks need to halt execution due to an
 	 * error
-	 *
+	 * 
 	 * This method will do the internal bookkeeping necessary in order to
 	 * provide diagnostics to the original caller and then throw an
 	 * ExecutionError which you should not catch.
-	 *
+	 * 
 	 * @param exctype
 	 *            Best practise is to use the name of a Python exception (eg
 	 *            "TypeError")
@@ -1464,10 +1478,10 @@ public class MiniPython {
 	/**
 	 * Returns a string representing the object using Python nomenclature where
 	 * possible
-	 *
+	 * 
 	 * For example `null` is returned as `None`, `true` as `True` etc. Container
 	 * types like dict/Map and list/List will include the items.
-	 *
+	 * 
 	 * @param o
 	 *            Object to stringify. Can be null.
 	 */
@@ -1475,10 +1489,11 @@ public class MiniPython {
 		return _toPyString(o, false, null);
 	}
 
-       /**
-        * Same as toPyString except strings are quoted and backslash escaped.  If you emit an
-        * error message this is preferable as it makes it clear a value is a string.
-	 *
+	/**
+	 * Same as toPyString except strings are quoted and backslash escaped. If
+	 * you emit an error message this is preferable as it makes it clear a value
+	 * is a string.
+	 * 
 	 * @param o
 	 *            Object to stringify. Can be null.
 	 */
@@ -1486,16 +1501,15 @@ public class MiniPython {
 		return _toPyString(o, true, null);
 	}
 
-
 	/**
 	 * Returns a string representing the type of the object using Python
 	 * nomenclature where possible
-	 *
+	 * 
 	 * For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as
 	 * `dict` etc. You can also pass in Class objects as well as instances. Note
 	 * that primitives (eg `int`) and the corresponding boxed type (eg
 	 * `Integer`) will both be returned as the same string (`int` in this case).
-	 *
+	 * 
 	 * @param o
 	 *            Object whose type to stringify, or a Class or null
 	 */
@@ -1529,7 +1543,7 @@ public class MiniPython {
 
 	/**
 	 * Callbacks to use for specific behaviour
-	 *
+	 * 
 	 * @param client
 	 *            Replaces existing client with this one
 	 */
@@ -1539,7 +1553,7 @@ public class MiniPython {
 
 	/**
 	 * Makes methods on the methods Object available to the Python
-	 *
+	 * 
 	 * @param name
 	 *            Module name in the Python environment
 	 * @param object
@@ -1572,10 +1586,10 @@ public class MiniPython {
 			return false;
 		if (o instanceof List)
 			return ((List) o).size() > 0;
-		if (o instanceof Map)
-                    return ((Map) o).size() > 0;
-                // treat all other non-null items as true
-		return true;
+			if (o instanceof Map)
+				return ((Map) o).size() > 0;
+				// treat all other non-null items as true
+				return true;
 	}
 
 	private boolean builtin_callable(Object o) {
@@ -1927,7 +1941,7 @@ public class MiniPython {
 	public interface Client {
 		/**
 		 * Request to print a string
-		 *
+		 * 
 		 * @param s
 		 *            String to print. May or may not contain a trailing newline
 		 *            depending on code
@@ -1938,10 +1952,10 @@ public class MiniPython {
 
 		/**
 		 * Called whenever there is an ExecutionError.
-		 *
+		 * 
 		 * This provides one spot where you can perform logging and other
 		 * diagnostics.
-		 *
+		 * 
 		 * @param error
 		 *            The instance that is about to be thrown
 		 */
@@ -1950,9 +1964,9 @@ public class MiniPython {
 
 	/**
 	 * Encapsulates what would be an Exception in Python.
-	 *
+	 * 
 	 * Do not instantiate one directly - call signalError instead.
-	 *
+	 * 
 	 */
 	public class ExecutionError extends Exception {
 		static final long serialVersionUID = -4271385191079964823L;
@@ -1988,7 +2002,7 @@ public class MiniPython {
 
 		/**
 		 * Returns the type of the error.
-		 *
+		 * 
 		 * This typically corresponds to a Python exception (eg `TypeError` or
 		 * `IndexError`)
 		 */
@@ -1999,7 +2013,7 @@ public class MiniPython {
 		/**
 		 * Returns the line number which was being executed when the error
 		 * happened.
-		 *
+		 * 
 		 * If you omitted line numbers then -1 is returned.
 		 */
 		public int linenumber() {
@@ -2017,7 +2031,7 @@ public class MiniPython {
 
 		/**
 		 * Returns program counter when error occurred.
-		 *
+		 * 
 		 * Note that due to internal implementation details this is the next
 		 * instruction to be executed, not the currently executing one.
 		 */
