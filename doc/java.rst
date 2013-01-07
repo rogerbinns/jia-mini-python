@@ -172,6 +172,14 @@ class MiniPython
       :param cause:  The underlying reason why this exception is being caused
       :raises ExecutionError:  Always thrown
 
+   .. method:: String toPyReprString(Object o)
+
+      Same as toPyString except strings are quoted and backslash escaped. If
+      you emit an error message this is preferable as it makes it clear a value
+      is a string.
+
+      :param o:  Object to stringify. Can be null.
+
    .. method:: String toPyString(Object o)
 
       Returns a string representing the object using Python nomenclature where
