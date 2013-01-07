@@ -51,7 +51,7 @@ list type
    Removes the last item in the list and returns it
 
 .. method:: sort(cmp=None, key=None, reverse=False)
- 
+
    You can omit some or all of the arguments.  Since keyword arguments
    are not supported you will need to supply preceding arguments.
 
@@ -103,9 +103,7 @@ str type
    :returns: List of substrings (each not including the separator)
 
    Splits string into a list of substrings around `sep` stopping when
-   maxsplits have been found.  Calls :jdoc:`String.split
-   <java/lang/String.html#split(java.lang.String, int)>` ensuring
-   `sep` is not treated as a regex.
+   maxsplits have been found.
 
 .. method:: startswith(prefix)
 
@@ -147,7 +145,7 @@ Global functions
 .. function:: cmp(left, right)
 
    Compares left against right depending on if they are less, equal or
-   greater.  (:ref:`Note <comparisons>`) 
+   greater.  (:ref:`Note <comparisons>`)
 
 .. function:: filter(function, list)
 
@@ -263,7 +261,7 @@ similar to how Javascript works.)::
 	  # method members
 	  "area": area,
 	  "draw": draw}
-    
+
     # This is how we make a new instance
     circ=Circle(25, 3, 12)
     print circ.area()

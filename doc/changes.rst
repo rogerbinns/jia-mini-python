@@ -11,6 +11,8 @@ Added :jdoc:`toPyReprString` for Java
 ``bool`` now always returns a value.  Before it would give TypeError
 for unknown types, which now give True.
 
+Correct Java string.split for various corner cases.
+
 1.2
 ===
 

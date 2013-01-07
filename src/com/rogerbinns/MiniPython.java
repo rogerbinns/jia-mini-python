@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Encapsulates running a Python syntax file.
@@ -1766,7 +1765,7 @@ public class MiniPython {
 	@SuppressWarnings({ "unused", "fallthrough" })
 	private List<String> instance_str_split(String s, Object... args)
 			throws ExecutionError {
-		int maxsplit = 0;
+		int maxsplit = -1;
 		String sep = null;
 
 		switch (args.length) {
@@ -1778,20 +1777,50 @@ public class MiniPython {
 				throw internalError("TypeError",
 						"maxsplit should be an integer");
 			maxsplit = (Integer) args[1];
-			maxsplit++; // Java and Python count differently
 		case 1:
 			if (!(args[0] instanceof String))
-				throw internalError("TypeError", "sep should be an integer");
+				throw internalError("TypeError", "sep should be a string");
 			sep = (String) args[0];
 			if (sep.length() == 0)
 				throw internalError("ValueError", "empty separator");
 		case 0:
 		}
-		String[] splits = s.split((sep != null) ? Pattern.quote(sep) : "\\s+",
-				maxsplit);
-		ArrayList<String> res = new ArrayList<String>(splits.length);
-		for (String str : splits) {
-			res.add(str);
+
+		ArrayList<String> res=new ArrayList<String>();
+		int pos=0;
+		char c;
+		if(sep==null) {
+			for(;;) {
+				while(pos<s.length() && (s.charAt(pos)==' ' || s.charAt(pos)=='\t' || s.charAt(pos)=='\r' || s.charAt(pos)=='\n')) {
+					pos++;
+				}
+				if(pos==s.length())
+					return res;
+				int pos2=pos;
+				while(pos2<s.length() && s.charAt(pos2)!=' ' && s.charAt(pos2)!='\t' && s.charAt(pos2)!='\r' && s.charAt(pos2)!='\n') {
+					pos2++;
+				}
+				res.add(s.substring(pos, pos2));
+				pos=pos2;
+			}
+		}
+
+		while(pos<s.length()) {
+			if(maxsplit>=0 && res.size()>=maxsplit) {
+				res.add(s.substring(pos));
+				return res;
+			}
+			int found=s.indexOf(sep, pos);
+			if(found<0) {
+				res.add(s.substring(pos));
+				return res;
+			}
+			res.add(s.substring(pos, found));
+			pos=found+sep.length();
+		}
+
+		if(s.endsWith(sep)) {
+			res.add("");
 		}
 		return res;
 	}
