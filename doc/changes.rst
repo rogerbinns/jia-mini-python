@@ -13,6 +13,8 @@ for unknown types, which now give True.
 
 Correct Java string.split for various corner cases.
 
+Made Java implemented methods work correctly as dictionary keys.
+
 1.2
 ===
 
