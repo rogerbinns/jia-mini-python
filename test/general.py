@@ -163,6 +163,7 @@ assert int(2+2)==4
 assert int(True)==1
 assert int(False)==0
 assert int("7")==7
+assert int("0")==0
 assert int("-2345")==-2345
 
 assert len("")==0

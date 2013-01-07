@@ -533,7 +533,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         if(!ISINT(stack[stacktop])) ERROR(InternalError, @"DICT expected int");
         int nitems=[N(stack[stacktop--]) intValue];
         stacktop-=nitems*2;
-        if(nitems && (stacktop+1<0 || stacktop+nitems*2>=stacklimit))
+        if(nitems<0 || (nitems && (stacktop+1<0 || nitems>stacklimit || stacktop+nitems*2>=stacklimit)))
           ERROR(RuntimeError, @"Exceeded stack bounds in dict");
         NSMutableDictionary *res=[NSMutableDictionary dictionaryWithCapacity:(NSUInteger)nitems];
         for(int i=0; i<nitems; i++) {
@@ -548,7 +548,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         if(!ISINT(stack[stacktop])) ERROR(InternalError, @"LIST expected int");
         int nitems=[N(stack[stacktop--]) intValue];
         stacktop-=nitems;
-        if(nitems && (stacktop+1<0 || stacktop+nitems>=stacklimit))
+        if(nitems<0 || (nitems && (stacktop+1<0 || nitems>stacklimit || stacktop+nitems>=stacklimit)))
           ERROR(RuntimeError, @"Exceeded stack bounds in list");
         NSMutableArray *res=[NSMutableArray arrayWithCapacity:(NSUInteger)nitems];
         for(int i=0; i<nitems; i++)
@@ -639,7 +639,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         int length=ISSTRING(object)?(int)[S(object) length]:(int)[L(object) count];
         int ifrom=ISNONE(from)?0:[N(from) intValue];
         int ito=ISNONE(to)?length:[N(to) intValue];
-        // NB: slices are allow to supply out of bounds ranges
+        // NB: slices are allowed to supply out of bounds ranges
         if(ifrom<0) ifrom+=length;
         if(ifrom<0) ifrom=0;
         if(ifrom>=length) { ifrom=0; ito=0; }
@@ -647,9 +647,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         if(ito<0) ito=0;
         if(ito>length) ito=length;
         if(ito<ifrom) ito=ifrom;
-        if(ISLIST(object))
-          stack[++stacktop]=[L(object) subarrayWithRange:NSMakeRange((NSUInteger)ifrom, (NSUInteger)(ito-ifrom))];
-        else
+        if(ISLIST(object)) {
+          // subarraywithrange on mutablelist returns a non-mutablelist so we have to do this the long way
+          NSArray *sub=[L(object) subarrayWithRange:NSMakeRange((NSUInteger)ifrom, (NSUInteger)(ito-ifrom))];
+          NSMutableArray *res=[NSMutableArray arrayWithCapacity:[sub count]];
+          [res addObjectsFromArray:sub];
+          stack[++stacktop]=res;
+        } else
           stack[++stacktop]=[S(object) substringWithRange:NSMakeRange((NSUInteger)ifrom, (NSUInteger)(ito-ifrom))];
         continue;
       }
@@ -808,6 +812,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
         int nargs = [N(stack[stacktop--]) intValue];
         BOOL nl = [N(stack[stacktop--]) boolValue];
 
+        if(nargs<0 || nargs>stacklimit)
+          ERROR(RuntimeError, @"Exceeded stack bounds in print");
+
         stacktop -= nargs;
         if(nargs && (stacktop+1<0 || stacktop+nargs>=stacklimit))
           ERROR(RuntimeError, @"Exceeded stack bounds in print");
@@ -908,6 +915,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
         if(!ISINT(stack[stacktop])) ERROR(InternalError, @"bad method call sequence");
         int nargs = [N(stack[stacktop]) intValue];
+        if(nargs<0 || nargs>stacklimit)
+          ERROR(RuntimeError, @"Exceeded stack bounds in call");
 
         if([func isKindOfClass:[MiniPythonNativeMethod class]]) {
           stacktop--;
@@ -1128,6 +1137,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       ADDCHAR(c); continue;
     }
 
+    if(pos<[format length]  && [format characterAtIndex:pos]=='%') {
+      pos++;
+      ADDCHAR((unichar)'%');
+      continue;
+    }
+
     BOOL flag_left=NO, flag_plus=NO, flag_space=NO, flag_zero=NO, flag_done=NO;
     do {
       if(pos>=[format length])
@@ -1159,7 +1174,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     NSObject *arg=[args objectAtIndex:argpos];
     argpos++;
     switch(c) {
-    case '%': ADDCHAR((unichar)'%'); continue;
     case 's': {
       NSString *s=[MiniPython toPyString:arg];
       if([s length]>=width) {
@@ -1918,12 +1932,24 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   case MiniPythonTypeError:
     [res appendString:@"TypeError:"];
     if([ue objectForKey:@"got"]) {
-      [res appendFormat:@" Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
-      [set addObject:@"got"];
-      [set addObject:@"expected"];
-      if([ue objectForKey:@"arg"]) {
-        [res appendFormat:@" (argument #%@)", [ue objectForKey:@"arg"]];
-        [set addObject:@"arg"];
+      if ([ue objectForKey:@"returntypesig"]) {
+        [res appendFormat:@" Unknown return format \"%@\"", [ue objectForKey:@"returntypesig"]];
+        [set addObject:@"returntypesig"];
+        if([ue objectForKey:@"got"]) [set addObject:@"got"];
+        if([ue objectForKey:@"expected"]) [set addObject:@"expected"];
+      } else {
+        [res appendFormat:@" Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
+        [set addObject:@"got"];
+        [set addObject:@"expected"];
+        if([ue objectForKey:@"arg"]) {
+          [res appendFormat:@" (argument #%@", [ue objectForKey:@"arg"]];
+          [set addObject:@"arg"];
+          if([ue objectForKey:@"typesig"]) {
+            [res appendFormat:@" with signature \"%@\"", [ue objectForKey:@"typesig"]];
+            [set addObject:@"typesig"];
+          }
+          [res appendString:@")"];
+        }
       }
       if([ue objectForKey:@"method"])
         [set addObject:@"method"];
@@ -2160,8 +2186,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(!*curname) {
         // zero args
         if(first) first=NO;
-        else [res appendString:@" or "];
-        [res appendString:@" zero"];
+        else [res appendString:@"or"];
+        [res appendString:@" zero "];
         continue;
       }
       // right prefix but wrong method
@@ -2173,8 +2199,8 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       }
       if(*curname) continue;
       if(first) first=NO;
-      else [res appendString:@" or "];
-      [res appendFormat:@" %d", nargs-!!instance];
+      else [res appendString:@"or"];
+      [res appendFormat:@" %d ", nargs-!!instance];
       continue;
     }
   }
@@ -2234,7 +2260,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(v==[NSNull null]) v=nil;
       [invocation setArgument:&v atIndex:INST((NSInteger)i+2)];
     } else {
-      [mp typeError:v expected:@"known type" details:@{@"method": name, @"arg":[NSNumber numberWithInt:(int)i+1], @"typesig":[NSString stringWithUTF8String:type]}];
+      [mp typeError:v expected:@"supported type" details:@{@"method": name, @"arg":[NSNumber numberWithInt:(int)i+1], @"typesig":[NSString stringWithUTF8String:type]}];
       return NULL;
     }
   }
@@ -2273,7 +2299,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   } else if(strcmp(returntype, "v")==0) {
     return [NSNull null];
   } else {
-    [mp typeError:self expected:@"known type" details:@{@"method": name, @"returntypesig":[NSString stringWithUTF8String:returntype]}];
+    [mp typeError:self expected:@"known return type" details:@{@"method": name, @"returntypesig":[NSString stringWithUTF8String:returntype]}];
     return NULL;
   }
 }

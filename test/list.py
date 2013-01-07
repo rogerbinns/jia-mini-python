@@ -101,3 +101,15 @@ assert l==l2
 l=[{"foo": 1}, {"foo": 7}, {"foo": 2}]
 l.sort(None, lambda x: x["foo"])
 assert l==[{"foo": 1}, {"foo": 2}, {"foo": 7}]
+
+assert map(lambda x: x+1, range(5)) == range(1,6)
+
+l=[3, 1,2,3,4,5,6]
+
+l1=l[:]
+l1.sort()
+assert l1!=l
+l2=l[:]
+l2.sort(cmp)
+
+assert l1==l2

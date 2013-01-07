@@ -57,6 +57,11 @@ static void usage() {
 - (void) signalBatman { [mp setError:MiniPythonGeneralError reason:@"Batman" userInfo:nil]; }
 - (id) badeqlist { return [[ListBadEquals alloc] init]; }
 - (id) badeqDict { return [[MapBadEquals alloc] init]; }
+- (void) foo {}
+- (void) foo:(int)i {(void)i;}
+- (void) foo:(int)i :(int)j {(void)i;(void)j;}
+- (void) takesFloat:(float)v { (void)v; }
+- (float) returnsFloat { return 3.14f; }
 @end
 
 @implementation ListBadEquals

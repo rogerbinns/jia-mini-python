@@ -35,9 +35,9 @@ with open(opj(topdir, "host", "jmp-compile"), "rtU") as f:
     exec f in jmpcompilemod.__dict__, jmpcompilemod.__dict__
     jmpcompilerobject=jmpcompilemod.Compiler()
 
-def jmp_compile_internal(infile, outfile=None):
+def jmp_compile_internal(infile, outfile=None, print_func=False):
     class options:
-        print_function=False
+        print_function=print_func
         asserts=True
         line_table=True
         annotate=False
@@ -134,18 +134,29 @@ class MiniPython(unittest.TestCase):
         # should raise that error
         tests=[]
         code=[]
+        add=True
         for lineno,line in enumerate(open("test/errors.py")):
             lineno+=1 # we count from one for files
             if line.startswith("#>") or line.startswith("#."):
                 if code:
-                    tests.append( (linestart, pattype, pat, "".join(code)) )
+                    if add:
+                        tests.append( (linestart, pattype, pat, "".join(code)) )
                     code=[]
+                    add=True
                 linestart=lineno
                 pat=line[2:].strip()
+                if pat.endswith("(objc)"):
+                    pat=pat[:-len("(objc)")].strip()
+                    if self.flavour!="objc":
+                        add=False
+                if pat.endswith("(java)"):
+                    pat=pat[:-len("(java)")].strip()
+                    if self.flavour!="java":
+                        add=False
                 pattype=["out","err"][line[1]==">"]
                 continue
             code.append(line)
-        if code:
+        if code and add:
             tests.append( (linestart, pattype, pat, "".join(code)) )
 
         with open("test/errors.jmp", "wb") as jmp:
@@ -154,7 +165,7 @@ class MiniPython(unittest.TestCase):
                         tempfile.NamedTemporaryFile(prefix="runtest") as tmpjmpf:
                     tmppyf.write(code)
                     tmppyf.flush()
-                    jmp_compile_internal(tmppyf.name, tmpjmpf.name)
+                    jmp_compile_internal(tmppyf.name, tmpjmpf.name, print_func="print(" in code)
                     jmp.write(tmpjmpf.read())
         out,err=self.run_mp("test/errors.jmp", args=["--multi"])
         self.assertEqual(err, "")
@@ -170,6 +181,7 @@ class MiniPython(unittest.TestCase):
                     print >> sys.stderr, "\nFailed to match at line %d of errors.py. Expected %r\n%s = %s" % (lineno, pat, pattype, against)
                     allok=False
             else:
+                pat=pat.replace("\\n", "\n")
                 if not against.startswith(pat):
                     print >> sys.stderr,  "\nFailed to prefix at line %d of errors.py.  Expected %r\n%s = %s" % (lineno,pat,pattype, against)
                     allok=False
@@ -194,13 +206,21 @@ class MiniPython(unittest.TestCase):
         "Corrupted input"
 
         testpats=[]
-        t=array.array('B', [0,0, 0,0, 0,0, 10,0, 0, 1, 2, 3])
+        t=array.array('B', [0,0,  # version
+                            1,0,  # #strings
+                            2,0,  # string 0 len
+                            65, 66, # string 0
+                            1,0,  # #lines
+                            10,10,20,20, # line 0
+                            10,0, # code size
+                            0, 1, 2, 3 # code
+                            ])
         for i in range(1, len(t)+1):
             testpats.append( ("Unexpected end of file", t[:i]) )
 
         if False:
-            # Cobertura bug: doesn't see these so no point running them
-            for i in [20]+range(35,128)+range(134,160)+range(165,200)+range(202,56):
+            # Cobertura bug: doesn't see these
+            for i in [20]+range(36,128)+range(134,160)+range(166,200)+range(203,256):
                 testpats.append(("(Runtime|Internal)Error: Unknown/unimplemented opcode: "+str(i),
                                  array.array('B', [0,0,0,0, 0,0, 3,0, i,0,0])))
 
@@ -252,7 +272,7 @@ def main(flavour="java"):
             raise Exception("Couldn't find built test code.  Run make otest to produce "+objcfile)
 
     MiniPython.run_mp=getattr(MiniPython, "run_mp_"+flavour)
-
+    MiniPython.flavour=flavour
     unittest.main()
 
 if __name__=='__main__':

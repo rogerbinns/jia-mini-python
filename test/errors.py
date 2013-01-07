@@ -274,3 +274,55 @@ test2.signalBatman()
 #> TypeError
 x=3
 x.foo=4
+#> TypeError
+range(10)[{}:]
+#> TypeError
+range(10)[3:""]
+#>TypeError
+"%" % []
+#>TypeError
+"%d" % ("foo",)
+#>TypeError
+"% 5" % ("foo",)
+#>TypeError
+"%Q" % ("abc",)
+#>TypeError
+filter(3, [1,2])
+#>TypeError
+filter(lambda :1, "aaa")
+#>TypeError
+map(3, [])
+#>TypeError
+map(lambda :3, 3)
+
+#.\n
+# these are needed because of no varargs in objc
+print()
+#.1\n
+print(1)
+#.1 2\n
+print(1,2)
+#.1 2 3\n
+print(1,2,3)
+#.1 2 3 4\n
+print(1,2,3,4)
+#.1 2 3 4 5\n
+print(1,2,3,4,5)
+#.1 2 3 4 5 6\n
+print(1,2,3,4,5,6)
+#.1 2 3 4 5 6 7\n
+print(1,2,3,4,5,6,7)
+#.1 2 3 4 5 6 7 8\n
+print(1,2,3,4,5,6,7,8)
+
+#>TypeError
+locals(3)
+
+#>TypeError.* or .* (objc)
+test1.foo(1,2,3,4)
+
+#>TypeError.*signature "f".* (objc)
+test1.takesFloat(1)
+
+#>TypeError.*return format "f".* (objc)
+test1.returnsFloat()
