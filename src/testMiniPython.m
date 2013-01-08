@@ -5,6 +5,8 @@
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wdirect-ivar-access"
 #pragma clang diagnostic ignored "-Wreceiver-is-weak"
+#pragma clang diagnostic ignored "-Warc-repeated-use-of-weak"
+
 #import "MiniPython.h"
 
 #include <stdio.h>
@@ -132,7 +134,7 @@ static void usage() {
 
 // This is so that the debugger can get access to it easily and we can
 // dump out any crashing jmp
-BlockingInputStream *currentstream;
+static BlockingInputStream *currentstream;
 
 // This needs to have the same semantics as Tester.java and has been
 // translated from the Java

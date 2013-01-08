@@ -2,10 +2,10 @@
 #error "ARC: Automatic reference counting must be enabled for this file"
 #endif
 
-
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wdirect-ivar-access"
 #pragma clang diagnostic ignored "-Wreceiver-is-weak"
+#pragma clang diagnostic ignored "-Warc-repeated-use-of-weak"
 
 #import "MiniPython.h"
 // #import <Foundation/NSObjCRuntime.h>
@@ -1932,7 +1932,6 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 - (NSString*) description {
   NSMutableString *res=[[NSMutableString alloc] init];
-  NSMutableSet *set=[[NSMutableSet alloc] init];
   NSDictionary *ue=[self userInfo];
 
   switch((enum MiniPythonErrorCode)[self code]) {
@@ -1944,13 +1943,9 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     break;
   case MiniPythonEndOfStreamError:
     [res appendString:@"Unexpected end of file"];
-    if([ue objectForKey:@"readresult"])
-      [set addObject:@"readresult"];
     break;
   case MiniPythonStreamError:
     [res appendString:@"StreamError: error reading code stream"];
-    if([ue objectForKey:@"readresult"])
-      [set addObject:@"readresult"];
     break;
   case MiniPythonUnknownVersionError:
     [res appendString:@"UnknownVersionError: unknown jmp version"];
@@ -1967,33 +1962,21 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     if([ue objectForKey:@"got"]) {
       if ([ue objectForKey:@"returntypesig"]) {
         [res appendFormat:@" Unknown return format \"%@\"", [ue objectForKey:@"returntypesig"]];
-        [set addObject:@"returntypesig"];
-        if([ue objectForKey:@"got"]) [set addObject:@"got"];
-        if([ue objectForKey:@"expected"]) [set addObject:@"expected"];
       } else {
         [res appendFormat:@" Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
-        [set addObject:@"got"];
-        [set addObject:@"expected"];
         if([ue objectForKey:@"arg"]) {
           [res appendFormat:@" (argument #%@", [ue objectForKey:@"arg"]];
-          [set addObject:@"arg"];
           if([ue objectForKey:@"typesig"]) {
             [res appendFormat:@" with signature \"%@\"", [ue objectForKey:@"typesig"]];
-            [set addObject:@"typesig"];
           }
           [res appendString:@")"];
         }
       }
-      if([ue objectForKey:@"method"])
-        [set addObject:@"method"];
     }
     if([ue objectForKey:@"op"]) {
       [res appendFormat:@"can't perform %@ on %@ and %@", [ue objectForKey:@"op"],
            [MiniPython toPyTypeString:[ue objectForKey:@"left"]],
            [MiniPython toPyTypeString:[ue objectForKey:@"right"]]];
-      [set addObject:@"op"];
-      [set addObject:@"left"];
-      [set addObject:@"right"];
     }
     break;
   case MiniPythonArithmeticError:
@@ -2031,34 +2014,20 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
   if([ue objectForKey:@"reason"]) {
     [res appendFormat:@" %@", [ue objectForKey:@"reason"]];
-    [set addObject:@"reason"];
  }
 
   if([ue objectForKey:@"currentmethod"]) {
     [res appendFormat:@" in call to %@()", [ue objectForKey:@"currentmethod"]];
-    [set addObject:@"currentmethod"];
-    if([[ue objectForKey:@"currentmethod"] isEqual:[ue objectForKey:@"method"]])
-      [set addObject:@"method"];
   }
 
   // line number and pc
   if([ue objectForKey:@"pc"]) {
     [res appendFormat:@"\npc = %d", [[ue objectForKey:@"pc"] intValue]];
-    [set addObject:@"pc"];
     if([ue objectForKey:@"lineno"]) {
       [res appendFormat:@" line = %d", [[ue objectForKey:@"lineno"] intValue]];
-      [set addObject:@"lineno"];
     }
   }
 
-  // stacktop will go away
-  if([ue objectForKey:@"stacktop"]) {
-      [set addObject:@"stacktop"];
-  }
-
-  if([set count]!=[ue count]) {
-    NSLog(@"Did not use all keys of %@\nUsed %@\n%@", ue, set, res);
-  }
   return res;
 }
 @end
