@@ -18,7 +18,10 @@ static void usage() {
 @interface MapBadEquals : NSMutableDictionary
 @end
 
+// it also records
 @interface BlockingInputStream : NSInputStream
+- (void) clear;
+- (void) writeTo:(const char*)filename;
 @end
 
 @implementation Test1
@@ -123,6 +126,10 @@ static void usage() {
 }
 @end
 
+// This is so that the debugger can get access to it easily and we can
+// dump out any crashing jmp
+BlockingInputStream *currentstream;
+
 // This needs to have the same semantics as Tester.java and has been
 // translated from the Java
 static int main2(int argc, char *argv[]) {
@@ -159,7 +166,7 @@ static int main2(int argc, char *argv[]) {
       return 1;
     }
 
-    NSInputStream *is=[[BlockingInputStream alloc] initWithFileAtPath:[[NSString alloc] initWithUTF8String:argv[0]]];
+    BlockingInputStream *is=[[BlockingInputStream alloc] initWithFileAtPath:[[NSString alloc] initWithUTF8String:argv[0]]];
     [is open];
 
     NSMutableString *out=nil, *err=nil;
@@ -189,7 +196,10 @@ static int main2(int argc, char *argv[]) {
         }
 
         NSError *error=nil;
+        [is clear];
+        currentstream=is;
         BOOL res=[mp setCode:is error:&error];
+        currentstream=nil;
         NSCAssert( (res==NO && error) || res==YES, @"Failed return %d", res);
         if(error) {
           NSCAssert( [[error domain] isEqual:MiniPythonErrorDomain], @"Invalid error domain returned %@", [error domain]);
@@ -243,6 +253,8 @@ int main(int argc, char *argv[]) {
 @implementation BlockingInputStream
 {
   NSInputStream *in;
+  uint8_t *savedbuf;
+  NSUInteger bufused;
 }
 
 - (id) initWithFileAtPath:(NSString*) name {
@@ -264,16 +276,36 @@ int main(int argc, char *argv[]) {
     NSInteger res=[in read:buffer maxLength:len-sofar];
     if(res==0) return (NSInteger)sofar;
     if(res<0) return res;
+    // we let the OS figure growing this at a reasonable rate
+    savedbuf=realloc(savedbuf, bufused+(NSUInteger)res);
+    memcpy(savedbuf+bufused, buffer, (NSUInteger)res);
+    bufused+=(NSUInteger)res;
+    // advance
     buffer+=res;
     sofar+=(NSUInteger)res;
   }
   return (NSInteger)sofar;
 }
 
+- (void) writeTo:(const char*)filename {
+  printf("Writing out saved data %d bytes to %s\n", (int)bufused, filename);
+  FILE *f=fopen(filename, "wb");
+  printf("About to write\n");
+  fwrite(savedbuf, bufused, 1, f);
+  printf("About to close\n");
+  fclose(f);
+  printf("Done\n");
+}
+
 - (void) open {
   [in open];
 }
 
+- (void) clear {
+  free(savedbuf);
+  savedbuf=NULL;
+  bufused=0;
+}
 
 - (void) close {
   [in close];
