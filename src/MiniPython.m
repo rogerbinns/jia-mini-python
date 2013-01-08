@@ -5,6 +5,7 @@
 
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wdirect-ivar-access"
+#pragma clang diagnostic ignored "-Wreceiver-is-weak"
 
 #import "MiniPython.h"
 // #import <Foundation/NSObjCRuntime.h>
@@ -2134,7 +2135,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 @implementation MiniPythonNativeMethod
 {
-  MiniPython *mp;
+  MiniPython * __weak mp;
   NSString *name;
   NSObject* object;
   NSObject* instance;

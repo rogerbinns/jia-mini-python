@@ -1,6 +1,10 @@
+#if !__has_feature(objc_arc)
+#error "ARC: Automatic reference counting must be enabled for this file"
+#endif
+
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wdirect-ivar-access"
-
+#pragma clang diagnostic ignored "-Wreceiver-is-weak"
 #import "MiniPython.h"
 
 #include <stdio.h>
@@ -26,7 +30,7 @@ static void usage() {
 
 @implementation Test1
 {
-  MiniPython* mp;
+  MiniPython* __weak mp;
 }
 - (id) init:(MiniPython*)mp_ {if((self=[super init])) { mp=mp_;} return self;}
 - (void) retNone {}
@@ -176,6 +180,7 @@ static int main2(int argc, char *argv[]) {
     }
     MiniPython *mp=[[MiniPython alloc] init];
 
+    // sadly the weaks are not enough
 #define EXIT(x) do { [mp clear]; return (x); } while(0)
 
     if(!clear) {
@@ -290,9 +295,7 @@ int main(int argc, char *argv[]) {
 - (void) writeTo:(const char*)filename {
   printf("Writing out saved data %d bytes to %s\n", (int)bufused, filename);
   FILE *f=fopen(filename, "wb");
-  printf("About to write\n");
   fwrite(savedbuf, bufused, 1, f);
-  printf("About to close\n");
   fclose(f);
   printf("Done\n");
 }
