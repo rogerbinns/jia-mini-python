@@ -178,6 +178,12 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
       if(res!=(NSInteger)len) goto onerror;
     }
     strings[i]=[[NSString alloc] initWithBytes:stringbuf length:(NSUInteger)len encoding:NSUTF8StringEncoding];
+    if(!strings[i]) {
+      [self clear];
+      [self internalError:MiniPythonInternalError reason:[NSString stringWithFormat:@"Unable to read string #%d as utf8", i]];
+      if(error) *error=[self getError];
+      return NO;
+    }
   }
 
   // line number table
