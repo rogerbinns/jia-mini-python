@@ -1,3 +1,7 @@
+#if !__has_feature(objc_arc)
+#error "ARC: Automatic reference counting must be enabled for this file"
+#endif
+
 
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wdirect-ivar-access"
@@ -72,10 +76,13 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   int pc;
   NSError *errorindicator;
   NSSet *instance_methods;
+  NSRecursiveLock *theLock;
+
 }
 
 - (id) init {
   if( (self = [super init]) ) {
+    theLock=[[NSRecursiveLock alloc] init];
     stacklimit=1024;
     // build up list of known instance methods
     instance_methods=[[NSMutableSet alloc] init];
@@ -98,11 +105,16 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   return self;
 }
 
+// alternative is @synchronized(self) { / }
+#define LOCKMP [theLock lock];
+#define UNLOCKMP [theLock unlock];
+
 - (void) setClient:(id <MiniPythonClientDelegate>)delegate {
   client=delegate;
 }
 
 - (void) clear {
+  LOCKMP;
   context=nil;
   if(strings) {
     for(int i=0; i<nstrings; i++) {
@@ -126,8 +138,15 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   code=NULL;
 
   errorindicator=nil;
+  UNLOCKMP;
 }
 
+- (BOOL) setCode:(NSInputStream*)stream error:(NSError* __autoreleasing*)error {
+  LOCKMP;
+  BOOL ret=[self setCodeLocked:stream error:error];
+  UNLOCKMP;
+  return ret;
+}
 
 #define ERRORNOMEM(x) do { [self clear]; [self internalError:MiniPythonOutOfMemory reason:x]; if(error) *error=[self getError]; return NO; } while(0)
 
@@ -137,7 +156,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
    if(res!=2) goto onerror; \
    v=(buf[0] | (buf[1]<<8)); }
 
-- (BOOL) setCode:(NSInputStream*)stream error:(NSError* __autoreleasing*)error {
+- (BOOL) setCodeLocked:(NSInputStream*)stream error:(NSError* __autoreleasing*)error {
   NSInteger res=0, errorcode=0;
   int stringbuflen=256;
   void * stringbuf=malloc((size_t)stringbuflen);
@@ -1694,11 +1713,14 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 }
 
 - (void) setNSError:(NSError*)error {
+  LOCKMP;
   errorindicator=error;
   [client onError:errorindicator];
+  UNLOCKMP;
 }
 
 - (void) setError:(enum MiniPythonErrorCode)code_ reason:(NSString*)reason userInfo:(NSDictionary*)userinfo {
+  LOCKMP;
   NSMutableDictionary *d=[[NSMutableDictionary alloc] init];
   [d setObject:reason forKey:@"reason"];
   if(userinfo)
@@ -1706,6 +1728,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   [self setNSError:[MiniPythonError withMiniPython:self
                                               code:code_
                                           userInfo:d]];
+  UNLOCKMP;
 }
 
 - (NSError*) getError {
@@ -1755,13 +1778,16 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
 
 
 - (void) addModule:(NSObject*)module named:(NSString*)name {
+  LOCKMP;
   if(!context)
     context=[[MiniPythonContext alloc] initWithParent:nil];
   MiniPythonModule *mod=[[MiniPythonModule alloc] initWithDelegate:module name:name];
   [context setValue:mod forName:name];
+  UNLOCKMP;
 }
 
 - (NSObject*) callMethod:(NSString*)name args:(NSArray*)args error:(NSError* __autoreleasing*)error {
+  LOCKMP;
   NSObject *retval;
 
   int savedsp=stacktop, savedpc=pc;
@@ -1788,7 +1814,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
   pc=savedpc;
   stacktop=savedsp;
   context=savedcontext;
-
+  UNLOCKMP;
   return retval;
 }
 
