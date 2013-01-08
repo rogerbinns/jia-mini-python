@@ -18,6 +18,9 @@ static void usage() {
 @interface MapBadEquals : NSMutableDictionary
 @end
 
+@interface BlockingInputStream : NSInputStream
+@end
+
 @implementation Test1
 {
   MiniPython* mp;
@@ -156,7 +159,7 @@ static int main2(int argc, char *argv[]) {
       return 1;
     }
 
-    NSInputStream *is=[[NSInputStream alloc] initWithFileAtPath:[[NSString alloc] initWithUTF8String:argv[0]]];
+    NSInputStream *is=[[BlockingInputStream alloc] initWithFileAtPath:[[NSString alloc] initWithUTF8String:argv[0]]];
     [is open];
 
     NSMutableString *out=nil, *err=nil;
@@ -236,3 +239,45 @@ int main(int argc, char *argv[]) {
   }
   return res;
 }
+
+@implementation BlockingInputStream
+{
+  NSInputStream *in;
+}
+
+- (id) initWithFileAtPath:(NSString*) name {
+  if( (self=[super init]) ) {
+    in=[[NSInputStream alloc] initWithFileAtPath:name];
+  }
+  return self;
+}
+
+- (BOOL) getBuffer:(uint8_t **)buffer length:(NSUInteger *)len {
+  (void)buffer;
+  (void)len;
+  return NO;
+}
+
+- (NSInteger)read:(uint8_t *)buffer maxLength:(NSUInteger)len {
+  NSUInteger sofar=0;
+  while(sofar<len) {
+    NSInteger res=[in read:buffer maxLength:len-sofar];
+    if(res==0) return (NSInteger)sofar;
+    if(res<0) return res;
+    buffer+=res;
+    sofar+=(NSUInteger)res;
+  }
+  return (NSInteger)sofar;
+}
+
+- (void) open {
+  [in open];
+}
+
+
+- (void) close {
+  [in close];
+}
+
+
+@end
