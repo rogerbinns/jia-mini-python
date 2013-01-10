@@ -563,7 +563,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
           ERROR(RuntimeError, @"Exceeded stack bounds in dict");
         NSMutableDictionary *res=[NSMutableDictionary dictionaryWithCapacity:(NSUInteger)nitems];
         for(int i=0; i<nitems; i++) {
-          [res setObject:stack[stacktop+1+i*2] forKey:stack[stacktop+1+i*2+1]];
+          [res setObject:stack[stacktop+1+i*2] forKey:(id<NSCopying>)stack[stacktop+1+i*2+1]];
         }
         stack[++stacktop]=res;
         continue;
@@ -707,7 +707,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
             NSObject* value=stack[stacktop--], *index=stack[stacktop--], *collection=stack[stacktop--];
             if(ISDICT(collection)) {
               if(!ISDICTM(collection)) TYPEERROR(collection, @"NSMutableDictionary");
-              [(NSMutableDictionary*)collection setObject:value forKey:index];
+              [(NSMutableDictionary*)collection setObject:value forKey:(id<NSCopying>)index];
             } else if (ISLIST(collection)) {
               if(!ISLISTM(collection)) TYPEERROR(collection, @"NSMutableArray");
               if(!ISINT(index)) TYPEERROR(index, @"int");
