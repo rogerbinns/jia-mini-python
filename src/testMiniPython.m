@@ -36,6 +36,7 @@ static void usage() {
 }
 - (id) init:(MiniPython*)mp_ {if((self=[super init])) { mp=mp_;} return self;}
 - (void) retNone {}
+- (NSObject*) returnNone { return nil; }
 - (void) takesAll:(BOOL)b :(BOOL)b2 :(NSDictionary*)dict :(NSArray*)list :(NSNumber*)int1 :(int)int2 :(Test1*)t1 {
   (void)b; (void)b2; (void)int2;
   if(![dict isKindOfClass:[NSDictionary class]]) [mp setError:MiniPythonTypeError reason:@"Expected dict" userInfo:nil];

@@ -2297,7 +2297,7 @@ NSString * const MiniPythonErrorDomain=@"MiniPythonErrorDomain";
     */
     __unsafe_unretained NSObject* result;
     [invocation getReturnValue:&result];
-    return result;
+    return result?result:[NSNull null];
   } else if(strcmp(returntype, "v")==0) {
     return [NSNull null];
   } else {

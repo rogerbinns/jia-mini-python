@@ -257,3 +257,11 @@ foo(1)
 assert bool(test1.retSelf())
 assert not bool(None)
 
+# make sure None/null/nil is handled correctly as the underly
+# list/map/array may get upset
+assert len([None, test1.returnNone(), 3])==3
+assert len({
+        None: 3,
+        test1.returnNone(): 4,
+        3: None,
+        4: test1.returnNone()})==3

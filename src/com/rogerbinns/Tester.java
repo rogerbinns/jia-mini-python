@@ -149,6 +149,7 @@ public class Tester {
 		MiniPython mp;
 		Test1(MiniPython mp) { this.mp=mp;}
 		public void retNone() {}
+                public Object returnNone() { return null; }
 		@SuppressWarnings("rawtypes")
 		public void takesAll(Boolean b, boolean b2, Map m, List l, Integer i, int i2, Test1 t1) {}
 		public Test1 retSelf() { return this; }
