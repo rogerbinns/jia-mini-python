@@ -192,6 +192,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     if (stack) {
         [self internalError:MiniPythonNeedsClear reason:@"You must clear to reuse this instance"];
         if (error) {*error = [self getError];}
+        free(stringbuf);
         return NO;
     }
     [self addBuiltins];
@@ -228,6 +229,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             [self clear];
             [self internalError:MiniPythonInternalError reason:[NSString stringWithFormat:@"Unable to read string #%d as utf8", i]];
             if (error) {*error = [self getError];}
+            free(stringbuf);
             return NO;
         }
     }
@@ -328,7 +330,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             case 164: // DEL_NAME
                 break;
 
-            // Use top item
+                // Use top item
             case 8: // UNARY_ADD
             case 24: // NOT
             case 13: // UNARY_NEG
@@ -344,9 +346,9 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             case 11: // POP_TOP
             case 9: // RETURN (further checking in implementation)
                 if (stacktop < 0 || stacktop >= stacklimit) {stackerror = YES;}
-            break;
+                break;
 
-            // Use top two items
+                // Use top two items
             case 1: // ADD
             case 2: // MULT
             case 3: // DIV
@@ -367,27 +369,27 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             case 23: // PRINT  (further checking in implementation)
             case 10: // CALL (further checking in implementation)
                 if (stacktop - 1 < 0 || stacktop >= stacklimit) {stackerror = YES;}
-            break;
+                break;
 
-            // use top 3 items
+                // use top 3 items
             case 15: // SUBSCRIPT_SLICE
             case 33: // ASSIGN_INDEX
             case 29: // DEL_SLICE
 
                 if (stacktop - 2 < 0 || stacktop >= stacklimit) {stackerror = YES;}
-            break;
+                break;
 
-            // and the winner with 4 items
+                // and the winner with 4 items
             case 0: // FUNCTION_PROLOG
                 if (stacktop - 3 < 0 || stacktop >= stacklimit) {stackerror = YES;}
-            break;
+                break;
 
-            // uses top and adds one
+                // uses top and adds one
             case 131: // NEXT
                 if (stacktop < 0 || stacktop + 1 >= stacklimit) {stackerror = YES;}
-            break;
+                break;
 
-            // no use - adds item
+                // no use - adds item
             case 162: // PUSH_STR
             case 18: // PUSH_NONE
             case 21: // PUSH_TRUE
@@ -396,14 +398,14 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             case 160: // LOAD_NAME
             case 128: // MAKE_METHOD
                 if (stacktop + 1 >= stacklimit) {stackerror = YES;}
-            break;
+                break;
 
-            // N items
+                // N items
             case 202: // POP_N
                 if (stacktop + 1 - val < 0) {stackerror = YES;}
-            break;
+                break;
 
-            // -- check end : marker used by tool
+                // -- check end : marker used by tool
             default:
                 ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
         }
@@ -436,7 +438,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 continue;
             }
 
-            // binary operators
+                // binary operators
             case 1: // ADD
             {
                 NSObject *right = stack[stacktop--], *left = stack[stacktop--];
@@ -539,7 +541,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 BINARYOPERROR(@"%", left, right);
             }
 
-            // comparisons
+                // comparisons
             case 4: // GT
             case 5: // LT
             case 6: // EQ
@@ -554,22 +556,22 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 switch (op) {
                     case 5: // < LT
                         res = cmp < 0;
-                    break;
+                        break;
                     case 32: // <= LTE
                         res = cmp <= 0;
-                    break;
+                        break;
                     case 4: // > GT
                         res = cmp > 0;
-                    break;
+                        break;
                     case 31: // >= GTE
                         res = cmp >= 0;
-                    break;
+                        break;
                     case 6: // = EQ
                         res = cmp == 0;
-                    break;
+                        break;
                     case 26: // != NOT_EQ
                         res = cmp != 0;
-                    break;
+                        break;
                 }
                 stack[++stacktop] = [NSNumber numberWithBool:res];
                 continue;
@@ -582,7 +584,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 continue;
             }
 
-            // lists, dicts, complex operations
+                // lists, dicts, complex operations
             case 16: // DICT
             {
                 if (!ISINT(stack[stacktop])) ERROR(InternalError, @"DICT expected int");
@@ -824,7 +826,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 TYPEERROR(o, @"dict");
             }
 
-            // stack things
+                // stack things
             case 11: // POP_TOP
             {
                 stacktop--;
@@ -844,7 +846,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 continue;
             }
 
-            // Codes that make the stack bigger
+                // Codes that make the stack bigger
             case 200: // PUSH_INT
             {
                 stack[++stacktop] = [NSNumber numberWithInt:val];
@@ -899,7 +901,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 ERROR(AssertionError, ISNONE(o) ? @"assertion failed" : [MiniPython toPyString:o]);
             }
 
-            // control flow
+                // control flow
 
             case 19: // EXIT_LOOP
             {
@@ -927,7 +929,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 continue;
             }
 
-            // names
+                // names
             case 161: // STORE_NAME
             {
                 STRINGCHECK(val);
@@ -968,7 +970,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 continue;
             }
 
-            // function calls
+                // function calls
             case 10: // CALL
             {
                 NSObject *func = stack[stacktop--];
@@ -1067,7 +1069,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 continue;
             }
 
-            // -- check end : marker used by tool
+                // -- check end : marker used by tool
             default:
                 ERROR(InternalError, ([NSString stringWithFormat:@"Unknown/unimplemented opcode: %d", op]));
         }
@@ -1224,15 +1226,20 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             ERROR(TypeError, @"incomplete format specifier");
             c = [format characterAtIndex:pos];
             switch (c) {
-                case '-': flag_left = YES;
-                break;
-                case '+': flag_plus = YES;
-                break;
-                case ' ': flag_space = YES;
-                break;
-                case '0': flag_zero = YES;
-                break;
-                default: flag_done = YES;
+                case '-':
+                    flag_left = YES;
+                    break;
+                case '+':
+                    flag_plus = YES;
+                    break;
+                case ' ':
+                    flag_space = YES;
+                    break;
+                case '0':
+                    flag_zero = YES;
+                    break;
+                default:
+                    flag_done = YES;
             }
             if (!flag_done) {pos++;}
         } while (!flag_done);
@@ -1274,21 +1281,22 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             case 'x':
             case 'd':
                 if (!ISINT(arg)) TYPEERROR(arg, @"int for formatting");
-            int i = [N(arg) intValue];
+                int i = [N(arg) intValue];
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
-            [res appendFormat:[NSString stringWithFormat:@"%%%@%@%@%@%@%C",
-                                                         flag_left ? @"-" : @"",
-                                                         flag_plus ? @"+" : @"",
-                                                         flag_space ? @" " : @"",
-                                                         flag_zero ? @"0" : @"",
-                                                         width ? [NSNumber numberWithInt:(int) width] : @"",
-                                                         c], i];
+                [res appendFormat:[NSString stringWithFormat:@"%%%@%@%@%@%@%C",
+                                                             flag_left ? @"-" : @"",
+                                                             flag_plus ? @"+" : @"",
+                                                             flag_space ? @" " : @"",
+                                                             flag_zero ? @"0" : @"",
+                                                             width ? [NSNumber numberWithInt:(int) width] : @"",
+                                                             c], i];
 #pragma clang diagnostic pop
 
-            continue;
-            default: ERROR(TypeError, ([NSString stringWithFormat:@"Unknown format '%C'", c]));
+                continue;
+            default:
+                ERROR(TypeError, ([NSString stringWithFormat:@"Unknown format '%C'", c]));
         }
     }
 
@@ -2060,75 +2068,75 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     switch ((enum MiniPythonErrorCode) [self code]) {
         case MiniPythonOutOfMemory:
             [res appendString:@"Out of memory:"];
-        break;
+            break;
         case MiniPythonNeedsClear:
             [res appendString:@"Needs clear:"];
-        break;
+            break;
         case MiniPythonEndOfStreamError:
             [res appendString:@"Unexpected end of file"];
-        break;
+            break;
         case MiniPythonStreamError:
             [res appendString:@"StreamError: error reading code stream"];
-        break;
+            break;
         case MiniPythonUnknownVersionError:
             [res appendString:@"UnknownVersionError: unknown jmp version"];
-        break;
+            break;
         case MiniPythonInternalError:
             [res appendString:@"InternalError:"];
-        break;
+            break;
         case MiniPythonRuntimeError:
             [res appendString:@"RuntimeError:"];
-        break;
+            break;
 
         case MiniPythonTypeError:
             [res appendString:@"TypeError:"];
-        if ([ue objectForKey:@"got"]) {
-            if ([ue objectForKey:@"returntypesig"]) {
-                [res appendFormat:@" Unknown return format \"%@\"", [ue objectForKey:@"returntypesig"]];
-            } else {
-                [res appendFormat:@" Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
-                if ([ue objectForKey:@"arg"]) {
-                    [res appendFormat:@" (argument #%@", [ue objectForKey:@"arg"]];
-                    if ([ue objectForKey:@"typesig"]) {
-                        [res appendFormat:@" with signature \"%@\"", [ue objectForKey:@"typesig"]];
+            if ([ue objectForKey:@"got"]) {
+                if ([ue objectForKey:@"returntypesig"]) {
+                    [res appendFormat:@" Unknown return format \"%@\"", [ue objectForKey:@"returntypesig"]];
+                } else {
+                    [res appendFormat:@" Got %@ expected %@", [ue objectForKey:@"got"], [ue objectForKey:@"expected"]];
+                    if ([ue objectForKey:@"arg"]) {
+                        [res appendFormat:@" (argument #%@", [ue objectForKey:@"arg"]];
+                        if ([ue objectForKey:@"typesig"]) {
+                            [res appendFormat:@" with signature \"%@\"", [ue objectForKey:@"typesig"]];
+                        }
+                        [res appendString:@")"];
                     }
-                    [res appendString:@")"];
                 }
             }
-        }
-        if ([ue objectForKey:@"op"]) {
-            [res appendFormat:@"can't perform %@ on %@ and %@", [ue objectForKey:@"op"],
-                              [MiniPython toPyTypeString:[ue objectForKey:@"left"]],
-                              [MiniPython toPyTypeString:[ue objectForKey:@"right"]]];
-        }
-        break;
+            if ([ue objectForKey:@"op"]) {
+                [res appendFormat:@"can't perform %@ on %@ and %@", [ue objectForKey:@"op"],
+                                  [MiniPython toPyTypeString:[ue objectForKey:@"left"]],
+                                  [MiniPython toPyTypeString:[ue objectForKey:@"right"]]];
+            }
+            break;
         case MiniPythonArithmeticError:
             [res appendString:@"ArithmeticException:"];
-        break;
+            break;
         case MiniPythonAssertionError:
             [res appendString:@"AssertionError:"];
-        break;
+            break;
         case MiniPythonNameError:
             [res appendString:@"NameError:"];
-        break;
+            break;
         case MiniPythonGeneralError:
             [res appendString:@"GeneralError:"];
-        break;
+            break;
         case MiniPythonIndexError:
             [res appendString:@"IndexError:"];
-        break;
+            break;
         case MiniPythonKeyError:
             [res appendString:@"KeyError:"];
-        break;
+            break;
         case MiniPythonAttributeError:
             [res appendString:@"AttributeError:"];
-        break;
+            break;
         case MiniPythonSyntaxError:
             [res appendString:@"SyntaxError:"];
-        break;
+            break;
         case MiniPythonValueError:
             [res appendString:@"ValueError:"];
-        break;
+            break;
     }
 
     if (![res length]) {
