@@ -174,7 +174,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return ret;
 }
 
-#define ERRORNOMEM(x) do { [self clear]; [self internalError:MiniPythonOutOfMemory reason:x]; if(error) *error=[self getError]; return NO; } while(0)
+#define ERRORNOMEM(x) do { free(stringbuf); [self clear]; [self internalError:MiniPythonOutOfMemory reason:x]; if(error) *error=[self getError]; return NO; } while(0)
 
 #define read16(v) { \
    uint8_t buf[2]; \
