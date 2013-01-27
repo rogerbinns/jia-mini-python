@@ -11,6 +11,9 @@ assert -2/6==-1
 assert 65535+2==65537
 assert 256*256-1==65535
 
+# http://kqueue.org/blog/2012/12/31/idiv-dos/
+assert -2147483648 / -1 == -2147483648
+
 assert 6%3==0
 assert 6%-3==0
 
