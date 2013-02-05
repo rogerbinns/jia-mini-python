@@ -504,16 +504,18 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
                 if (ISINT(left) && ISINT(right)) {
                     int l = [N(left) intValue], r = [N(right) intValue];
                     if (!r) ERROR(ArithmeticError, @"Division by zero");
-                    // http://python-history.blogspot.com/2010/08/why-pythons-integer-division-floors.html
-                    if ((l >= 0 && r >= 0) || (l < 0 && r < 0)) {
-                        stack[++stacktop] = [NSNumber numberWithInt:l / r];
+                    int res;
+                    if (l == -2147483648 && r == -1) {
+                        res = -2147483648;
                     } else {
-                        int res = l / r;
-                        if (l % r != 0) {
+                        res = l / r;
+                        // http://python-history.blogspot.com/2010/08/why-pythons-integer-division-floors.html
+                        if (!(l >= 0 && r >= 0) && !(l < 0 && r < 0) && l % r != 0) {
                             res--;
                         }
-                        stack[++stacktop] = [NSNumber numberWithInt:res];
+
                     }
+                    stack[++stacktop] = [NSNumber numberWithInt:res];
                     continue;
                 }
                 BINARYOPERROR(@"/", left, right);
