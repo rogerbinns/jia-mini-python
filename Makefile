@@ -1,6 +1,9 @@
 VERSION = 2.0
 DATE = "5 September 2012"
 
+# use python3 for python3
+PYTHON=python
+
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
@@ -14,7 +17,6 @@ help:
 	@echo "Use \`make <target>' where target is one of"
 	@echo "  test      Run tests using standard Python (java based)"
 	@echo "  otest     Run tests for Objective C implementation"
-	@echo "  nose      Run tests using enhanced nosetests tool"
 	@echo "  ant       Build a jar file for command line usage and testing"
 	@echo "  doc       To build the documentation using sphinx"
 	@echo "  coverage  Run the test suites with coverage"
@@ -40,13 +42,11 @@ ant:
 	ant -q
 
 test: ant
-	python test/main_test.py
+	$(PYTHON) test/main_test.py
 
-nose: ant
-	nosetests test/
 
 otest: obin
-	python test/main_test.py objc
+	$(PYTHON) test/main_test.py objc
 
 obin: bin/testminipython
 
