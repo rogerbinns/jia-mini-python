@@ -1,4 +1,4 @@
-VERSION = 1.2
+VERSION = 2.0
 DATE = "5 September 2012"
 
 # Used for coverage
@@ -75,10 +75,12 @@ javadoc:
 
 
 # Note that cobertura currently only works with Java 6.  You get all
-# sorts of errors with Java 7.
-coverage: ant
+# sorts of errors with Java 7.  (It has expectations of the bytecode
+# layout)
+coverage:
 	@rm -rf coverage
 	@mkdir -p coverage/bin
+	env PATH=/usr/lib/jvm/java-6-openjdk-amd64/jre/bin:$(PATH) ant -q
 	bash $(COBERTURADIR)/cobertura-instrument.sh --datafile /space/java-mini-python/coverage/cobertura.ser --destination coverage bin/*.jar
 	env JMPCOVERAGE=t COBERTURADIR=$(COBERTURADIR) python test/main_test.py
 	bash $(COBERTURADIR)/cobertura-report.sh --datafile coverage/cobertura.ser --destination coverage src
