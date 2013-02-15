@@ -308,6 +308,13 @@ class Compiler(ast.NodeVisitor):
     def generic_visit(self, node):
         raise self.Error(node, "Unsupported syntax "+node.__class__.__name__)
 
+    def visit_list(self, node):
+        # This happens when the optimizer replaces an always True if
+        # statement with its body
+        for n in node:
+            for x in self.visit(n):
+                yield x
+
     def visit_Module(self, node):
         for i in node.body:
             for x in self.visit(i):
