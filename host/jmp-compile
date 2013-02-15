@@ -16,6 +16,9 @@ import functools
 py3=sys.version_info>=(3,0)
 
 if py3:
+    sys.exit("Currently jmp-compile only runs under Python 2.")
+
+if py3:
     basestring=str
 
 class Label:
