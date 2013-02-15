@@ -1178,7 +1178,9 @@ public class MiniPython {
 			for (int i = 0; i < suppliedargs; i++) {
 				Object val = (i < lpargs) ? prefixargs[i] : stack[stacktop + i
 				                                                  - lpargs + 1];
-
+				if (i>=parameterTypes.length) {
+					break;
+				}
 				if (!checkTypeCompatible(parameterTypes[i], val)) {
 					badarg = i;
 					badval = val;
