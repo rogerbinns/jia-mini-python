@@ -11,6 +11,7 @@ import ast
 import linecache
 import array
 import re
+import functools
 
 py3=sys.version_info>=(3,0)
 
@@ -99,8 +100,17 @@ class Compiler(ast.NodeVisitor):
 
         # sadly this doesn't always work - especially for slices
         ast.fix_missing_locations(t)
+
+
         res=[]
         try:
+            if options.optimization:
+                opty=Optimizer()
+                opty.options=options
+                t=opty.visit(t)
+                ast.fix_missing_locations(t)
+
+            # Regular compilation
             for node,v  in self.visit(t):
                 res.append( (node, v) )
 
@@ -260,8 +270,8 @@ class Compiler(ast.NodeVisitor):
             # Slice objects don't have line/column set so we use the
             # most recent item emitted.  If you tried really hard you
             # could also make that a Slice giving an error here.
-            lineno=getattr(e.node, "lineno", res[-1][0].lineno)
-            column=getattr(e.node, "col_offset", res[-1][0].col_offset)
+            lineno=getattr(e.node, "lineno", res[-1][0].lineno if res else 1)
+            column=getattr(e.node, "col_offset", res[-1][0].col_offset if res else 1)
             write (e.message,"at line", lineno, "of", inputfile, file=sys.stderr)
             write (linecache.getline(inputfile, lineno)+column*" "+"^", file=sys.stderr)
             sys.exit(2)
@@ -432,6 +442,8 @@ class Compiler(ast.NodeVisitor):
         if isinstance(target, ast.Name):
             for x in self.visit(node.value):
                 yield x
+            if target.id in ("True", "False", "None"):
+                raise self.Error(target, "You can't assign to constants")
             yield node, ("STORE_NAME", target.id)
         elif isinstance(target, ast.Attribute):
             # python evaluation order is rhs then lhs
@@ -649,6 +661,191 @@ class Compiler(ast.NodeVisitor):
                     yield target, "DEL_SLICE"
             else:
                 raise self.Error(target, "Unsupported item to delete")
+
+# Returns nice errors when optimization fails on a node
+def errorfy(func):
+    @functools.wraps(func)
+    def wrapped(self, node):
+        try:
+            return func(self, node)
+        except Exception, e:
+            if self.options.traceback:
+                raise
+            raise Compiler.Error(node, str(e))
+    return wrapped
+
+class Optimizer(ast.NodeTransformer):
+    "Perform some optimizations (eg folding constant expressions, removing dead code)"
+    def is_constant(self, node):
+        if isinstance(node, (ast.Str, ast.Num)):
+            return True
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            if node.id in ("None", "True", "False"):
+                return True
+        return False
+
+    @errorfy
+    def get_val(self, node):
+        assert self.is_constant(node)
+        if isinstance(node, ast.Str):
+            return node.s
+        if isinstance(node, ast.Num):
+            return node.n
+        if isinstance(node, ast.Name):
+            return {
+                "None": None,
+                "True": True,
+                "False": False}[node.id]
+        raise Exception("Can't get_val "+repr(node))
+
+    @errorfy
+    def nodify(self, value):
+        if value is True:
+            return ast.Name("True", ast.Load())
+        if value is False:
+            return ast.Name("False", ast.Load())
+        if value is None:
+            return ast.Name("None", ast.Load())
+        if isinstance(value, int):
+            return ast.Num(value)
+        if isinstance(value, basestring):
+            return ast.Str(value)
+        raise Exception("Can't nodify "+repr(value))
+
+    @errorfy
+    def visit_BinOp(self, node):
+        node.left=self.visit(node.left)
+        node.right=self.visit(node.right)
+        if self.is_constant(node.left) and self.is_constant(node.right):
+            l=self.get_val(node.left)
+            r=self.get_val(node.right)
+            if isinstance(node.op, ast.Add):
+                return self.nodify(l+r)
+            elif isinstance(node.op, ast.Sub):
+                return self.nodify(l-r)
+            elif isinstance(node.op, ast.Mult):
+                return self.nodify(l*r)
+            elif isinstance(node.op, ast.Div):
+                return self.nodify(l/r)
+            elif isinstance(node.op, ast.FloorDiv):
+                return self.nodify(l/r)
+            elif isinstance(node.op, ast.Mod):
+                return self.nodify(l%r)
+        return node
+
+    @errorfy
+    def visit_Compare(self, node):
+        if len(node.ops)!=1 or len(node.comparators)!=1:
+            return node
+        node.left=self.visit(node.left)
+        node.comparators[0]=self.visit(node.comparators[0])
+        if self.is_constant(node.left) and self.is_constant(node.comparators[0]):
+            l=self.get_val(node.left)
+            r=self.get_val(node.comparators[0])
+            op=node.ops[0]
+            if isinstance(op, ast.Lt):
+                return self.nodify(l<r)
+            elif isinstance(op, ast.LtE):
+                return self.nodify(l<=r)
+            elif isinstance(op, ast.Eq):
+                return self.nodify(l==r)
+            elif isinstance(op, ast.NotEq):
+                return self.nodify(l!=r)
+            elif isinstance(op, ast.Gt):
+                return self.nodify(l>r)
+            elif isinstance(op, ast.GtE):
+                return self.nodify(l>=r)
+        return node
+
+    @errorfy
+    def visit_BoolOp(self, node):
+        for i in range(len(node.values)):
+            node.values[i]=self.visit(node.values[i])
+        i=0
+        while i+1<len(node.values):
+            l=node.values[i]
+            r=node.values[i+1]
+            if isinstance(node.op, ast.Or):
+                if self.is_constant(l):
+                    if self.get_val(l):
+                        # l is true so we'll never evaluate the rest
+                        del node.values[i+1:]
+                        i+=1
+                        continue
+                    else:
+                        # l is false so ignore it
+                        del node.values[i]
+                        continue
+            elif isinstance(node.op, ast.And):
+                if self.is_constant(l):
+                    if self.get_val(l):
+                        del node.values[i]
+                        continue
+                    else:
+                        del node.values[i+1:]
+            i+=1
+
+        if len(node.values)==1:
+            return node.values[0]
+        elif len(node.values)==0:
+            return self.nodify(False)
+        return node
+
+    @errorfy
+    def visit_Assert(self, node):
+        node.test=self.visit(node.test)
+        if self.is_constant(node.test):
+            if self.get_val(node.test):
+                return
+        return node
+
+    @errorfy
+    def visit_UnaryOp(self, node):
+        node.operand=self.visit(node.operand)
+        if self.is_constant(node.operand):
+            v=self.get_val(node.operand)
+            if isinstance(node.op, ast.UAdd):
+                return self.nodify(+v)
+            elif isinstance(node.op, ast.USub):
+                return self.nodify(-v)
+            elif isinstance(node.op, ast.Not):
+                return self.nodify(not v)
+        return node
+
+    @errorfy
+    def visit_IfExp(self, node):
+        node.test=self.visit(node.test)
+        node.body=self.visit(node.body)
+        node.orelse=self.visit(node.orelse)
+        if self.is_constant(node.test):
+            if self.get_val(node.test):
+                return node.body
+            else:
+                return node.orelse
+        return node
+
+    @errorfy
+    def visit_If(self, node):
+        node.test=self.visit(node.test)
+        if node.orelse:
+            node.orelse=[self.visit(o) for o in node.orelse]
+        node.body=[self.visit(b) for b in node.body]
+
+        if self.is_constant(node.test):
+            if self.get_val(node.test):
+                return node.body
+            return node.orelse if node.orelse else None
+        return node
+
+    @errorfy
+    def visit_While(self, node):
+        if node.orelse:
+            return node
+        node.test=self.visit(node.test)
+        node.body=[self.visit(b) for b in node.body]
+        if self.is_constant(node.test) and not self.get_val(node.test):
+            return None
+        return node
 
 # Currently only used by assert.  Turns nodes back into pretty printed
 # text.  While we could stringify each node it would require inserting
@@ -924,6 +1121,7 @@ filename to override where the output goes.""")
     g.add_option("--annotate", action="store_true", default=False, help="Place an annotated JMP/source file (extension .i) alongside the .jmp output")
     g.add_option("--syntax", action="store_false", dest="jmpoutput", default=True, help="Do a syntax check only - do not produce .jmp output")
     g.add_option("--omit-line-table", action="store_false", default=True, dest="line_table", help="Exclude line number table from .jmp output")
+    g.add_option("--no-optimization", action="store_false", default=True, dest="optimization", help="Turn off optimizations")
     p.add_option_group(g)
 
     g=optparse.OptionGroup(p, "Dumping", """Shows the internal representation of .jmp files""")

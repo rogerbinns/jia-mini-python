@@ -55,6 +55,12 @@ output is alongside the input with a `.jmp` extension.
     various limits (eg string length, jmp size) are not exceeded.  The
     exit code will be non-zero on any error.
 
+.. option:: --no-optimization
+
+    Turns off optimizations such as constant expressions (replacing
+    ``3+4`` with ``7`` and ``True or 7`` with ``True``) and omitting
+    unreachable code (eg ``if False``).
+
 Dumping
 -------
 
