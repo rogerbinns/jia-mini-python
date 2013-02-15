@@ -32,6 +32,18 @@ def write(*args, **kwargs):
         raise Exception("Unexpected args "+repr(kwargs))
     file.write(sep.join(str(x) if not isinstance(x,basestring) else x for x in args)+end)
 
+# Returns nice errors when an exception happens processing a node
+def errorfy(func):
+    @functools.wraps(func)
+    def wrapped(self, node):
+        try:
+            return func(self, node)
+        except Exception:
+            t,e,_=sys.exc_info()
+            if isinstance(t, Compiler.Error) or self.options.traceback:
+                raise
+            raise Compiler.Error(node, str(e))
+    return wrapped
 
 class Compiler(ast.NodeVisitor):
 
@@ -87,7 +99,7 @@ class Compiler(ast.NodeVisitor):
             flags|=__future__.print_function.compiler_flag
 
         try:
-            t=compile(open(inputfile, "rb").read(), inputfile, 'exec', flags)
+            root=compile(open(inputfile, "rb").read(), inputfile, 'exec', flags)
         except:
             t,e,_=sys.exc_info()
             if not isinstance(e, SyntaxError):
@@ -95,23 +107,27 @@ class Compiler(ast.NodeVisitor):
             write("SyntaxError:", e.msg,"at line",e.lineno,"of", inputfile, file=sys.stderr)
             write(linecache.getline(inputfile, e.lineno), end="", file=sys.stderr)
             if e.offset is not None:
-                write (e.offset*" "+"^", file=sys.stderr)
+                write ((e.offset-1 if e.offset else 0)*" "+"^", file=sys.stderr)
             sys.exit(2)
 
-        # sadly this doesn't always work - especially for slices
-        ast.fix_missing_locations(t)
-
+        ast.fix_missing_locations(root)
 
         res=[]
         try:
+            if options.constants:
+                const=ConstantExpander()
+                const.options=options
+                root=const.visit(root)
+                ast.fix_missing_locations(root)
+
             if options.optimization:
                 opty=Optimizer()
                 opty.options=options
-                t=opty.visit(t)
-                ast.fix_missing_locations(t)
+                root=opty.visit(root)
+                #ast.fix_missing_locations(root)
 
             # Regular compilation
-            for node,v  in self.visit(t):
+            for node,v  in self.visit(root):
                 res.append( (node, v) )
 
             # string and location tables
@@ -260,19 +276,21 @@ class Compiler(ast.NodeVisitor):
                         dump_internal(options, strings, linenotab, out[-codelen:], outf)
 
         except:
-            t,e,_=sys.exc_info()
-            if not isinstance(e, self.Error):
+            et,ev,_=sys.exc_info()
+            if not isinstance(ev, self.Error):
                 raise
             if options.traceback:
                 x=sys.exc_info()
                 import traceback
                 traceback.print_exception(*x)
+
             # Slice objects don't have line/column set so we use the
             # most recent item emitted.  If you tried really hard you
             # could also make that a Slice giving an error here.
-            lineno=getattr(e.node, "lineno", res[-1][0].lineno if res else 1)
-            column=getattr(e.node, "col_offset", res[-1][0].col_offset if res else 1)
-            write (e.message,"at line", lineno, "of", inputfile, file=sys.stderr)
+            ast.fix_missing_locations(root)
+            lineno=getattr(ev.node, "lineno", res[-1][0].lineno if res else 1)
+            column=getattr(ev.node, "col_offset", res[-1][0].col_offset if res else 1)
+            write (ev.message,"at line", lineno, "of", inputfile, file=sys.stderr)
             write (linecache.getline(inputfile, lineno)+column*" "+"^", file=sys.stderr)
             sys.exit(2)
 
@@ -348,7 +366,7 @@ class Compiler(ast.NodeVisitor):
         if not isinstance(node.n, int):
             raise self.Error(node, "Only integers are supported")
         if node.n>0x7fffffff or node.n<-0x80000000:
-            raise self.Error(node, "Value is too large")
+            raise self.Error(node, "Value %d is too large" % node.n)
         yield node, ("PUSH_INT", node.n)
 
     def visit_Str(self, node):
@@ -662,17 +680,6 @@ class Compiler(ast.NodeVisitor):
             else:
                 raise self.Error(target, "Unsupported item to delete")
 
-# Returns nice errors when optimization fails on a node
-def errorfy(func):
-    @functools.wraps(func)
-    def wrapped(self, node):
-        try:
-            return func(self, node)
-        except Exception, e:
-            if self.options.traceback:
-                raise
-            raise Compiler.Error(node, str(e))
-    return wrapped
 
 class Optimizer(ast.NodeTransformer):
     "Perform some optimizations (eg folding constant expressions, removing dead code)"
@@ -698,18 +705,20 @@ class Optimizer(ast.NodeTransformer):
                 "False": False}[node.id]
         raise Exception("Can't get_val "+repr(node))
 
-    @errorfy
-    def nodify(self, value):
+    def nodify(self, sourcenode, value):
         if value is True:
-            return ast.Name("True", ast.Load())
-        if value is False:
-            return ast.Name("False", ast.Load())
-        if value is None:
-            return ast.Name("None", ast.Load())
-        if isinstance(value, int):
-            return ast.Num(value)
-        if isinstance(value, basestring):
-            return ast.Str(value)
+            v=ast.Name("True", ast.Load())
+        elif value is False:
+            v=ast.Name("False", ast.Load())
+        elif value is None:
+            v=ast.Name("None", ast.Load())
+        elif isinstance(value, int):
+            v=ast.Num(value)
+        elif isinstance(value, basestring):
+            v=ast.Str(value)
+        if v is not None:
+            return ast.copy_location(v, sourcenode)
+
         raise Exception("Can't nodify "+repr(value))
 
     @errorfy
@@ -720,17 +729,18 @@ class Optimizer(ast.NodeTransformer):
             l=self.get_val(node.left)
             r=self.get_val(node.right)
             if isinstance(node.op, ast.Add):
-                return self.nodify(l+r)
+                return self.nodify(node, l+r)
             elif isinstance(node.op, ast.Sub):
-                return self.nodify(l-r)
+                return self.nodify(node, l-r)
             elif isinstance(node.op, ast.Mult):
-                return self.nodify(l*r)
-            elif isinstance(node.op, ast.Div):
-                return self.nodify(l/r)
-            elif isinstance(node.op, ast.FloorDiv):
-                return self.nodify(l/r)
+                return self.nodify(node, l*r)
             elif isinstance(node.op, ast.Mod):
-                return self.nodify(l%r)
+                return self.nodify(node, l%r)
+            elif isinstance(node.op, (ast.Div, ast.FloorDiv)):
+                if l==-2147483648 and r==-1:
+                    return self.nodify(node, -2147483648)
+                return self.nodify(node, l/r)
+
         return node
 
     @errorfy
@@ -744,17 +754,17 @@ class Optimizer(ast.NodeTransformer):
             r=self.get_val(node.comparators[0])
             op=node.ops[0]
             if isinstance(op, ast.Lt):
-                return self.nodify(l<r)
+                return self.nodify(node, l<r)
             elif isinstance(op, ast.LtE):
-                return self.nodify(l<=r)
+                return self.nodify(node, l<=r)
             elif isinstance(op, ast.Eq):
-                return self.nodify(l==r)
+                return self.nodify(node, l==r)
             elif isinstance(op, ast.NotEq):
-                return self.nodify(l!=r)
+                return self.nodify(node, l!=r)
             elif isinstance(op, ast.Gt):
-                return self.nodify(l>r)
+                return self.nodify(node, l>r)
             elif isinstance(op, ast.GtE):
-                return self.nodify(l>=r)
+                return self.nodify(node, l>=r)
         return node
 
     @errorfy
@@ -788,7 +798,7 @@ class Optimizer(ast.NodeTransformer):
         if len(node.values)==1:
             return node.values[0]
         elif len(node.values)==0:
-            return self.nodify(False)
+            return self.nodify(node, False)
         return node
 
     @errorfy
@@ -805,11 +815,11 @@ class Optimizer(ast.NodeTransformer):
         if self.is_constant(node.operand):
             v=self.get_val(node.operand)
             if isinstance(node.op, ast.UAdd):
-                return self.nodify(+v)
+                return self.nodify(node, +v)
             elif isinstance(node.op, ast.USub):
-                return self.nodify(-v)
+                return self.nodify(node, -v)
             elif isinstance(node.op, ast.Not):
-                return self.nodify(not v)
+                return self.nodify(node, not v)
         return node
 
     @errorfy
@@ -845,6 +855,20 @@ class Optimizer(ast.NodeTransformer):
         node.body=[self.visit(b) for b in node.body]
         if self.is_constant(node.test) and not self.get_val(node.test):
             return None
+        return node
+
+class ConstantExpander(ast.NodeTransformer):
+
+    @errorfy
+    def visit_Name(self, node):
+        if node.id in self.options.constants:
+            if isinstance(node.ctx, ast.Load):
+                newnode=ast.parse(self.options.constants[node.id], mode="eval").body
+                for n in ast.walk(newnode):
+                    ast.copy_location(n, node)
+                return newnode
+            elif isinstance(node.ctx, ast.Store):
+                raise Exception("You can't assign to a constant")
         return node
 
 # Currently only used by assert.  Turns nodes back into pretty printed
@@ -1122,6 +1146,7 @@ filename to override where the output goes.""")
     g.add_option("--syntax", action="store_false", dest="jmpoutput", default=True, help="Do a syntax check only - do not produce .jmp output")
     g.add_option("--omit-line-table", action="store_false", default=True, dest="line_table", help="Exclude line number table from .jmp output")
     g.add_option("--no-optimization", action="store_false", default=True, dest="optimization", help="Turn off optimizations")
+    g.add_option("--constant", action="append", dest="constants", help="name=value Can be supplied multiple times.  value must be in Python syntax and can be any expression.  For example --constant DEBUG=True\t --constant VERSION=\"2alpha1\"\t --constant mapping={3: \"Three\", 4: \"a\"*7m 5: func(1,2,3)}.  Be careful of the shell altering what you provide on the command line.")
     p.add_option_group(g)
 
     g=optparse.OptionGroup(p, "Dumping", """Shows the internal representation of .jmp files""")
@@ -1133,6 +1158,23 @@ filename to override where the output goes.""")
 
     p.disable_interspersed_args()
     options, args=p.parse_args()
+
+    constants={}
+    if options.constants:
+        for c in options.constants:
+            expr=c.split("=", 1)
+            if len(expr)!=2:
+                p.error("You need to provide an equals and a value for constant "+repr(c))
+            name, value=expr
+            name=name.strip()
+            value=value.strip()
+            try:
+                compile(value, value, "eval")
+            except:
+                _,e,_=sys.exc_info()
+                p.error("Error in constant '%s' value '%s': %s" % (name, value, str(e)))
+            constants[name]=value
+    options.constants=constants
 
     if options.dump:
         if len(args)!=1:
