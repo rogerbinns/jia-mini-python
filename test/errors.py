@@ -326,3 +326,6 @@ test1.takesFloat(1)
 
 #>TypeError.*return format "f".* (objc)
 test1.returnsFloat()
+
+#>TypeError
+test1.foo=7

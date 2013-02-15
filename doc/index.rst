@@ -3,9 +3,16 @@ Welcome to Java Mini Python's documentation
 
 .. centered::  Version |version| released |today|
 
+.. note::
+
+  This project also works on iOS and MacOS.  The Java prefix was
+  because the first implementation was Java only and a lack of
+  foresight.
+
 Java Mini Python provides an implementation of a useful subset of
-Python syntax and types in Java.  The sweet spot is where you need a
-`DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`__ (eg
+Python syntax and types in Java and Objective C.  The sweet spot is
+where you need a `DSL
+<http://en.wikipedia.org/wiki/Domain-specific_language>`__ (eg
 expressions, variables, conditionals, methods/macros, callbacks) and
 would like to use Python's syntax and types (eg heterogeneous lists
 and dicts).
@@ -21,7 +28,9 @@ If you are looking for a fuller implementation of Python then try the
 Java Mini Python is hosted at http://code.google.com/p/java-mini-python/
 
 Works with `Java 1.5+
-<http://en.wikipedia.org/wiki/Java_version_history#J2SE_5.0_.28September_30.2C_2004.29>`__
+<http://en.wikipedia.org/wiki/Java_version_history#J2SE_5.0_.28September_30.2C_2004.29>`__,
+iOS/MacOS with Clang and `ARC
+<http://developer.apple.com/library/mac/#releasenotes/ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html>`__,
 and `Python 2.6+/3.1+
 <http://en.wikipedia.org/wiki/History_of_Python#Version_release_dates>`__.
 
@@ -39,7 +48,7 @@ Contents:
    :maxdepth: 2
 
    example
-   lang   
+   lang
    java
    python
    jmp-compile

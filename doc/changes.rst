@@ -6,14 +6,25 @@ Change History
 
 There is now a compatible Objective C solution that works on iOS and Mac
 
-Added :jdoc:`toPyReprString` for Java
+Enhanced :doc:`jmp-compile` to evaluate constants in the source (eg
+``3+4`` is replaced with ``7``, and ``True or 7`` is replaced with
+``True``).  It will also omit unreachable code (eg if False).  You can
+turn this optimisation off with :option:`--no-optimizations`
+
+:doc:`jmp-compile` detects trying to assign to builtin constants
+(eg ``True=0``)
+
+Added toPyReprString for Java
 
 ``bool`` now always returns a value.  Before it would give TypeError
-for unknown types, which now give True.
+for unknown types, which now give ``True``.
 
 Correct Java string.split for various corner cases.
 
 Made Java implemented methods work correctly as dictionary keys.
+
+Calling a Java method non-varargs method with an incorrect number of
+args now gives the correct exception type (``TypeError``)
 
 1.2
 ===

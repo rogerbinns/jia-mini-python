@@ -42,6 +42,7 @@ def jmp_compile_internal(infile, outfile=None, print_func=False):
         line_table=True
         annotate=False
         jmpoutput=True
+        optimization=False
     if outfile is None:
         outfile=os.path.splitext(infile)[1]+".jmp"
     jmpcompilerobject.compile(options, infile, outfile)
@@ -56,9 +57,12 @@ def delfiles(files):
 
 class MiniPython(unittest.TestCase):
 
-    def jmp_compile(self, infile, outfile=None, print_function=False):
+    def jmp_compile(self, infile, outfile=None, print_function=False, optimizations=False):
         outfile=[outfile] if outfile else []
-        out,err=self.run_external_command([jmpcompiler]+(["--print-function"] if print_function else [])+["--asserts", infile]+outfile)
+        out,err=self.run_external_command([jmpcompiler]
+                                          +(["--print-function"] if print_function else [])
+                                          +(["--no-optimization"] if not optimizations else [])
+                                          +["--asserts", infile]+outfile)
         self.assertEqual(err, "")
         return out,err
 
@@ -85,7 +89,7 @@ class MiniPython(unittest.TestCase):
 
     def testCmp(self):
         "Test comparisons"
-        self.run_py("test/cmp.py")
+        self.run_py("test/cmp.py", optimizations=False)
 
     def testDict(self):
         "Test dictionaries"
@@ -120,11 +124,21 @@ class MiniPython(unittest.TestCase):
             expect="\n".join([str(i) for i in range(0, 65536, 257)])+"\n"
             self.assertEqual(out, expect)
 
-    def run_py(self, name):
-        out,err=self.jmp_compile(name)
+    def run_py(self, name, optimizations=False):
+        # Check we get exactly same behaviour with and without optimizations
+        out,err=self.jmp_compile(name, optimizations=False)
         self.assertEqual("", err)
+
         out,err=self.run_mp(os.path.splitext(name)[0]+".jmp")
         self.assertEqual("", err)
+
+        if optimizations:
+            out2,err2=self.jmp_compile(name, optimizations=True)
+            self.assertEqual("", err2)
+            out2,err2=self.run_mp(os.path.splitext(name)[0]+".jmp")
+            self.assertEqual("", err2)
+            self.assertEqual(out, out2)
+
         return out
 
     def testErrors(self):
