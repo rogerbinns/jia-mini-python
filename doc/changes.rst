@@ -23,8 +23,14 @@ Correct Java string.split for various corner cases.
 
 Made Java implemented methods work correctly as dictionary keys.
 
-Calling a Java method non-varargs method with an incorrect number of
+Calling a Java non-varargs method with an incorrect number of
 args now gives the correct exception type (``TypeError``)
+
+Deal with -2147483648 / -1 (gives -2147483648 because + 2147483648
+would be an overflow).  On Intel processors this operation would cause
+a `hardware fault <http://kqueue.org/blog/2012/12/31/idiv-dos/>`__
+like dividing by zero does, so similar precautions are taken.  Note
+that Java Mini Python only uses 32 bit signed integers.
 
 1.2
 ===
