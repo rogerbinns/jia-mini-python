@@ -43,6 +43,7 @@ def jmp_compile_internal(infile, outfile=None, print_func=False):
         annotate=False
         jmpoutput=True
         optimization=False
+        constants={}
     if outfile is None:
         outfile=os.path.splitext(infile)[1]+".jmp"
     jmpcompilerobject.compile(options, infile, outfile)
@@ -124,7 +125,7 @@ class MiniPython(unittest.TestCase):
             expect="\n".join([str(i) for i in range(0, 65536, 257)])+"\n"
             self.assertEqual(out, expect)
 
-    def run_py(self, name, optimizations=False):
+    def run_py(self, name, optimizations=True):
         # Check we get exactly same behaviour with and without optimizations
         out,err=self.jmp_compile(name, optimizations=False)
         self.assertEqual("", err)
