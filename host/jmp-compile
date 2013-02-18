@@ -317,6 +317,7 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Module(self, node):
         for i in node.body:
+            assert i is not None
             for x in self.visit(i):
                 yield x
         yield None, "EXIT_LOOP"
@@ -381,9 +382,6 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Str(self, node):
         yield node, ("PUSH_STR", node.s)
-
-    def visit_NoneType(self, node):
-        yield node, "PUSH_NONE"
 
     def visit_Name(self, node):
         assert len(node.ctx._fields)==0
@@ -512,12 +510,14 @@ class Compiler(ast.NodeVisitor):
         elsepart=Label() if node.orelse else None
         yield node, ("IF_FALSE", elsepart if elsepart else end)
         for x in node.body:
+            assert x is not None
             for y in self.visit(x):
                 yield y
         if elsepart:
             yield node, ("GOTO", end)
             yield node, elsepart
             for x in node.orelse:
+                assert x is not None
                 for y in self.visit(x):
                     yield y
         yield node, end
@@ -533,6 +533,7 @@ class Compiler(ast.NodeVisitor):
             yield x
         yield node, ("IF_FALSE", end)
         for x in node.body:
+            assert x is not None
             for y in self.visit(x):
                 yield y
         yield None, ("GOTO", test)
@@ -555,6 +556,7 @@ class Compiler(ast.NodeVisitor):
         yield node, ("NEXT", end)
         yield node.target, ("STORE_NAME", node.target.id)
         for x in node.body:
+            assert x is not None
             for y in self.visit(x):
                 yield y
         yield None, ("GOTO", loop)
@@ -633,6 +635,7 @@ class Compiler(ast.NodeVisitor):
             yield None, "RETURN"
         else:
             for x in node.body:
+                assert x is not None
                 for y in self.visit(x):
                     last=y[1]
                     yield y
@@ -693,6 +696,18 @@ class Compiler(ast.NodeVisitor):
 
 class Optimizer(ast.NodeTransformer):
     "Perform some optimizations (eg folding constant expressions, removing dead code)"
+
+    # Use this to iterate of lists (eg if node body)
+    def process_list(self, l):
+        if not l:
+            return
+        res=[]
+        for item in l:
+            r=self.visit(item)
+            if r is not None:
+                res.append(r)
+        l[:]=res
+
     def is_constant(self, node):
         if isinstance(node, (ast.Str, ast.Num)):
             return True
@@ -847,13 +862,12 @@ class Optimizer(ast.NodeTransformer):
     @errorfy
     def visit_If(self, node):
         node.test=self.visit(node.test)
-        if node.orelse:
-            node.orelse=[self.visit(o) for o in node.orelse]
-        node.body=[self.visit(b) for b in node.body]
+        self.process_list(node.orelse)
+        self.process_list(node.body)
 
         if self.is_constant(node.test):
             if self.get_val(node.test):
-                return node.body
+                return node.body if node.body else None
             return node.orelse if node.orelse else None
         return node
 
@@ -862,7 +876,7 @@ class Optimizer(ast.NodeTransformer):
         if node.orelse:
             return node
         node.test=self.visit(node.test)
-        node.body=[self.visit(b) for b in node.body]
+        self.process_list(node.body)
         if self.is_constant(node.test) and not self.get_val(node.test):
             return None
         return node
