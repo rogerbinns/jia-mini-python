@@ -673,8 +673,11 @@ class Compiler(ast.NodeVisitor):
         elif icount:
             yield node, ("POP_N", icount)
         # now return
-        for x in self.visit(node.value):
-            yield x
+        if node.value is None:
+            yield node, "PUSH_NONE"
+        else:
+            for x in self.visit(node.value):
+                yield x
         yield node, "RETURN"
 
     def visit_Delete(self, node):
