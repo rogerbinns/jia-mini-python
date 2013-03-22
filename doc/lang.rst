@@ -21,7 +21,7 @@ Types
 * None
 * tuple (note: :ref:`treated as list and mutable <tuples>`)
 * functions (you can nest them, assign to variables, pass then around,
-  invoke, :func:`apply`)
+  invoke, :closures, func:`apply`)
 
 Keywords
 --------
@@ -46,7 +46,7 @@ Operators
 * [] (list and dict indexing)
 * [from:to] list slicing (step not supported)
 * x if y else z (ternary)
-
+* Augmented assignments (+= -= /= etc). :ref:`note <augassign>`)
 
 What is not supported
 =====================
@@ -58,7 +58,6 @@ What is not supported
   variable numbers of arguments.  You can call :func:`apply` to call
   a function with a list of arguments.
 * Default arguments
-* Augmented assignments (+= -= /= etc)
 * Bitwise operators (<< >> & | ^)
 * Classes - note however that there is some :ref:`pyobject`
 * Decorators

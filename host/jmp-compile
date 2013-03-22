@@ -117,17 +117,25 @@ class Compiler(ast.NodeVisitor):
 
         res=[]
         try:
+            # Replace x+=1 with x=x+1
+            aug=AugmentedAssigns()
+            aug.options=options
+            root=aug.visit(root)
+            ast.fix_missing_locations(root)
+
+            # Constant expansions
             if options.constants:
                 const=ConstantExpander()
                 const.options=options
                 root=const.visit(root)
                 ast.fix_missing_locations(root)
 
+            # Removal of dead code, static expression evaluation etc
             if options.optimization:
                 opty=Optimizer()
                 opty.options=options
                 root=opty.visit(root)
-                #ast.fix_missing_locations(root)
+                ast.fix_missing_locations(root)
 
             # Regular compilation
             for node,v  in self.visit(root):
@@ -897,6 +905,15 @@ class ConstantExpander(ast.NodeTransformer):
             elif isinstance(node.ctx, ast.Store):
                 raise Exception("You can't assign to a constant")
         return node
+
+class AugmentedAssigns(ast.NodeTransformer):
+    @errorfy
+    def visit_AugAssign(self, node):
+        binop=ast.BinOp(op=node.op, left=node.target, right=node.value)
+        ast.copy_location(binop, node.value)
+        assign=ast.Assign(targets=[node.target], value=binop)
+        ast.copy_location(assign, node)
+        return assign
 
 # Currently only used by assert.  Turns nodes back into pretty printed
 # text.  While we could stringify each node it would require inserting

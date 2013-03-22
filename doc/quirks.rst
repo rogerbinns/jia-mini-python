@@ -69,3 +69,14 @@ The `str % list` (% operator) just calls :jdoc:`String.format
 which uses different rules than Python's equivalent.  For example
 Python will complain if too many arguments are provided while
 String.format doesn't.
+
+.. _augassign:
+
+Augmented Assignments
+---------------------
+
+These are expanded: ``x+=1`` becomes ``x=x+1``
+
+CPython has an internal handler that turns ``+=`` into list append for
+lists which doesn't happen here.  If you do this with a list then a
+new list is created and assigned to the original variable name.
