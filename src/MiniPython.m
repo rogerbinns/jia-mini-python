@@ -8,7 +8,6 @@
 #pragma clang diagnostic ignored "-Warc-repeated-use-of-weak"
 
 #import "MiniPython.h"
-// #import <Foundation/NSObjCRuntime.h>
 #import <objc/runtime.h>
 
 NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
@@ -275,10 +274,10 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return YES;
 
     onerror:
-        [self setNSError:[MiniPythonError withMiniPython:self
-                                                    code:(errorcode != 0) ? errorcode : ((res < 0) ? MiniPythonStreamError : MiniPythonEndOfStreamError)
-                                                userInfo:(errorcode == 0) ? @{@"readresult" : [NSNumber numberWithInteger:res]}
-                                                    : nil]];
+    [self setNSError:[MiniPythonError withMiniPython:self
+                                                code:(errorcode != 0) ? errorcode : ((res < 0) ? MiniPythonStreamError : MiniPythonEndOfStreamError)
+                                            userInfo:(errorcode == 0) ? @{@"readresult" : [NSNumber numberWithInteger:res]}
+                                                : nil]];
     if (error) {*error = errorindicator;}
     free(stringbuf);
     return NO;
@@ -1307,7 +1306,10 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
 #undef ADDCHAR
 }
 
-- (NSObject *)builtin_apply:(NSObject *)func :(NSArray *)args {
+// From here on are methods that are invoked indirectly via NSInvocation (aka reflection).  Static analysis tools will
+// declare them unused.  Consequently they are marked as __unused which means that they are actually used!
+
+- (NSObject *)builtin_apply:(NSObject *)func :(NSArray *)args __unused {
     if (![self builtin_callable:func]) TYPEERROR(func, @"method");
     if (!ISLIST(args)) TYPEERROR(args, @"list");
     if (stacktop + (int) [args count] >= stacklimit)
@@ -1387,7 +1389,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return [self builtin_cmp:ls :rs];
 }
 
-- (NSArray *)builtin_filter:(NSObject *)func :(NSArray *)list {
+- (NSArray *)builtin_filter:(NSObject *)func :(NSArray *)list __unused {
     if (![self builtin_callable:func])
     TYPEERROR(func, @"method");
     if (!ISLIST(list))
@@ -1406,15 +1408,15 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return res;
 }
 
-- (NSDictionary *)builtin_globals {
+- (NSDictionary *)builtin_globals __unused {
     return [context globals];
 }
 
-- (int)builtin_id:(NSObject *)value {
+- (int)builtin_id:(NSObject *)value __unused {
     return (int) (value ? value : [NSNull null]);
 }
 
-- (int)builtin_int:(NSObject *)value {
+- (int)builtin_int:(NSObject *)value __unused {
     if (ISINT(value)) {return [N(value) intValue];}
     if (ISBOOL(value)) {return !![N(value) boolValue];}
     if (ISSTRING(value)) {
@@ -1431,7 +1433,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return 0;
 }
 
-- (int)builtin_len:(NSObject *)value {
+- (int)builtin_len:(NSObject *)value __unused {
     if (ISDICT(value)) {return (int) [D(value) count];}
     if (ISLIST(value)) {return (int) [L(value) count];}
     if (ISSTRING(value)) {return (int) [S(value) length];}
@@ -1439,11 +1441,11 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return 0;
 }
 
-- (NSDictionary *)builtin_locals {
+- (NSDictionary *)builtin_locals __unused {
     return [context locals];
 }
 
-- (NSObject *)builtin_map:(NSObject *)func :(NSArray *)list {
+- (NSObject *)builtin_map:(NSObject *)func :(NSArray *)list __unused {
     if (![self builtin_callable:func])
     TYPEERROR(func, @"method");
     if (!ISLIST(list))
@@ -1472,52 +1474,52 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     [client print:output];
 }
 
-- (void)builtin_print {
+- (void)builtin_print __unused {
     [self print_helper:@[]];
 }
 
-- (void)builtin_print:(NSObject *)one {
+- (void)builtin_print:(NSObject *)one __unused {
     [self print_helper:@[one]];
 }
 
-- (void)builtin_print:(NSObject *)one :(NSObject *)two {
+- (void)builtin_print:(NSObject *)one :(NSObject *)two __unused {
     [self print_helper:@[one, two]];
 }
 
-- (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three {
+- (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three __unused {
     [self print_helper:@[one, two, three]];
 }
 
-- (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four {
+- (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four __unused {
     [self print_helper:@[one, two, three, four]];
 }
 
-- (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four :(NSObject *)five {
+- (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four :(NSObject *)five __unused {
     [self print_helper:@[one, two, three, four, five]];
 }
 
 - (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four :(NSObject *)five
-    :(NSObject *)six {
+    :(NSObject *)six __unused {
     [self print_helper:@[one, two, three, four, five, six]];
 }
 
 - (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four :(NSObject *)five
-    :(NSObject *)six :(NSObject *)seven {
+    :(NSObject *)six :(NSObject *)seven __unused {
     [self print_helper:@[one, two, three, four, five, six, seven]];
 }
 
 // should be enough ....
 - (void)builtin_print:(NSObject *)one :(NSObject *)two :(NSObject *)three :(NSObject *)four :(NSObject *)five
-    :(NSObject *)six :(NSObject *)seven :(NSObject *)eight {
+    :(NSObject *)six :(NSObject *)seven :(NSObject *)eight __unused {
     [self print_helper:@[one, two, three, four, five, six, seven, eight]];
 }
 
 
-- (NSArray *)builtin_range:(int)end {
+- (NSArray *)builtin_range:(int)end __unused {
     return [self builtin_range:0 :end :1];
 }
 
-- (NSArray *)builtin_range:(int)start :(int)end {
+- (NSArray *)builtin_range:(int)start :(int)end __unused {
     return [self builtin_range:start :end :1];
 }
 
@@ -1538,24 +1540,24 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
 }
 
 
-- (NSString *)builtin_str:(NSObject *)value {
+- (NSString *)builtin_str:(NSObject *)value __unused {
     return [MiniPython toPyString:value];
 }
 
-- (NSString *)builtin_type:(NSObject *)value {
+- (NSString *)builtin_type:(NSObject *)value __unused {
     return [MiniPython toPyTypeString:value];
 }
 
-- (NSObject *)instance_dict_copy:(NSDictionary *)dict {
+- (NSObject *)instance_dict_copy:(NSDictionary *)dict __unused {
     return [[NSMutableDictionary alloc] initWithDictionary:dict];
 }
 
-- (NSObject *)instance_dict_get:(NSDictionary *)dict :(NSObject *)key :(NSObject *)defvalue {
+- (NSObject *)instance_dict_get:(NSDictionary *)dict :(NSObject *)key :(NSObject *)defvalue __unused {
     NSObject *v = [dict objectForKey:key ? key : [NSNull null]];
     return v ? v : defvalue;
 }
 
-- (void)instance_dict_update:(NSMutableDictionary *)dict :(NSObject *)other {
+- (void)instance_dict_update:(NSMutableDictionary *)dict :(NSObject *)other __unused {
     if (!ISDICTM(dict)) {
         [self typeError:dict expected:@"NSMutableDictionary"];
         return;
@@ -1567,7 +1569,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     [dict addEntriesFromDictionary:D(other)];
 }
 
-- (void)instance_list_append:(NSMutableArray *)list :(NSObject *)item {
+- (void)instance_list_append:(NSMutableArray *)list :(NSObject *)item __unused {
     if (!ISLISTM(list)) {
         [self typeError:list expected:@"NSMutableArray"];
         return;
@@ -1575,7 +1577,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     [list addObject:item];
 }
 
-- (void)instance_list_extend:(NSMutableArray *)list :(NSArray *)items {
+- (void)instance_list_extend:(NSMutableArray *)list :(NSArray *)items __unused {
     if (!ISLISTM(list)) {
         [self typeError:list expected:@"NSMutableArray"];
         return;
@@ -1587,13 +1589,13 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     [list addObjectsFromArray:items];
 }
 
-- (int)instance_list_index:(NSArray *)list :(NSObject *)item {
+- (int)instance_list_index:(NSArray *)list :(NSObject *)item __unused {
     NSUInteger location = [list indexOfObject:item];
     if (location == NSNotFound) {return -1;}
     return (int) location;
 }
 
-- (NSObject *)instance_list_pop:(NSMutableArray *)list {
+- (NSObject *)instance_list_pop:(NSMutableArray *)list __unused {
     if (!ISLISTM(list)) TYPEERROR(list, @"NSMutableArray");
     NSObject *res = [list lastObject];
     if (!res) ERROR(IndexError, @"pop from empty list");
@@ -1601,7 +1603,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return res;
 }
 
-- (void)instance_list_reverse:(NSMutableArray *)list {
+- (void)instance_list_reverse:(NSMutableArray *)list __unused {
     if (!ISLISTM(list)) {
         [self typeError:list expected:@"NSMutableArray"];
         return;
@@ -1618,15 +1620,15 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
 }
 
 
-- (void)instance_list_sort:(NSMutableArray *)list {
+- (void)instance_list_sort:(NSMutableArray *)list __unused {
     [self instance_list_sort:list :[NSNull null] :[NSNull null] :NO];
 }
 
-- (void)instance_list_sort:(NSMutableArray *)list :(NSObject *)cmp {
+- (void)instance_list_sort:(NSMutableArray *)list :(NSObject *)cmp __unused {
     [self instance_list_sort:list :cmp :[NSNull null] :NO];
 }
 
-- (void)instance_list_sort:(NSMutableArray *)list :(NSObject *)cmp :(NSObject *)key {
+- (void)instance_list_sort:(NSMutableArray *)list :(NSObject *)cmp :(NSObject *)key __unused {
     [self instance_list_sort:list :cmp :key :NO];
 }
 
@@ -1677,7 +1679,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     }];
 }
 
-- (BOOL)instance_str_endswith:(NSString *)str :(NSString *)suffix {
+- (BOOL)instance_str_endswith:(NSString *)str :(NSString *)suffix __unused {
     if (!ISSTRING(suffix)) {
         [self typeError:suffix expected:@"str"];
         return NO;
@@ -1685,7 +1687,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return [suffix length] ? [str hasSuffix:suffix] : YES;
 }
 
-- (NSString *)instance_str_join:(NSString *)str :(NSObject *)with {
+- (NSString *)instance_str_join:(NSString *)str :(NSObject *)with __unused {
     if (!ISLIST(with)) TYPEERROR(with, @"list");
     NSArray *list = L(with);
     NSMutableString *res = [[NSMutableString alloc] init];
@@ -1700,11 +1702,11 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return res;
 }
 
-- (NSString *)instance_str_lower:(NSString *)str {
+- (NSString *)instance_str_lower:(NSString *)str __unused {
     return [str lowercaseString];
 }
 
-- (NSString *)instance_str_replace:(NSString *)str :(NSString *)find :(NSString *)replacement {
+- (NSString *)instance_str_replace:(NSString *)str :(NSString *)find :(NSString *)replacement __unused {
     if (!ISSTRING(find)) TYPEERROR(find, @"str");
     if (!ISSTRING(replacement)) TYPEERROR(find, @"replacement");
     if ([find length]) {
@@ -1762,11 +1764,11 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return res;
 }
 
-- (NSArray *)instance_str_split:(NSString *)str {
+- (NSArray *)instance_str_split:(NSString *)str __unused {
     return [self internal_str_split:str sep:nil maxCount:-1];
 }
 
-- (NSArray *)instance_str_split:(NSString *)str :(NSString *)sep {
+- (NSArray *)instance_str_split:(NSString *)str :(NSString *)sep __unused {
     return [self instance_str_split:str :sep :-1];
 }
 
@@ -1776,7 +1778,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return [self internal_str_split:str sep:sep maxCount:maxsep];
 }
 
-- (BOOL)instance_str_startswith:(NSString *)str :(NSString *)prefix {
+- (BOOL)instance_str_startswith:(NSString *)str :(NSString *)prefix __unused {
     if (!ISSTRING(prefix)) {
         [self typeError:prefix expected:@"str"];
         return NO;
@@ -1784,12 +1786,12 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
     return [prefix length] ? [str hasPrefix:prefix] : YES;
 }
 
-- (NSString *)instance_str_strip:(NSString *)str {
+- (NSString *)instance_str_strip:(NSString *)str __unused {
     // builtin objc whitespace set includes U+0085 which python doesn't
     return [str stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \t\r\n"]];
 }
 
-- (NSString *)instance_str_upper:(NSString *)str {
+- (NSString *)instance_str_upper:(NSString *)str __unused {
     return [str uppercaseString];
 }
 
@@ -2355,6 +2357,8 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
 }
 
 - (NSObject *)call:(NSArray *)args {
+    // This adds one if we are supplying an instance argument later as
+    // all args have to be shifted to leave space for it
 #define INST(x) ((x)+(instance!=nil))
     if (!invocation || INST([args count]) != nargsininvocation) {
         NSMutableString *selname;
@@ -2403,7 +2407,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
             bval = [N(v) boolValue];
             [invocation setArgument:&bval atIndex:INST((NSInteger) i + 2)];
         } else if (strcmp(type, "@") == 0) {
-            // always works but we pass nil instead of NSNUll
+            // always works but we pass nil instead of NSNull
             if (v == [NSNull null]) {v = nil;}
             [invocation setArgument:&v atIndex:INST((NSInteger) i + 2)];
         } else {
