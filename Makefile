@@ -7,10 +7,6 @@ PYTHON=python
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
-# You need the version of clang in llvm32 to get correct coverage.  Older versions
-# overwrite the tracking files instead of appending on each run
-COVERAGECC=/Users/rogerb/llvm32/bin/clang
-
 .PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind ocoverage clean
 
 help:
@@ -54,10 +50,11 @@ bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makef
 	$(CC) -g -Weverything -fobjc-arc \
 	src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o $@
 
+# Requires minimum clang/llvm3.2 http://stackoverflow.com/questions/8826682/
 # use -a with gcov to get each block
+COVERAGECC=clang
 ocoverage:
 	-rm -f *.gcda *.gcno *.gcov
-	$(COVERAGECC) --version | grep -q 3.2 # Requires clang/llvm3.2 http://stackoverflow.com/questions/8826682/
 	$(COVERAGECC) --coverage -fsanitize -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
 	python test/main_test.py objc
 	gcov src/MiniPython.m
@@ -93,6 +90,7 @@ dist: clean doc
 	mkdir -p "$(BUILDDIR)"
 	cp host/jmp-compile "$(BUILDDIR)"
 	sed -e 's/^package.*$$//' -e "s/%%VERSION%%/$(VERSION)/" < src/com/rogerbinns/MiniPython.java > "$(BUILDDIR)/MiniPython.java"
+	cp src/MiniPython.[mh] "$(BUILDDIR)"
 	cp -r doc/_build/html "$(BUILDDIR)/doc"
 	mkdir dist
 	cd build ; zip -9r "../dist/JavaMiniPython-$(VERSION).zip" *
