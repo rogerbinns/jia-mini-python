@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * Encapsulates running a Python syntax file.
- *
+ * 
  * The source should have been transformed using jmp-compile. The class cannot
  * be used concurrently. There is no shared state between instances.
  */
@@ -50,7 +50,7 @@ public class MiniPython {
 
 	/**
 	 * Removes all internal state.
-	 *
+	 * 
 	 * This ensures that garbage collection is easier. You can reuse this
 	 * instance by calling addModule to reregister modules and setCode to run
 	 * new code.
@@ -66,11 +66,11 @@ public class MiniPython {
 
 	/**
 	 * Reads and executes code from the supplied stream
-	 *
+	 * 
 	 * The stream provided must satisfy reads completely (eg if 27 bytes is
 	 * asked for then that number should be returned in the read() call unless
 	 * end of file is reached.)
-	 *
+	 * 
 	 * @param stream
 	 *            The stream is not closed and you can have additional content
 	 *            after the jmp.
@@ -218,7 +218,8 @@ public class MiniPython {
 		Object[] getPrefixArgs();
 	}
 
-	private final class TBuiltinInstanceMethod implements TNativeMethod, Comparable<TBuiltinInstanceMethod> {
+	private final class TBuiltinInstanceMethod implements TNativeMethod,
+	Comparable<TBuiltinInstanceMethod> {
 		Object[] prefixargs;
 		String prettyname;
 		Method method;
@@ -247,7 +248,8 @@ public class MiniPython {
 		@Override
 		public boolean equals(Object other) {
 			return other instanceof TBuiltinInstanceMethod
-					&& this.toString().equals(((TBuiltinInstanceMethod)other).toString());
+					&& this.toString().equals(
+							((TBuiltinInstanceMethod) other).toString());
 		}
 
 		@Override
@@ -272,7 +274,8 @@ public class MiniPython {
 		}
 	}
 
-	private final class TModuleNativeMethod implements TNativeMethod, Comparable<TModuleNativeMethod> {
+	private final class TModuleNativeMethod implements TNativeMethod,
+	Comparable<TModuleNativeMethod> {
 		TModule mod;
 		String name;
 		Method nativeMethod;
@@ -355,7 +358,7 @@ public class MiniPython {
 
 	/**
 	 * Calls a method in Python and returns the result
-	 *
+	 * 
 	 * @param name
 	 *            Global method name
 	 * @param args
@@ -515,6 +518,9 @@ public class MiniPython {
 			{
 				Context c = current;
 				String key = strings[val];
+				if (c.globals != null && c.globals.contains(key)) {
+					c = root;
+				}
 				while (c != null) {
 					if (c.variables.containsKey(key)) {
 						stack[++stacktop] = c.variables.get(key);
@@ -1178,7 +1184,7 @@ public class MiniPython {
 			for (int i = 0; i < suppliedargs; i++) {
 				Object val = (i < lpargs) ? prefixargs[i] : stack[stacktop + i
 				                                                  - lpargs + 1];
-				if (i>=parameterTypes.length) {
+				if (i >= parameterTypes.length) {
 					break;
 				}
 				if (!checkTypeCompatible(parameterTypes[i], val)) {
@@ -1275,11 +1281,11 @@ public class MiniPython {
 	/**
 	 * Call this method when your callbacks need to halt execution due to an
 	 * error
-	 *
+	 * 
 	 * This method will do the internal bookkeeping necessary in order to
 	 * provide diagnostics to the original caller and then throw an
 	 * ExecutionError which you should not catch.
-	 *
+	 * 
 	 * @param exctype
 	 *            Best practise is to use the name of a Python exception (eg
 	 *            "TypeError")
@@ -1296,11 +1302,11 @@ public class MiniPython {
 	/**
 	 * Call this method when your callbacks need to halt execution due to an
 	 * error
-	 *
+	 * 
 	 * This method will do the internal bookkeeping necessary in order to
 	 * provide diagnostics to the original caller and then throw an
 	 * ExecutionError which you should not catch.
-	 *
+	 * 
 	 * @param exctype
 	 *            Best practise is to use the name of a Python exception (eg
 	 *            "TypeError")
@@ -1490,10 +1496,10 @@ public class MiniPython {
 	/**
 	 * Returns a string representing the object using Python nomenclature where
 	 * possible
-	 *
+	 * 
 	 * For example `null` is returned as `None`, `true` as `True` etc. Container
 	 * types like dict/Map and list/List will include the items.
-	 *
+	 * 
 	 * @param o
 	 *            Object to stringify. Can be null.
 	 */
@@ -1505,7 +1511,7 @@ public class MiniPython {
 	 * Same as toPyString except strings are quoted and backslash escaped. If
 	 * you emit an error message this is preferable as it makes it clear a value
 	 * is a string.
-	 *
+	 * 
 	 * @param o
 	 *            Object to stringify. Can be null.
 	 */
@@ -1516,12 +1522,12 @@ public class MiniPython {
 	/**
 	 * Returns a string representing the type of the object using Python
 	 * nomenclature where possible
-	 *
+	 * 
 	 * For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as
 	 * `dict` etc. You can also pass in Class objects as well as instances. Note
 	 * that primitives (eg `int`) and the corresponding boxed type (eg
 	 * `Integer`) will both be returned as the same string (`int` in this case).
-	 *
+	 * 
 	 * @param o
 	 *            Object whose type to stringify, or a Class or null
 	 */
@@ -1555,7 +1561,7 @@ public class MiniPython {
 
 	/**
 	 * Callbacks to use for specific behaviour
-	 *
+	 * 
 	 * @param client
 	 *            Replaces existing client with this one
 	 */
@@ -1565,7 +1571,7 @@ public class MiniPython {
 
 	/**
 	 * Makes methods on the methods Object available to the Python
-	 *
+	 * 
 	 * @param name
 	 *            Module name in the Python environment
 	 * @param object
@@ -1799,40 +1805,44 @@ public class MiniPython {
 		case 0:
 		}
 
-		ArrayList<String> res=new ArrayList<String>();
-		int pos=0;
+		ArrayList<String> res = new ArrayList<String>();
+		int pos = 0;
 		char c;
-		if(sep==null) {
-			for(;;) {
-				while(pos<s.length() && (s.charAt(pos)==' ' || s.charAt(pos)=='\t' || s.charAt(pos)=='\r' || s.charAt(pos)=='\n')) {
+		if (sep == null) {
+			for (;;) {
+				while (pos < s.length()
+						&& (s.charAt(pos) == ' ' || s.charAt(pos) == '\t'
+						|| s.charAt(pos) == '\r' || s.charAt(pos) == '\n')) {
 					pos++;
 				}
-				if(pos==s.length())
+				if (pos == s.length())
 					return res;
-				int pos2=pos;
-				while(pos2<s.length() && s.charAt(pos2)!=' ' && s.charAt(pos2)!='\t' && s.charAt(pos2)!='\r' && s.charAt(pos2)!='\n') {
+				int pos2 = pos;
+				while (pos2 < s.length() && s.charAt(pos2) != ' '
+						&& s.charAt(pos2) != '\t' && s.charAt(pos2) != '\r'
+						&& s.charAt(pos2) != '\n') {
 					pos2++;
 				}
 				res.add(s.substring(pos, pos2));
-				pos=pos2;
+				pos = pos2;
 			}
 		}
 
-		while(pos<s.length()) {
-			if(maxsplit>=0 && res.size()>=maxsplit) {
+		while (pos < s.length()) {
+			if (maxsplit >= 0 && res.size() >= maxsplit) {
 				res.add(s.substring(pos));
 				return res;
 			}
-			int found=s.indexOf(sep, pos);
-			if(found<0) {
+			int found = s.indexOf(sep, pos);
+			if (found < 0) {
 				res.add(s.substring(pos));
 				return res;
 			}
 			res.add(s.substring(pos, found));
-			pos=found+sep.length();
+			pos = found + sep.length();
 		}
 
-		if(s.endsWith(sep)) {
+		if (s.endsWith(sep)) {
 			res.add("");
 		}
 		return res;
@@ -1983,7 +1993,7 @@ public class MiniPython {
 	public interface Client {
 		/**
 		 * Request to print a string
-		 *
+		 * 
 		 * @param s
 		 *            String to print. May or may not contain a trailing newline
 		 *            depending on code
@@ -1994,10 +2004,10 @@ public class MiniPython {
 
 		/**
 		 * Called whenever there is an ExecutionError.
-		 *
+		 * 
 		 * This provides one spot where you can perform logging and other
 		 * diagnostics.
-		 *
+		 * 
 		 * @param error
 		 *            The instance that is about to be thrown
 		 */
@@ -2006,9 +2016,9 @@ public class MiniPython {
 
 	/**
 	 * Encapsulates what would be an Exception in Python.
-	 *
+	 * 
 	 * Do not instantiate one directly - call signalError instead.
-	 *
+	 * 
 	 */
 	public class ExecutionError extends Exception {
 		static final long serialVersionUID = -4271385191079964823L;
@@ -2044,7 +2054,7 @@ public class MiniPython {
 
 		/**
 		 * Returns the type of the error.
-		 *
+		 * 
 		 * This typically corresponds to a Python exception (eg `TypeError` or
 		 * `IndexError`)
 		 */
@@ -2055,7 +2065,7 @@ public class MiniPython {
 		/**
 		 * Returns the line number which was being executed when the error
 		 * happened.
-		 *
+		 * 
 		 * If you omitted line numbers then -1 is returned.
 		 */
 		public int linenumber() {
@@ -2073,7 +2083,7 @@ public class MiniPython {
 
 		/**
 		 * Returns program counter when error occurred.
-		 *
+		 * 
 		 * Note that due to internal implementation details this is the next
 		 * instruction to be executed, not the currently executing one.
 		 */

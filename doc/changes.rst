@@ -34,6 +34,8 @@ a `hardware fault <http://kqueue.org/blog/2012/12/31/idiv-dos/>`__
 like dividing by zero does, so similar precautions are taken.  Note
 that |project| only uses 32 bit signed integers.
 
+Fix global lookup for LOAD_NAME (:issue:`14`)
+
 1.2
 ===
 

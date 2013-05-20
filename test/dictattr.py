@@ -1,6 +1,6 @@
 # dictionary/attribute type stuff
 
-# issue 6 
+# issue 6
 
 t={"a": 1}
 
@@ -47,3 +47,23 @@ assert inst1.instance()==1
 inst0.xxx=inst1.instance
 
 assert inst0.xxx()==1
+
+# check scoping and globals
+
+toplist=[]
+def closure():
+
+   def the_method(self, one, two):
+      # Try to call the global version
+      global the_method
+      the_method(100, 100)
+
+   toplist.append(locals())
+
+def the_method(one, two):
+   if one!=100:
+      toplist[0].the_method(one, two)
+
+closure()
+the_method(1, 1)
+
