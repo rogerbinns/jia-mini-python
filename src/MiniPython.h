@@ -57,8 +57,7 @@ enum MiniPythonErrorCode {
 
 - (NSObject *)callMethod:(NSString *)name args:(NSArray *)args error:(NSError **)error;
 
-- (BOOL)isCallable:(NSObject *)object;\
-
+- (BOOL)isCallable:(NSObject *)object;
 
 - (NSObject *)callObject:(NSObject *)object args:(NSArray *)args error:(NSError **)error;
 @end
