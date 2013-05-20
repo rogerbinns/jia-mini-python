@@ -52,7 +52,7 @@ places::
    >>> True>-1
    True
 
-It is currently an error in Java Mini Python to do so.  You can use
+It is currently an error in |project| to do so.  You can use
 :func:`int` to convert a bool to 1/0.
 
 Concurrent container modification/iteration

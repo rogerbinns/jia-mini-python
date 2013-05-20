@@ -8,8 +8,10 @@ There is now a compatible Objective C solution that works on iOS and Mac
 
 Enhanced :doc:`jmp-compile` to evaluate constants in the source (eg
 ``3+4`` is replaced with ``7``, and ``True or 7`` is replaced with
-``True``).  It will also omit unreachable code (eg if False).  You can
-turn this optimisation off with :option:`--no-optimizations`
+``True``).  It will also omit unreachable code (eg ``if False``).  You
+can turn this optimisation off with :option:`--no-optimizations`.  You
+can also supply your own constants such as ``DEBUG=True`` or
+``VERSION="2.3"``.
 
 :doc:`jmp-compile` detects trying to assign to builtin constants
 (eg ``True=0``)
@@ -30,7 +32,7 @@ Deal with -2147483648 / -1 (gives -2147483648 because + 2147483648
 would be an overflow).  On Intel processors this operation would cause
 a `hardware fault <http://kqueue.org/blog/2012/12/31/idiv-dos/>`__
 like dividing by zero does, so similar precautions are taken.  Note
-that Java Mini Python only uses 32 bit signed integers.
+that |project| only uses 32 bit signed integers.
 
 1.2
 ===

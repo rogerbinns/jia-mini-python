@@ -61,6 +61,15 @@ output is alongside the input with a `.jmp` extension.
     ``3+4`` with ``7`` and ``True or 7`` with ``True``) and omitting
     unreachable code (eg ``if False``).
 
+.. option:: --constant ``name=value``
+
+   Can be supplied multiple times.  value must be in Python syntax and
+   can be any expression.  For example ``--constant DEBUG=True``,
+   ``--constant VERSION="2alpha1"``, ``--constant mapping={3: "Three",
+   4: "a"*7m 5: func(1,2,3)}``.  Be careful of the shell altering what
+   you provide on the command line.
+
+
 Dumping
 -------
 

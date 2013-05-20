@@ -12,14 +12,14 @@ require version coordination if the app already used those libraries.
 Additionally those libraries are orders of magnitude larger than the
 original project which is very undesirable.
 
-Java Mini Python is just over 800 lines of code, and a single source
+|project| is just over 800 lines of code, and a single source
 file which you are encouraged to put into your own packages thereby
 avoiding having to coordinate versions.
 
 What about hostile code?
 ------------------------
 
-Code run by Java Mini Python is restricted in what it can do.  For
+Code run by |project| is restricted in what it can do.  For
 example it can only access modules you explicitly make available, and
 then only public methods implemented directly in the module.
 
@@ -33,7 +33,7 @@ Code can perform denial of service attacks::
     # infinite loop
     while True:
         pass
-    
+
     # huge list
     l=[]
     while True:

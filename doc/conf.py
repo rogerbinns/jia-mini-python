@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "t
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.extlinks', 'javadomain']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.extlinks', 'javadomain', "objcdomain"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -26,8 +26,13 @@ extlinks={
 master_doc = 'index'
 
 # General information about the project.
-project = u'Java Mini Python'
+project = u'NewName'
 copyright = u'2011-2013, Roger Binns <rogerb@rogerbinns.com>'
+
+rst_prolog="""
+.. |project| replace:: %s
+
+""" % (project,)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

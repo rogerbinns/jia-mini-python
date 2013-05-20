@@ -2,8 +2,7 @@ Syntax/type support
 *******************
 
 The goal is to support a useful subset of Python syntax and keep the
-resulting files small.  If you want fuller Python support then
-consider using `Jython <http://www.jython.org>`__ instead.
+resulting files small.
 
 :doc:`python` details more about specific types and global functions.
 
@@ -21,7 +20,7 @@ Types
 * None
 * tuple (note: :ref:`treated as list and mutable <tuples>`)
 * functions (you can nest them, assign to variables, pass then around,
-  invoke, :closures, func:`apply`)
+  invoke, closures, :func:`apply`)
 
 Keywords
 --------
@@ -54,9 +53,9 @@ What is not supported
 * docstrings are seen but ignored.  You cannot retrieve them.  They do
   not end up in the output jmp file.
 * Variable arguments and keyword arguments (`*args` and `**kwargs`).
-  Note that methods :ref:`added via Java <adding_methods>` can take
-  variable numbers of arguments.  You can call :func:`apply` to call
-  a function with a list of arguments.
+  Note that methods added :ref:`Java <java_adding_methods>`/:ref:`ObjC
+  <objc_adding_methods>` can take variable numbers of arguments.  You
+  can call :func:`apply` to call a function with a list of arguments.
 * Default arguments
 * Bitwise operators (<< >> & | ^)
 * Classes - note however that there is some :ref:`pyobject`
@@ -84,10 +83,11 @@ Exceptions
 
 Exceptions are not supported nor is try/except.  If you do something
 that results in an exception (eg adding a number to a string) then a
-:ref:`Java level exception <ExecutionError>` will be thrown.
+:ref:`Java level exception <ExecutionError>` will be thrown, or
+:ref:`Objective C error returned <ObjCError>`.
 
 If you do need to be highly dynamic then consider using the `Look
 Before You Leap <http://docs.python.org/glossary.html#term-lbyl>`__
 style where you make checks before performing operations that can
-fail.  Note that multi-threading is not supported so there are no race
-conditions.
+fail.  Note that multi-threading is not supported (serialised) so
+there are no race conditions.

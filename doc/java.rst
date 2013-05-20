@@ -1,8 +1,6 @@
 Java API Reference
 ==================
 
-.. You need to hava Java domain support from https://bitbucket.org/danc/sphinx-contrib/src
-
 .. default-domain:: java
 
 :index:`Types`
@@ -32,10 +30,10 @@ Your added methods can return types other than the above without
 error.  However there will be type errors if you try to perform
 operations on them (eg use them as an `if` expression or add them).
 
-.. _adding_methods:
+.. _java_adding_methods:
 
-:index:`Adding methods`
------------------------
+:index:`Adding methods <single:Adding methods; Java>`
+-----------------------------------------------------
 
 You can make methods available to the Python by calling
 `MiniPython.addModule`.
@@ -88,8 +86,8 @@ No attempt is made to convert method parameters.  For example if a
 method takes a `boolean` and an `int` is provided then the `int` will
 not be converted to a `boolean` and there will be an exception.
 
-Errors
-******
+:index:`Errors <single:Errors; Java>`
+*************************************
 
 If your code encounters an error (for example one of the list items
 not being an integer in the sum_all method above) then you should call

@@ -2,7 +2,7 @@ Python reference
 ================
 
 See :doc:`lang` for an overview of what types and operations are
-supported.  Java Mini Python does not have an internal object model -
+supported.  |project| does not have an internal object model -
 instead Java types are :doc:`used directly <java>`.  This keeps the
 code considerably smaller.  But it also means that most Python
 attributes (eg functions) do not exist.  For example in Python
@@ -211,7 +211,7 @@ and the methods that operate on it together in the same dictionary.
 This is because of two features on dictionaries - attribute access and
 implicit *self* if attribute access returns a method.
 
-Java MiniPython lets you access dictionaries the regular Python way
+|project| lets you access dictionaries the regular Python way
 and as attribute access::
 
     d={"a": 3}
