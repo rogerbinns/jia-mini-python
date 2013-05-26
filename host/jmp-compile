@@ -152,7 +152,7 @@ class Compiler(ast.NodeVisitor):
                 if isinstance(v, Label):
                     locations[v]=pos
                     continue
-                if n is not None and lastlineno!=n.lineno:
+                if n is not None and hasattr(n, "lineno") and lastlineno!=n.lineno:
                     linenotab.append( (pos, n.lineno) )
                     lastlineno=n.lineno
                 if not isinstance(v, tuple):
@@ -552,7 +552,7 @@ class Compiler(ast.NodeVisitor):
         if node.orelse:
             raise self.Error(node, "else not supported for 'for'")
         if not isinstance(node.target, ast.Name):
-            raise self.Error(node.name, "Can only use single name for 'for' variable")
+            raise self.Error(node.target, "Can only use single name for 'for' variable")
 
         loop=Label()
         end=Label()
@@ -584,6 +584,53 @@ class Compiler(ast.NodeVisitor):
         if bc is None:
             raise self.Error(node, "'continue' not relevant here")
         yield node, ("GOTO", bc[1])
+
+    def visit_ListComp(self, node):
+        if not hasattr(self, "list_comp_nesting"):
+            self.list_comp_nesting=-1
+        self.list_comp_nesting+=1
+        name="_l[%d]" % (self.list_comp_nesting)
+        yield node, ("PUSH_INT", 0)
+        yield node, "LIST"
+        yield node, ("STORE_NAME", name)
+        stack=[]
+        for gen in node.generators:
+            if not isinstance(gen.target, ast.Name):
+                raise self.Error(gen.target, "Can only use single name for 'for' variable")
+            loop=Label()
+            end=Label()
+            stack.append( (loop, end) )
+            for x in self.visit(gen.iter):
+                yield x
+            yield gen, "ITER"
+            yield gen, loop
+            yield gen, ("NEXT", end)
+            yield gen, ("STORE_NAME", gen.target.id)
+
+            for cond in gen.ifs:
+                for x in self.visit(cond):
+                    yield x
+                yield cond, ("IF_FALSE", loop)
+
+            if gen is node.generators[-1]:
+                # we are adding this one - construct call to append
+                for x in self.visit(node.elt):
+                    yield x
+                yield gen, ("PUSH_INT", 1) # nargs
+                yield gen, ("PUSH_STR", "append")
+                yield gen, ("LOAD_NAME", name)
+                yield gen, "ATTR"
+                yield gen, "CALL"
+                yield gen, "POP_TOP"
+
+        for loop, end in stack[::-1]:
+            yield None, ("GOTO", loop)
+            yield None, end
+            yield None, "POP_TOP"
+        # leave list on stack and get rid of our tempname
+        yield node, ("LOAD_NAME", name)
+        yield node, ("DEL_NAME", name)
+        self.list_comp_nesting-=1
 
     def visit_Print(self, node):
         if node.dest is not None:

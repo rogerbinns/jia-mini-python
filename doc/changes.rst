@@ -11,10 +11,14 @@ Enhanced :doc:`jmp-compile` to evaluate constants in the source (eg
 ``True``).  It will also omit unreachable code (eg ``if False``).  You
 can turn this optimisation off with :option:`--no-optimizations`.  You
 can also supply your own constants such as ``DEBUG=True`` or
-``VERSION="2.3"``.
+``VERSION="2.3"``.  The resulting bytecode still works correctly even
+against |project| version 1.0.
 
 :doc:`jmp-compile` detects trying to assign to builtin constants
 (eg ``True=0``)
+
+:doc:`jmp-compile` now understands list comprehensions.  The resulting
+bytecode still works correctly even against |project| version 1.0.
 
 Added toPyReprString for Java
 

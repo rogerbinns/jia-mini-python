@@ -46,6 +46,7 @@ Operators
 * [from:to] list slicing (step not supported)
 * x if y else z (ternary)
 * Augmented assignments (+= -= /= etc). :ref:`note <augassign>`)
+* List comprehensions
 
 What is not supported
 =====================
@@ -53,20 +54,20 @@ What is not supported
 * docstrings are seen but ignored.  You cannot retrieve them.  They do
   not end up in the output jmp file.
 * Variable arguments and keyword arguments (`*args` and `**kwargs`).
-  Note that methods added :ref:`Java <java_adding_methods>`/:ref:`ObjC
-  <objc_adding_methods>` can take variable numbers of arguments.  You
-  can call :func:`apply` to call a function with a list of arguments.
+  Note that methods added in :ref:`Java
+  <java_adding_methods>`/:ref:`ObjC <objc_adding_methods>` can take
+  variable numbers of arguments.  You can call :func:`apply` to call a
+  function with a list of arguments.
 * Default arguments
 * Bitwise operators (<< >> & | ^)
-* Classes - note however that there is some :ref:`pyobject`
+* Classes - note however that there is a useful :ref:`approximation <pyobject>`
 * Decorators
-* Threads
+* Threads (mutexes ensure only one call at a time into |product| can happen)
 * Exceptions
 * More than one source file/module
 * Generators
 * Import
 * With
-* List comprehensions (see :func:`map`)
 * Tuple unpacking.  For example::
 
     for x,y in z:
@@ -74,9 +75,7 @@ What is not supported
 * Floating point
 * Bytes type
 * Assignment to False/True/None (allowed in some Python versions to
-  change value).  Has no effect.
-
-Use Jython if you want more than mini-Python
+  change value).
 
 Exceptions
 ==========
@@ -84,7 +83,7 @@ Exceptions
 Exceptions are not supported nor is try/except.  If you do something
 that results in an exception (eg adding a number to a string) then a
 :ref:`Java level exception <ExecutionError>` will be thrown, or
-:ref:`Objective C error returned <ObjCError>`.
+:ref:`Objective C error <ObjCError>` returned.
 
 If you do need to be highly dynamic then consider using the `Look
 Before You Leap <http://docs.python.org/glossary.html#term-lbyl>`__

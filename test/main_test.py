@@ -103,6 +103,7 @@ class MiniPython(unittest.TestCase):
     def testList(self):
         "Test lists"
         self.run_py("test/list.py")
+        self.run_py("test/listcomp.py")
 
     def testGeneral(self):
         "Test various operations"
