@@ -62,7 +62,7 @@ What is not supported
 * Bitwise operators (<< >> & | ^)
 * Classes - note however that there is a useful :ref:`approximation <pyobject>`
 * Decorators
-* Threads (mutexes ensure only one call at a time into |product| can happen)
+* Threads (mutexes ensure only one call at a time into |project| can happen)
 * Exceptions
 * More than one source file/module
 * Generators
