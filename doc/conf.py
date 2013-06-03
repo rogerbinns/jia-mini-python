@@ -26,7 +26,7 @@ extlinks={
 master_doc = 'index'
 
 # General information about the project.
-project = u'NewName'
+project = u'Jia Mini Python'
 copyright = u'2011-2013, Roger Binns <rogerb@rogerbinns.com>'
 
 rst_prolog="""
