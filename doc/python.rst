@@ -152,6 +152,10 @@ Global functions
    Returns a new list consisting of members when `function(member)`
    returned true.
 
+.. function:: globals()
+
+   Returns a dict of global variables.  You can modify the contents.
+
 .. function:: id(item)
 
    Returns a numeric code uniquely representing this instance.  Behind
@@ -159,7 +163,7 @@ Global functions
    :jdoc:`System.getIdentityHashcode()
    <java/lang/System.html#identityHashCode(java.lang.Object)>`.
 
-.. function: int(item)
+.. function:: int(item)
 
    Returns integer of item.  int items are returned as is, bools as
    0/1 for False/True and strings are parsed.  Note that this
@@ -169,6 +173,10 @@ Global functions
 
    Returns length of item such as number of characters for a str,
    members in a list/dict.
+
+.. function:: locals()
+
+   Returns a dict of local variables.  You can modify the contents.
 
 .. function:: map(function, list)
 
