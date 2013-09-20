@@ -142,8 +142,20 @@ assert (bool({}), bool({0:0})) == (False, True)
 assert not {} == True
 assert not [] == True
 
+# Check or and and short circuiting
+
 def errmeth():  # should not be called
-    1/0
+    a=0
+    1/a
+
+if False and errmeth():
+    pass
+
+if True or errmeth():
+    pass
+
+if {}=={} or not errmeth():
+    pass
 
 if not {} or not errmeth():
     pass
