@@ -139,6 +139,15 @@ assert (bool([]), bool([0])) == (False, True)
 
 assert (bool({}), bool({0:0})) == (False, True)
 
+assert not {} == True
+assert not [] == True
+
+def errmeth():  # should not be called
+    1/0
+
+if not {} or not errmeth():
+    pass
+
 assert callable(None)==False
 assert callable(meth)==True
 assert callable(test1.retSelf())==False
