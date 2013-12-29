@@ -31,7 +31,7 @@ clean:
 	rm -rf bin/* doc/_build *.gcov *.gcda *.gcno coverage build dist
 
 publish: doc
-	rsync -av --delete --exclude=.git doc/_build/html/ ../jmp-doc/
+	rsync -av --delete --exclude=.git --exclude=.nojekyll doc/_build/html/ ../jmp-doc/
 	cd ../jmp-doc && git status
 
 ant:
