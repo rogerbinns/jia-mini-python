@@ -1,4 +1,4 @@
-VERSION = 2.0
+VERSION = 1.99
 DATE = "5 September 2012"
 
 # use python3 for python3
@@ -31,8 +31,8 @@ clean:
 	rm -rf bin/* doc/_build *.gcov *.gcda *.gcno coverage build dist
 
 publish: doc
-	rsync -av --delete --exclude=.hg doc/_build/html/ ../jmp-doc/
-	cd ../jmp-doc && hg status
+	rsync -av --delete --exclude=.git doc/_build/html/ ../jmp-doc/
+	cd ../jmp-doc && git status
 
 ant:
 	ant -q

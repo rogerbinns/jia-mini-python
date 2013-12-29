@@ -16,7 +16,7 @@ source_suffix = '.rst'
 
 extlinks={
     "jdoc": ("http://docs.oracle.com/javase/7/docs/api/%s", "javadoc"),
-    "issue": ("http://code.google.com/p/java-mini-python/issues/detail?id=%s", "Issue "),
+    "issue": ("https://github.com/rogerbinns/jia-mini-python/issues/%s", "Issue "),
 }
 
 # The encoding of source files.

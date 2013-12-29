@@ -28,7 +28,7 @@ If you are looking for a fuller implementation of Python then try the
 `Jython Project <http://www.jython.org/>`__ for Java, or regular
 `CPython <http://www.python.org/download>`__.
 
-|project| is hosted at http://code.google.com/p/java-mini-python/
+|project| is hosted at https://github.com/rogerbinns/jia-mini-python
 
 Works with `Java 1.5+
 <http://en.wikipedia.org/wiki/Java_version_history#J2SE_5.0_.28September_30.2C_2004.29>`__,
@@ -72,4 +72,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
-
