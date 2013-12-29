@@ -61,8 +61,10 @@ that the vast majority of code is tested.  (The remaining uncovered
 The scope being limited (note "Mini" in the name!) there is also less
 functionality and less to go wrong.
 
-Please use the discussion group and bug tracker at
-http://code.google.com/p/java-mini-python/ if you encounter any issues.
+Please use the discussion group
+https://groups.google.com/forum/#!forum/java-mini-python and bug
+tracker at https://github.com/rogerbinns/jia-mini-python/issues if you
+encounter any issues.
 
 What about bugs in my code?
 ---------------------------

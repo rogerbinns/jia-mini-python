@@ -93,7 +93,7 @@
 <pre>public class <strong>MiniPython</strong>
 extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true" title="class or interface in java.lang">Object</a></pre>
 <div class="block">Encapsulates running a Python syntax file.
- 
+
  The source should have been transformed using jmp-compile. The class cannot
  be used concurrently. There is no shared state between instances.</div>
 </li>
@@ -188,7 +188,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
 <td class="colFirst"><code>void</code></td>
 <td class="colLast"><code><strong><a href="../../com/rogerbinns/MiniPython.html#setCode(java.io.InputStream)">setCode</a></strong>(<a href="http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html?is-external=true" title="class or interface in java.io">InputStream</a>&nbsp;stream)</code>
 <div class="block">Reads and executes code from the supplied stream
- 
+
  The stream provided must satisfy reads completely (eg if 27 bytes is
  asked for then that number should be returned in the read() call unless
  end of file is reached.)</div>
@@ -200,7 +200,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
            <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html?is-external=true" title="class or interface in java.lang">String</a>&nbsp;message)</code>
 <div class="block">Call this method when your callbacks need to halt execution due to an
  error
- 
+
  This method will do the internal bookkeeping necessary in order to
  provide diagnostics to the original caller and then throw an
  ExecutionError which you should not catch.</div>
@@ -213,7 +213,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
            <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Throwable.html?is-external=true" title="class or interface in java.lang">Throwable</a>&nbsp;cause)</code>
 <div class="block">Call this method when your callbacks need to halt execution due to an
  error
- 
+
  This method will do the internal bookkeeping necessary in order to
  provide diagnostics to the original caller and then throw an
  ExecutionError which you should not catch.</div>
@@ -230,7 +230,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
 <td class="colLast"><code><strong><a href="../../com/rogerbinns/MiniPython.html#toPyString(java.lang.Object)">toPyString</a></strong>(<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true" title="class or interface in java.lang">Object</a>&nbsp;o)</code>
 <div class="block">Returns a string representing the object using Python nomenclature where
  possible
- 
+
  For example `null` is returned as `None`, `true` as `True` etc.</div>
 </td>
 </tr>
@@ -239,7 +239,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
 <td class="colLast"><code><strong><a href="../../com/rogerbinns/MiniPython.html#toPyTypeString(java.lang.Object)">toPyTypeString</a></strong>(<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true" title="class or interface in java.lang">Object</a>&nbsp;o)</code>
 <div class="block">Returns a string representing the type of the object using Python
  nomenclature where possible
- 
+
  For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as
  `dict` etc.</div>
 </td>
@@ -291,7 +291,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
 <h4>clear</h4>
 <pre>public&nbsp;void&nbsp;clear()</pre>
 <div class="block">Removes all internal state.
- 
+
  This ensures that garbage collection is easier. You can reuse this
  instance by calling addModule to reregister modules and setCode to run
  new code.</div>
@@ -307,7 +307,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
              throws <a href="http://docs.oracle.com/javase/7/docs/api/java/io/IOException.html?is-external=true" title="class or interface in java.io">IOException</a>,
                     <a href="../../com/rogerbinns/MiniPython.ExecutionError.html" title="class in com.rogerbinns">MiniPython.ExecutionError</a></pre>
 <div class="block">Reads and executes code from the supplied stream
- 
+
  The stream provided must satisfy reads completely (eg if 27 bytes is
  asked for then that number should be returned in the read() call unless
  end of file is reached.)</div>
@@ -345,7 +345,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
                  throws <a href="../../com/rogerbinns/MiniPython.ExecutionError.html" title="class in com.rogerbinns">MiniPython.ExecutionError</a></pre>
 <div class="block">Call this method when your callbacks need to halt execution due to an
  error
- 
+
  This method will do the internal bookkeeping necessary in order to
  provide diagnostics to the original caller and then throw an
  ExecutionError which you should not catch.</div>
@@ -367,7 +367,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
                  throws <a href="../../com/rogerbinns/MiniPython.ExecutionError.html" title="class in com.rogerbinns">MiniPython.ExecutionError</a></pre>
 <div class="block">Call this method when your callbacks need to halt execution due to an
  error
- 
+
  This method will do the internal bookkeeping necessary in order to
  provide diagnostics to the original caller and then throw an
  ExecutionError which you should not catch.</div>
@@ -386,7 +386,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
 <pre>public&nbsp;<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html?is-external=true" title="class or interface in java.lang">String</a>&nbsp;toPyString(<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true" title="class or interface in java.lang">Object</a>&nbsp;o)</pre>
 <div class="block">Returns a string representing the object using Python nomenclature where
  possible
- 
+
  For example `null` is returned as `None`, `true` as `True` etc. Container
  types like dict/Map and list/List will include the items.</div>
 <dl><dt><span class="strong">Parameters:</span></dt><dd><code>o</code> - Object to stringify. Can be null.</dd></dl>
@@ -414,7 +414,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?
 <pre>public static&nbsp;<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html?is-external=true" title="class or interface in java.lang">String</a>&nbsp;toPyTypeString(<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true" title="class or interface in java.lang">Object</a>&nbsp;o)</pre>
 <div class="block">Returns a string representing the type of the object using Python
  nomenclature where possible
- 
+
  For example `null` is returned as `NoneType`, `true` as `bool`, `Map` as
  `dict` etc. You can also pass in Class objects as well as instances. Note
  that primitives (eg `int`) and the corresponding boxed type (eg

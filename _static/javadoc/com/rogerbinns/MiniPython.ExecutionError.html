@@ -111,7 +111,7 @@
 <pre>public class <strong>MiniPython.ExecutionError</strong>
 extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Exception.html?is-external=true" title="class or interface in java.lang">Exception</a></pre>
 <div class="block">Encapsulates what would be an Exception in Python.
- 
+
  Do not instantiate one directly - call signalError instead.</div>
 <dl><dt><span class="strong">See Also:</span></dt><dd><a href="../../serialized-form.html#com.rogerbinns.MiniPython.ExecutionError">Serialized Form</a></dd></dl>
 </li>
@@ -222,7 +222,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Exception.ht
 <h4>getType</h4>
 <pre>public&nbsp;<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html?is-external=true" title="class or interface in java.lang">String</a>&nbsp;getType()</pre>
 <div class="block">Returns the type of the error.
- 
+
  This typically corresponds to a Python exception (eg `TypeError` or
  `IndexError`)</div>
 </li>
@@ -236,7 +236,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Exception.ht
 <pre>public&nbsp;int&nbsp;linenumber()</pre>
 <div class="block">Returns the line number which was being executed when the error
  happened.
- 
+
  If you omitted line numbers then -1 is returned.</div>
 </li>
 </ul>
@@ -248,7 +248,7 @@ extends <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/Exception.ht
 <h4>pc</h4>
 <pre>public&nbsp;int&nbsp;pc()</pre>
 <div class="block">Returns program counter when error occurred.
- 
+
  Note that due to internal implementation details this is the next
  instruction to be executed, not the currently executing one.</div>
 </li>

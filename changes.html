@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Change History &mdash; Jia Mini Python 2.0 documentation</title>
+    <title>Change History &mdash; Jia Mini Python 1.99 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '2.0',
+        VERSION:     '1.99',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="copyright" title="Copyright" href="copyright.html" />
-    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="top" title="Jia Mini Python 1.99 documentation" href="index.html" />
     <link rel="next" title="Copyright and License" href="copyright.html" />
     <link rel="prev" title="Frequently Asked Questions" href="faq.html" />
  
@@ -50,7 +50,7 @@
         <li class="right" >
           <a href="faq.html" title="Frequently Asked Questions"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Jia Mini Python 1.99 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -87,7 +87,7 @@ would be an overflow).  On Intel processors this operation would cause
 a <a class="reference external" href="http://kqueue.org/blog/2012/12/31/idiv-dos/">hardware fault</a>
 like dividing by zero does, so similar precautions are taken.  Note
 that Jia Mini Python only uses 32 bit signed integers.</p>
-<p>Fix global lookup for LOAD_NAME (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=14">Issue 14</a>)</p>
+<p>Fix global lookup for LOAD_NAME (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/14">Issue 14</a>)</p>
 </div>
 <div class="section" id="id2">
 <h2>1.2<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
@@ -103,12 +103,12 @@ useful detail for logging and analytics.</p>
 <div class="section" id="id3">
 <h2>1.1<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
 <p>All Java non-public items marked private to avoid them showing up in
-completions if you copied the code to your own package.  (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=1">Issue 1</a>)</p>
-<p>Do not use <cite>String.isEmpty()</cite> as it doesn&#8217;t exist on Android (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=2">Issue 2</a>)</p>
-<p>Public entry points are synchronized to prevent concurrent usage (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=3">Issue 3</a>)</p>
-<p>Added <cite>dict.get(key, default)</cite> (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=5">Issue 5</a>)</p>
+completions if you copied the code to your own package.  (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/1">Issue 1</a>)</p>
+<p>Do not use <cite>String.isEmpty()</cite> as it doesn&#8217;t exist on Android (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/2">Issue 2</a>)</p>
+<p>Public entry points are synchronized to prevent concurrent usage (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/3">Issue 3</a>)</p>
+<p>Added <cite>dict.get(key, default)</cite> (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/5">Issue 5</a>)</p>
 <p>Dictionary members can be obtained and set via attribute style access
-too (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=6">Issue 6</a>):</p>
+too (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/6">Issue 6</a>):</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">a</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;foo&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
 <span class="c"># Get</span>
 <span class="k">print</span> <span class="n">a</span><span class="p">[</span><span class="s">&quot;foo&quot;</span><span class="p">],</span> <span class="n">a</span><span class="o">.</span><span class="n">foo</span>
@@ -121,12 +121,12 @@ too (<a class="reference external" href="http://code.google.com/p/java-mini-pyth
 y</em> into <em>id(x) == id(y)</em>.</p>
 <p>It is possible to do a form of object orientation keeping data and the
 functions that operate on it together in the same dictionary as
-<a class="reference internal" href="python.html#pyobject"><em>documented here</em></a> (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=7">Issue 7</a>)</p>
+<a class="reference internal" href="python.html#pyobject"><em>documented here</em></a> (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/7">Issue 7</a>)</p>
 <p>Code that attempted to do a rich compare of dictionaries was removed
 and their <a class="reference internal" href="python.html#id" title="id"><tt class="xref py py-func docutils literal"><span class="pre">id()</span></tt></a> is used instead.  (<a class="reference internal" href="quirks.html#comparisons"><em>Comparisons</em></a>).</p>
-<p>Added dict.copy (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=8">Issue 8</a>)</p>
+<p>Added dict.copy (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/8">Issue 8</a>)</p>
 <p>Added <a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> option to only do a syntax check</p>
-<p>Fixed returns within for loops (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=10">Issue 10</a>)</p>
+<p>Fixed returns within for loops (<a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues/10">Issue 10</a>)</p>
 </div>
 </div>
 
@@ -186,7 +186,7 @@ and their <a class="reference internal" href="python.html#id" title="id"><tt cla
         <li class="right" >
           <a href="faq.html" title="Frequently Asked Questions"
              >previous</a> |</li>
-        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Jia Mini Python 1.99 documentation</a> &raquo;</li> 
       </ul>
     </div>
 
