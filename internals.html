@@ -1,0 +1,422 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Internals &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="next" title="Frequently Asked Questions" href="faq.html" />
+    <link rel="prev" title="Quirks and differences" href="quirks.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="faq.html" title="Frequently Asked Questions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="quirks.html" title="Quirks and differences"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="internals">
+<h1>Internals<a class="headerlink" href="#internals" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>Executing a language is a multi step process:</p>
+<ul class="simple">
+<li>Tokenize the input (keywords, numbers, strings, etc)</li>
+<li>Parse into pieces according to the grammar (eg an if statement would
+be composed of a test, a true arm and an optional else arm)</li>
+<li>Output some sort of code to represent that.  For example <cite>3+4*5</cite>
+would need to multiply 4 by 5 and then add 3.</li>
+<li>Execute that code - it could be <a class="reference external" href="http://en.wikipedia.org/wiki/Machine_code">machine code</a> executed directly by
+the processor, or something higher level <a class="reference external" href="http://en.wikipedia.org/wiki/Interpreter_(computing)">interpreted by a program</a>.  (It gets
+lots more complicated than that with combinations of the two,
+translating dynamically from the latter to the former.  This is
+outside the scope of a <cite>mini</cite> implementation.)</li>
+</ul>
+<p>Fortunately Python already has code that performs the tokenizing and
+parsing in the <a class="reference external" href="http://docs.python.org/library/ast">ast module</a>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ast</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s">&quot;3+4*5&quot;</span><span class="p">))</span>
+<span class="go">&#39;Module(body=[Expr(value=BinOp(left=Num(n=3), op=Add(), right=BinOp(left=Num(n=4), op=Mult(), right=Num(n=5))))])&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ast</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s">&quot;if 3+4&gt;6: print x&quot;</span><span class="p">))</span>
+<span class="go">&quot;Module(body=[If(test=Compare(left=BinOp(left=Num(n=3), op=Add(), right=Num(n=4)), ops=[Gt()], comparators=[Num(n=6)]), body=[Print(dest=None, values=[Name(id=&#39;x&#39;, ctx=Load())], nl=True)], orelse=[])])&quot;</span>
+<span class="go">&gt;&gt;&gt;</span>
+</pre></div>
+</div>
+<p>The code representation used is custom <a class="reference external" href="http://en.wikipedia.org/wiki/Bytecode">bytecode</a> with about 40 different
+operations.  These encompass control flow (if, for, goto), comparisons
+(&gt; &lt;= != etc), operators (* + - / etc), subscripts (eg x[y]),
+variables etc.  Data is stored on a stack with operations acting on
+the stack.  For example <cite>ADD</cite> takes the top two items off the stack,
+adds them and then puts the result back on the stack.
+<a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> contains the code that visits the hierarchy from
+ast and turns it into this bytecode.</p>
+<p>The MiniPython Java code is what interprets the bytecode.  It
+maintains the virtual stack, a context mapping variable names to
+values and the virtual <a class="reference external" href="http://en.wikipedia.org/wiki/Program_counter">program counter</a>.  The actual
+bytecode execution is done in the internal <cite>mainLoop</cite> method which is
+essentially a large <a class="reference external" href="http://en.wikipedia.org/wiki/Switch_statement">switch statement</a> on whatever the
+bytecode is at the program counter.</p>
+</div>
+<div class="section" id="bytecode-format">
+<h2>Bytecode Format<a class="headerlink" href="#bytecode-format" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="instructions">
+<h3>Instructions<a class="headerlink" href="#instructions" title="Permalink to this headline">¶</a></h3>
+<p>Instructions take one of two forms.  If their value is less than 128
+then they are a single byte.  If 128 or greater then they are followed
+by an additional 2 bytes making up an unsigned 16 bit integer (<a class="reference external" href="http://en.wikipedia.org/wiki/Endianness#Little-endian">little
+endian</a>).</p>
+<p>For control flow instructions the number is a relevant program counter
+address.  For string instructions it is an index into the string
+table.  For integer instructions it is used as is.</p>
+</div>
+<div class="section" id="jmp-file">
+<h3>JMP file<a class="headerlink" href="#jmp-file" title="Permalink to this headline">¶</a></h3>
+<p>Numbers are always two bytes little endian and should be sufficient
+for anticpated usage (note <cite>Mini</cite> in the name).  However if there is a
+need to expand in the future then the version header allows for the
+representation to be updated.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Size (bytes)</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>2</td>
+<td>Version header.  Currently only 0 is supported.</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>Number of strings in the string table</td>
+</tr>
+<tr class="row-even"><td>variable</td>
+<td>Each string is two bytes of size information followed
+by the UTF8 bytes making up the string.  There is no
+null terminator or similar.</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>Number of entries in the line number table</td>
+</tr>
+<tr class="row-even"><td>entries*4</td>
+<td>Each entry in the table is four bytes consisting of two
+numbers mapping a program counter to a line number.
+When subsequent program counters map to the same line
+number they are omitted from the table so there will be
+one entry per line of executable code in the source</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>Size of the code</td>
+</tr>
+<tr class="row-even"><td>code size</td>
+<td>The raw bytes making up the code</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="anatomy-of-minipython-java">
+<h2>Anatomy of MiniPython.java<a class="headerlink" href="#anatomy-of-minipython-java" title="Permalink to this headline">¶</a></h2>
+<p>The main data structure is a stack of Objects, a stack pointer and a
+context.  The stack holds the data to be operated on.  The context
+holds a mapping of variable names to their values.  <a class="reference internal" href="java.html"><em>Java</em></a>
+types are used wherever possible.</p>
+<p>The function <cite>mainLoop</cite> contains the switch statement on the current
+instruction.  Each instruction examines its data, throws exceptions if
+unsuitable or performs the operation.  Since existing Java types are
+used they don&#8217;t know about Python semantics and the code uses lots of
+<cite>instanceof</cite>.</p>
+<p>Calling Java code is very complicated and implemented in the
+<cite>nativeCall</cite> function.  It should just be a simple call to
+<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/reflect/Method.html#invoke(java.lang.Object,java.lang.Object...)">Method.invoke</a>
+but that has several short comings.  It doesn&#8217;t handle <a class="reference external" href="http://en.wikipedia.org/wiki/Variable_argument_list#Variadic_functions_in_C.23.2C_C.2B.2B.2FCLI.2C_VB.net.2C_and_Java">variable arguments</a>
+requiring that <cite>nativeCall</cite> has to do the packing from variable
+arguments to the final parameter array.  Additionally when types are
+not correct you get an <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/IllegalArgumentException.html">IllegalArgumentException</a>
+with no further detail.  This is extremely unhelpful since you
+wouldn&#8217;t know which parameter is the problem or which types should
+have been used.  Consequently <cite>nativeCall</cite> does the type checking
+itself so that useful error messages can be given.</p>
+<p><a class="reference internal" href="python.html#global-functions"><em>Global functions</em></a> are implemented by finding class member methods with
+an appropriate name prefix and added to the root context.
+<cite>nativeCall</cite> ensures they are called correctly.</p>
+<p><a class="reference internal" href="python.html"><em>Instance methods</em></a> are implemented in a substantially
+similar manner except they are looked for when the code does a name
+lookup on an item.</p>
+<p>There are a few other nested classes to hold various pieces of data
+(eg &#8220;modules&#8221;).</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>The listing shows <em class="xref std std-option">--dump</em> output.  The first numeric column
+is the code offset.  This is followed by the name of the instruction.
+Near the bottom of <a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> is the list of name to byte
+value mappings.  For instructions that reference strings the relevant
+string table entry is shown as a comment.</p>
+<p>The <cite>MiniPython.java</cite> contains the exact implementation for each
+instruction.  This is a brief explanation of some of the ones you see
+in the listing.</p>
+<dl class="describe">
+<dt>
+<tt class="descname">PUSH_INT</tt></dt>
+<dd><p>Puts the number on the stack.  (There is a separate PUSH_INT_HI
+used for numbers that don&#8217;t fit in two bytes.)</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">ADD</tt></dt>
+<dd><p>Adds top two items on stack, pushes result.  (Note that items
+could be numbers, strings, lists etc)</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">STORE_NAME</tt></dt>
+<dd><p>Takes the top item off the stack and saves it in a variable with
+the specified name</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">LOAD_NAME</tt></dt>
+<dd><p>Puts contents of the named variable onto the stack</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">GT</tt></dt>
+<dd><p>Removes top two stack items pushing True or False depending on if
+greater than</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">IF_FALSE</tt></dt>
+<dd><p>Take the top item off the stack and if it evaluates to False then
+go to the instruction number specified.  False itself as well as
+empty strings/list/dicts, the number 0 and None are all considered false.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">PUSH_TRUE</tt></dt>
+<dd><p>Pushes True onto the stack</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">PRINT</tt></dt>
+<dd><p>Print statement builtin which needs to know if a newline should be
+emitted (the True or False pushed beforehand) as well as how many
+items it should print.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">FUNCTION_PROLOG</tt></dt>
+<dd><p>Takes top item off the stack which is how many parameters the
+function takes.  It ensures that number were provided plus various
+other housekeeping operations.</p>
+</dd></dl>
+
+<div class="highlight-python"><pre>
+#    1 x=3+4
+
+    0 PUSH_INT 3
+    3 PUSH_INT 4
+    6 ADD
+    7 STORE_NAME 0   	# string 0 = 'x'
+
+#    2 if x&gt;5:
+
+   10 LOAD_NAME 0   	# string 0 = 'x'
+   13 PUSH_INT 5
+   16 GT
+   17 IF_FALSE 28
+
+#    3   print "greater"
+
+   20 PUSH_STR 1   	# string 1 = 'greater'
+   23 PUSH_TRUE
+   24 PUSH_INT 1
+   27 PRINT
+
+#    5 def fact(n):
+
+   28 MAKE_METHOD 37
+   31 STORE_NAME 2   	# string 2 = 'fact'
+   34 GOTO 77
+   37 PUSH_INT 1
+   40 FUNCTION_PROLOG
+   41 STORE_NAME 3   	# string 3 = 'n'
+
+#    6   if n&lt;=1:
+
+   44 LOAD_NAME 3   	# string 3 = 'n'
+   47 PUSH_INT 1
+   50 LTE
+   51 IF_FALSE 58
+
+#    7      return 1
+
+   54 PUSH_INT 1
+   57 RETURN
+
+#    8   return n*fact(n-1)
+
+   58 LOAD_NAME 3   	# string 3 = 'n'
+   61 LOAD_NAME 3   	# string 3 = 'n'
+   64 PUSH_INT 1
+   67 SUB
+   68 PUSH_INT 1
+   71 LOAD_NAME 2   	# string 2 = 'fact'
+   74 CALL
+   75 MULT
+   76 RETURN
+
+#   10 print fact(10)
+
+   77 PUSH_INT 10
+   80 PUSH_INT 1
+   83 LOAD_NAME 2   	# string 2 = 'fact'
+   86 CALL
+   87 PUSH_TRUE
+   88 PUSH_INT 1
+   91 PRINT
+   92 EXIT_LOOP
+</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Internals</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#bytecode-format">Bytecode Format</a><ul>
+<li><a class="reference internal" href="#instructions">Instructions</a></li>
+<li><a class="reference internal" href="#jmp-file">JMP file</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#anatomy-of-minipython-java">Anatomy of MiniPython.java</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="quirks.html"
+                        title="previous chapter">Quirks and differences</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="faq.html"
+                        title="next chapter">Frequently Asked Questions</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/internals.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="faq.html" title="Frequently Asked Questions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="quirks.html" title="Quirks and differences"
+             >previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>

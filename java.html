@@ -1,0 +1,518 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Java API Reference &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="next" title="Objective C API Reference" href="objc.html" />
+    <link rel="prev" title="Syntax/type support" href="lang.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="objc.html" title="Objective C API Reference"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="lang.html" title="Syntax/type support"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="java-api-reference">
+<h1>Java API Reference<a class="headerlink" href="#java-api-reference" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="types">
+<h2><span class="target" id="index-0"></span>Types<a class="headerlink" href="#types" title="Permalink to this headline">¶</a></h2>
+<p>Where possible types are mapped directly from Python to Java.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="78%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Python type</th>
+<th class="head">Java type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>int</td>
+<td>int/Integer - 32 bit signed</td>
+</tr>
+<tr class="row-odd"><td>str</td>
+<td>String (unicode only)</td>
+</tr>
+<tr class="row-even"><td>None</td>
+<td>null</td>
+</tr>
+<tr class="row-odd"><td>bool</td>
+<td>boolean/Boolean</td>
+</tr>
+<tr class="row-even"><td>dict</td>
+<td><a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/util/Map.html">Map</a> &lt;Object, Object&gt;</td>
+</tr>
+<tr class="row-odd"><td>list</td>
+<td><a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/util/List.html">List</a> &lt;Object&gt;</td>
+</tr>
+</tbody>
+</table>
+<p>Note that tuples are mutable and treated as lists.</p>
+<p>Your added methods can return types other than the above without
+error.  However there will be type errors if you try to perform
+operations on them (eg use them as an <cite>if</cite> expression or add them).</p>
+</div>
+<div class="section" id="adding-methods">
+<span id="java-adding-methods"></span><h2><span class="target" id="index-1"></span>Adding methods<a class="headerlink" href="#adding-methods" title="Permalink to this headline">¶</a></h2>
+<p>You can make methods available to the Python by calling
+<cite>MiniPython.addModule</cite>.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="kd">class</span> <span class="nc">timeinfo</span> <span class="o">{</span>
+   <span class="c1">// can&#39;t be seen from Python because it is not public</span>
+   <span class="kd">private</span> <span class="kt">void</span> <span class="nf">not_exposed</span><span class="o">()</span> <span class="o">{}</span>
+
+   <span class="c1">// using types from above</span>
+   <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isdst</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span> <span class="o">}</span>
+   <span class="kd">public</span> <span class="kt">int</span> <span class="nf">day_of_week</span><span class="o">(</span><span class="kt">int</span> <span class="n">year</span><span class="o">,</span> <span class="kt">int</span> <span class="n">month</span><span class="o">,</span> <span class="kt">int</span> <span class="n">day</span><span class="o">)</span> <span class="o">{</span>  <span class="k">return</span> <span class="mi">2</span><span class="o">;</span> <span class="o">}</span>
+   <span class="c1">// Java&#39;s type erasure doesn&#39;t make the Integer particularly meaningful</span>
+   <span class="kd">public</span> <span class="kt">int</span> <span class="nf">sum_all</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">items</span><span class="o">)</span> <span class="o">{</span> <span class="k">return</span> <span class="mi">17</span><span class="o">;</span> <span class="o">}</span>
+
+   <span class="c1">// You can use other types</span>
+   <span class="kd">public</span> <span class="n">Widget</span> <span class="nf">get_widget</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="k">new</span> <span class="n">Widget</span><span class="o">();</span> <span class="o">}</span>
+   <span class="kd">public</span> <span class="kt">void</span> <span class="nf">show_widget</span><span class="o">(</span><span class="n">Widget</span> <span class="n">w</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">show</span><span class="o">)</span> <span class="o">{</span> <span class="k">if</span><span class="o">(</span><span class="n">show</span><span class="o">)</span> <span class="n">w</span><span class="o">.</span><span class="na">show</span><span class="o">();</span> <span class="k">else</span> <span class="n">w</span><span class="o">.</span><span class="na">hide</span><span class="o">();</span> <span class="o">}</span>
+
+   <span class="c1">// varargs is supported</span>
+   <span class="kd">public</span> <span class="n">String</span> <span class="nf">printf</span><span class="o">(</span><span class="n">String</span> <span class="n">fmt</span><span class="o">,</span> <span class="n">Object</span> <span class="o">...</span><span class="na">items</span><span class="o">)</span> <span class="o">{</span> <span class="k">return</span> <span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="n">fmt</span><span class="o">,</span> <span class="n">items</span><span class="o">);</span> <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// register it as a module named &quot;example&quot;</span>
+<span class="n">MiniPython</span> <span class="n">mp</span><span class="o">=</span><span class="k">new</span> <span class="n">MiniPython</span><span class="o">();</span>
+<span class="n">mp</span><span class="o">.</span><span class="na">addModule</span><span class="o">(</span><span class="s">&quot;example&quot;</span><span class="o">,</span> <span class="k">new</span> <span class="n">timeinfo</span><span class="o">());</span>
+</pre></div>
+</div>
+<p>You can then call these from Python:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">print</span> <span class="n">example</span><span class="o">.</span><span class="n">isdst</span><span class="p">()</span>
+<span class="k">print</span> <span class="n">example</span><span class="o">.</span><span class="n">sum_all</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+<span class="n">w</span><span class="o">=</span><span class="n">example</span><span class="o">.</span><span class="n">get_widget</span><span class="p">()</span>
+<span class="n">example</span><span class="o">.</span><span class="n">show_widget</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="exposure">
+<h3>Exposure<a class="headerlink" href="#exposure" title="Permalink to this headline">¶</a></h3>
+<p>Only methods that have been declared <cite>public</cite> will be available.
+Additionally the method has to be implemented directly in the class.
+For example <cite>toString</cite> is not available in the above example as it is
+implemented in a parent class.</p>
+<p>If you have multiple methods with the same name, declared <cite>public</cite> and
+implemented directly in the class (eg taking different numbers of
+arguments) then the one to be used is picked at random.  No attempt is
+made to try and select a method based on number or type of arguments.</p>
+<p>No attempt is made to convert method parameters.  For example if a
+method takes a <cite>boolean</cite> and an <cite>int</cite> is provided then the <cite>int</cite> will
+not be converted to a <cite>boolean</cite> and there will be an exception.</p>
+</div>
+<div class="section" id="errors">
+<h3><span class="target" id="index-2"></span>Errors<a class="headerlink" href="#errors" title="Permalink to this headline">¶</a></h3>
+<p>If your code encounters an error (for example one of the list items
+not being an integer in the sum_all method above) then you should call
+<cite>MiniPython.signalError</cite>.  Note that it will throw
+ExecutionError after performing internal bookkeeping (eg tracking line
+numbers) and not return.</p>
+</div>
+</div>
+<div class="section" id="class-minipython">
+<span id="minipython"></span><h2>class MiniPython<a class="headerlink" href="#class-minipython" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="MiniPython">
+<tt class="descname">MiniPython</tt><a class="headerlink" href="#MiniPython" title="Permalink to this definition">¶</a></dt>
+<dd><p>(<a class="reference external" href="_static/javadoc/com/rogerbinns/MiniPython.html">javadoc</a>)
+Encapsulates running a Python syntax file.</p>
+<p>The source should have been transformed using jmp-compile. The class cannot
+be used concurrently. There is no shared state between instances.</p>
+<dl class="method">
+<dt id="MiniPython#addModule(String, Object)">
+void <tt class="descname">addModule</tt><big>(</big><span>String</span> <em>name</em>, <span>Object</span> <em>object</em><big>)</big><a class="headerlink" href="#MiniPython#addModule(String, Object)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes methods on the methods Object available to the Python</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param name:</th><td class="field-body">Module name in the Python environment</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Param object:</th><td class="field-body">Object to introspect looking for methods</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference external" href="java.html#id1">Adding methods</a></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#callMethod(String, Object...)">
+<span>Object</span> <tt class="descname">callMethod</tt><big>(</big><span>String</span> <em>name</em>, <span>Object</span> <em>args</em><big>)</big><a class="headerlink" href="#MiniPython#callMethod(String, Object...)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calls a method in Python and returns the result</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param name:</th><td class="field-body">Global method name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Param args:</th><td class="field-body">Variable list of arguments that it takes</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Raises ExecutionError:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">On any issues encountered</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#clear()">
+void <tt class="descname">clear</tt><big>(</big><big>)</big><a class="headerlink" href="#MiniPython#clear()" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes all internal state.</p>
+<p>This ensures that garbage collection is easier. You can reuse this
+instance by calling addModule to reregister modules and setCode to run
+new code.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#setClient(Client)">
+void <tt class="descname">setClient</tt><big>(</big><a class="reference internal" href="#MiniPython.Client" title="MiniPython.Client"><span>Client</span></a> <em>client</em><big>)</big><a class="headerlink" href="#MiniPython#setClient(Client)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callbacks to use for specific behaviour</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param client:</th><td class="field-body">Replaces existing client with this one</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#setCode(InputStream)">
+void <tt class="descname">setCode</tt><big>(</big><span>InputStream</span> <em>stream</em><big>)</big><a class="headerlink" href="#MiniPython#setCode(InputStream)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads and executes code from the supplied stream</p>
+<p>The stream provided must satisfy reads completely (eg if 27 bytes is
+asked for then that number should be returned in the read() call unless
+end of file is reached.)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param stream:</th><td class="field-body">The stream is not closed and you can have additional content
+after the jmp.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises IOException:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Passed on from read() calls on the stream</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Raises EOFException:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">When the stream is truncated</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises ExecutionError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Any issues from executing the code</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#signalError(String, String, Throwable)">
+void <tt class="descname">signalError</tt><big>(</big><span>String</span> <em>exctype</em>, <span>String</span> <em>message</em>, <span>Throwable</span> <em>cause</em><big>)</big><a class="headerlink" href="#MiniPython#signalError(String, String, Throwable)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call this method when your callbacks need to halt execution due to an
+error</p>
+<p>This method will do the internal bookkeeping necessary in order to
+provide diagnostics to the original caller and then throw an
+ExecutionError which you should not catch.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param exctype:</th><td class="field-body">Best practise is to use the name of a Python exception (eg
+&#8220;TypeError&#8221;)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Param message:</th><td class="field-body">Text describing the error.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Param cause:</th><td class="field-body">The underlying reason why this exception is being caused</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises ExecutionError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Always thrown</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#toPyReprString(Object)">
+<span>String</span> <tt class="descname">toPyReprString</tt><big>(</big><span>Object</span> <em>o</em><big>)</big><a class="headerlink" href="#MiniPython#toPyReprString(Object)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as toPyString except strings are quoted and backslash escaped. If
+you emit an error message this is preferable as it makes it clear a value
+is a string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param o:</th><td class="field-body">Object to stringify. Can be null.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#toPyString(Object)">
+<span>String</span> <tt class="descname">toPyString</tt><big>(</big><span>Object</span> <em>o</em><big>)</big><a class="headerlink" href="#MiniPython#toPyString(Object)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a string representing the object using Python nomenclature where
+possible</p>
+<p>For example <cite>null</cite> is returned as <cite>None</cite>, <cite>true</cite> as <cite>True</cite> etc. Container
+types like dict/Map and list/List will include the items.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param o:</th><td class="field-body">Object to stringify. Can be null.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython#toPyTypeString(Object)">
+<span>String</span> <tt class="descname">toPyTypeString</tt><big>(</big><span>Object</span> <em>o</em><big>)</big><a class="headerlink" href="#MiniPython#toPyTypeString(Object)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a string representing the type of the object using Python
+nomenclature where possible</p>
+<p>For example <cite>null</cite> is returned as <cite>NoneType</cite>, <cite>true</cite> as <cite>bool</cite>, <cite>Map</cite> as
+<cite>dict</cite> etc. You can also pass in Class objects as well as instances. Note
+that primitives (eg <cite>int</cite>) and the corresponding boxed type (eg
+<cite>Integer</cite>) will both be returned as the same string (<cite>int</cite> in this case).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param o:</th><td class="field-body">Object whose type to stringify, or a Class or null</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="interface-minipython-client">
+<span id="client"></span><h2>interface MiniPython.Client<a class="headerlink" href="#interface-minipython-client" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="MiniPython.Client">
+<tt class="descname">Client</tt><a class="headerlink" href="#MiniPython.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>(<a class="reference external" href="_static/javadoc/com/rogerbinns/MiniPython.Client.html">javadoc</a>)
+Provide platform behaviour</p>
+<dl class="method">
+<dt id="MiniPython.Client#onError(ExecutionError)">
+void <tt class="descname">onError</tt><big>(</big><a class="reference internal" href="#MiniPython.ExecutionError" title="MiniPython.ExecutionError"><span>ExecutionError</span></a> <em>error</em><big>)</big><a class="headerlink" href="#MiniPython.Client#onError(ExecutionError)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called whenever there is an ExecutionError.</p>
+<p>This provides one spot where you can perform logging and other
+diagnostics.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param error:</th><td class="field-body">The instance that is about to be thrown</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython.Client#print(String)">
+void <tt class="descname">print</tt><big>(</big><span>String</span> <em>s</em><big>)</big><a class="headerlink" href="#MiniPython.Client#print(String)" title="Permalink to this definition">¶</a></dt>
+<dd><p>Request to print a string</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Param s:</th><td class="field-body">String to print. May or may not contain a trailing newline
+depending on code</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises ExecutionError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Throw this if you experience any issues</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="class-minipython-executionerror">
+<span id="executionerror"></span><h2>class MiniPython.ExecutionError<a class="headerlink" href="#class-minipython-executionerror" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="MiniPython.ExecutionError">
+<tt class="descname">ExecutionError</tt><a class="headerlink" href="#MiniPython.ExecutionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>(<a class="reference external" href="_static/javadoc/com/rogerbinns/MiniPython.ExecutionError.html">javadoc</a>)
+Encapsulates what would be an Exception in Python.</p>
+<p>Do not instantiate one directly - call signalError instead.</p>
+<dl class="method">
+<dt id="MiniPython.ExecutionError#getType()">
+<span>String</span> <tt class="descname">getType</tt><big>(</big><big>)</big><a class="headerlink" href="#MiniPython.ExecutionError#getType()" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the type of the error.</p>
+<p>This typically corresponds to a Python exception (eg <cite>TypeError</cite> or
+<cite>IndexError</cite>)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython.ExecutionError#linenumber()">
+int <tt class="descname">linenumber</tt><big>(</big><big>)</big><a class="headerlink" href="#MiniPython.ExecutionError#linenumber()" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the line number which was being executed when the error
+happened.</p>
+<p>If you omitted line numbers then -1 is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython.ExecutionError#pc()">
+int <tt class="descname">pc</tt><big>(</big><big>)</big><a class="headerlink" href="#MiniPython.ExecutionError#pc()" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns program counter when error occurred.</p>
+<p>Note that due to internal implementation details this is the next
+instruction to be executed, not the currently executing one.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython.ExecutionError#toDetailedString()">
+<span>String</span> <tt class="descname">toDetailedString</tt><big>(</big><big>)</big><a class="headerlink" href="#MiniPython.ExecutionError#toDetailedString()" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns more detailed than toString (eg includes linenumber and pc).
+In the future it may also include a stack trace and local variables.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="MiniPython.ExecutionError#toString()">
+<span>String</span> <tt class="descname">toString</tt><big>(</big><big>)</big><a class="headerlink" href="#MiniPython.ExecutionError#toString()" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns &#8220;type: message&#8221; for the error</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Java API Reference</a><ul>
+<li><a class="reference internal" href="#types">Types</a></li>
+<li><a class="reference internal" href="#adding-methods">Adding methods</a><ul>
+<li><a class="reference internal" href="#exposure">Exposure</a></li>
+<li><a class="reference internal" href="#errors">Errors</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#class-minipython">class MiniPython</a></li>
+<li><a class="reference internal" href="#interface-minipython-client">interface MiniPython.Client</a></li>
+<li><a class="reference internal" href="#class-minipython-executionerror">class MiniPython.ExecutionError</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="lang.html"
+                        title="previous chapter">Syntax/type support</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="objc.html"
+                        title="next chapter">Objective C API Reference</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/java.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="objc.html" title="Objective C API Reference"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="lang.html" title="Syntax/type support"
+             >previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>

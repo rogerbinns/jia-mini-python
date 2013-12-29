@@ -1,0 +1,236 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Example &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="next" title="Syntax/type support" href="lang.html" />
+    <link rel="prev" title="Welcome to Jia Mini Python documentation" href="index.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="lang.html" title="Syntax/type support"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to Jia Mini Python documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="example">
+<h1><span class="target" id="index-0"></span>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h1>
+<p>Write your Python code:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">launches</span><span class="o">=</span><span class="mi">0</span>
+
+<span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="n">base</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">day_of_week</span><span class="p">()</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">launches</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+     <span class="k">return</span> <span class="n">base</span><span class="o">+</span><span class="mi">10</span>
+  <span class="k">return</span> <span class="n">base</span><span class="o">+</span><span class="mi">7</span>
+</pre></div>
+</div>
+<p>Turn that into the bytecode that Jia Mini Python uses.  This checks the
+syntax, tokenizes and produces a smaller file.  The output is by
+default the same filename as the input but with an extension of .jmp:</p>
+<div class="highlight-python"><pre>jmp-compile settings.py</pre>
+</div>
+<div class="section" id="java">
+<h2>Java<a class="headerlink" href="#java" title="Permalink to this headline">¶</a></h2>
+<p>Add the Jia Mini Python java source file to your project.  It is one .java
+file and you can put it anywhere.  Using your own namespace is
+recommended.  This means you do not have to worry about anyone else
+using it as well, having version clashes etc.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// make new instance</span>
+<span class="n">MiniPython</span> <span class="n">mp</span><span class="o">=</span><span class="k">new</span> <span class="n">MiniPython</span><span class="o">();</span>
+
+<span class="c1">// make methods available</span>
+<span class="kd">class</span> <span class="nc">timestuff</span> <span class="o">{</span>
+     <span class="kt">int</span> <span class="nf">day_of_week</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="mi">4</span><span class="o">;</span> <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="n">mp</span><span class="o">.</span><span class="na">addModule</span><span class="o">(</span><span class="s">&quot;time&quot;</span><span class="o">,</span> <span class="k">new</span> <span class="n">timestuff</span><span class="o">());</span>
+
+<span class="c1">// provide print and other Client behaviour</span>
+<span class="n">mp</span><span class="o">.</span><span class="na">setClient</span><span class="o">(</span><span class="k">new</span> <span class="n">MiniPython</span><span class="o">.</span><span class="na">Client</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kt">void</span> <span class="nf">print</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">)</span> <span class="o">{</span>
+         <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">(</span><span class="n">s</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span>
+    <span class="kt">void</span> <span class="nf">onError</span><span class="o">(</span><span class="n">Execution</span> <span class="n">error</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// a single location to log, dissect or otherwise deal</span>
+      <span class="c1">// with any error</span>
+    <span class="o">}</span>
+<span class="o">});</span>
+
+<span class="c1">// give it code to run in an inputStream from a file, network etc</span>
+<span class="n">mp</span><span class="o">.</span><span class="na">setCode</span><span class="o">(</span><span class="k">new</span> <span class="n">FileInputStream</span><span class="o">(</span><span class="s">&quot;settings.jmp&quot;</span><span class="o">));</span>
+
+<span class="c1">// Call a method passing in one parameter</span>
+<span class="kt">int</span> <span class="n">brightness</span><span class="o">=(</span><span class="n">Integer</span><span class="o">)</span><span class="n">mp</span><span class="o">.</span><span class="na">callMethod</span><span class="o">(</span><span class="s">&quot;get_brightness&quot;</span><span class="o">,</span> <span class="mi">2</span><span class="o">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="objective-c">
+<h2>Objective C<a class="headerlink" href="#objective-c" title="Permalink to this headline">¶</a></h2>
+<p>Add <tt class="file docutils literal"><span class="pre">MiniPython.h</span></tt> to relevant files, and <tt class="file docutils literal"><span class="pre">MiniPython.m</span></tt>
+to your project.  Use it like this.</p>
+<div class="highlight-objc"><pre>// the module we want to add
+@interface timestuff
+@end
+
+@implementation timestuf
+- (int) day_of_week {
+  return 4;
+}
+@end
+
+// MiniPythonClientDelegate methods
+- (void)print:(NSString *)s {
+    NSLog(@"MiniPython: %@", s);
+}
+
+- (void)onError:(NSError *)e {
+     // a single location to log, dissect or otherwise deal
+     // with any error
+}
+
+// make new instance
+MiniPython *mp=[[MiniPython alloc] init];
+
+[mp addModule:[[timestuff alloc] init] named:@"time"];
+[mp setClient:self];
+
+// give it code to run
+NSInputStream *in=[NSInputStream inputStreamWithFileAtPath:filename];
+[in open];
+
+NSError *error;
+BOOL success=[mp setCode:in error:&amp;error];
+
+// call a method passing in one parameter
+int brightness=[(NSNumber*)[mp callMethod:@"get_brightness" args:@[@2] error:&amp;error] intValue];</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Example</a><ul>
+<li><a class="reference internal" href="#java">Java</a></li>
+<li><a class="reference internal" href="#objective-c">Objective C</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to Jia Mini Python documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="lang.html"
+                        title="next chapter">Syntax/type support</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/example.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="lang.html" title="Syntax/type support"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to Jia Mini Python documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>

@@ -1,0 +1,210 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Quirks and differences &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="next" title="Internals" href="internals.html" />
+    <link rel="prev" title="jmp-compile" href="jmp-compile.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="internals.html" title="Internals"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="jmp-compile.html" title="jmp-compile"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="quirks-and-differences">
+<h1>Quirks and differences<a class="headerlink" href="#quirks-and-differences" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="comparisons">
+<span id="id1"></span><h2><span class="target" id="index-0"></span>Comparisons<a class="headerlink" href="#comparisons" title="Permalink to this headline">¶</a></h2>
+<p>Comparisons will always succeed.  This is to ensure you can sort any
+list and not have to worry about members being different types.</p>
+<p>Where the items being compared are the same type then the logical
+comparison is performed.  For dictionaries that are not equal the
+<a class="reference internal" href="python.html#id" title="id"><tt class="xref py py-func docutils literal"><span class="pre">id()</span></tt></a> is used as ordering doesn&#8217;t make sense.</p>
+<p>When the types differ then there is still an absolute ordering (eg all
+lists come after all dicts).  This matches the behaviour of Python 2,
+although the ordering of unrelated types may differ (the type name is
+used for the comparison).  In Python 3 comparing unrelated types
+results in an exception.</p>
+</div>
+<div class="section" id="tuples">
+<span id="id2"></span><h2>Tuples<a class="headerlink" href="#tuples" title="Permalink to this headline">¶</a></h2>
+<p>Tuples are not supported.  Where they are encountered in your source
+they are treated as though you specified a list.  This means you can
+also mutate them unlike regular Python.</p>
+</div>
+<div class="section" id="dictionary-keys">
+<h2>Dictionary keys<a class="headerlink" href="#dictionary-keys" title="Permalink to this headline">¶</a></h2>
+<p>Python only allows immutable types as keys, for example string,
+numbers and tuples.  This implementation will let you use any type
+including mutable lists, dicts etc as the key.  Note that altering a
+list/dict after using it as a key will make it impossible to find the key
+again (the hash code will have changed) and could lead to exceptions.</p>
+</div>
+<div class="section" id="booleans">
+<span id="id3"></span><h2>Booleans<a class="headerlink" href="#booleans" title="Permalink to this headline">¶</a></h2>
+<p>Python treats True as the integer 1 and False as zero in several
+places:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="mi">3</span><span class="o">+</span><span class="bp">True</span><span class="o">-</span><span class="mi">4</span><span class="o">*</span><span class="bp">False</span>
+<span class="go">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">1</span><span class="o">==</span><span class="bp">True</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="bp">True</span><span class="o">&gt;-</span><span class="mi">1</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>It is currently an error in Jia Mini Python to do so.  You can use
+<a class="reference internal" href="python.html#int" title="int"><tt class="xref py py-func docutils literal"><span class="pre">int()</span></tt></a> to convert a bool to 1/0.</p>
+</div>
+<div class="section" id="concurrent-container-modification-iteration">
+<h2>Concurrent container modification/iteration<a class="headerlink" href="#concurrent-container-modification-iteration" title="Permalink to this headline">¶</a></h2>
+<p>It is generally a bad idea to modify lists or dicts while iterating
+over them.  (This is true of regular Python too.)</p>
+</div>
+<div class="section" id="string-format">
+<h2>String format<a class="headerlink" href="#string-format" title="Permalink to this headline">¶</a></h2>
+<p>The <cite>str % list</cite> (% operator) just calls <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#format(java.lang.String, java.lang.Object...)">String.format</a>
+which uses different rules than Python&#8217;s equivalent.  For example
+Python will complain if too many arguments are provided while
+String.format doesn&#8217;t.</p>
+</div>
+<div class="section" id="augmented-assignments">
+<span id="augassign"></span><h2>Augmented Assignments<a class="headerlink" href="#augmented-assignments" title="Permalink to this headline">¶</a></h2>
+<p>These are expanded: <tt class="docutils literal"><span class="pre">x+=1</span></tt> becomes <tt class="docutils literal"><span class="pre">x=x+1</span></tt></p>
+<p>CPython has an internal handler that turns <tt class="docutils literal"><span class="pre">+=</span></tt> into list append for
+lists which doesn&#8217;t happen here.  If you do this with a list then a
+new list is created and assigned to the original variable name.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Quirks and differences</a><ul>
+<li><a class="reference internal" href="#comparisons">Comparisons</a></li>
+<li><a class="reference internal" href="#tuples">Tuples</a></li>
+<li><a class="reference internal" href="#dictionary-keys">Dictionary keys</a></li>
+<li><a class="reference internal" href="#booleans">Booleans</a></li>
+<li><a class="reference internal" href="#concurrent-container-modification-iteration">Concurrent container modification/iteration</a></li>
+<li><a class="reference internal" href="#string-format">String format</a></li>
+<li><a class="reference internal" href="#augmented-assignments">Augmented Assignments</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="jmp-compile.html"
+                        title="previous chapter">jmp-compile</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="internals.html"
+                        title="next chapter">Internals</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/quirks.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="internals.html" title="Internals"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="jmp-compile.html" title="jmp-compile"
+             >previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>

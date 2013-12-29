@@ -1,0 +1,246 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to Jia Mini Python documentation &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="#" />
+    <link rel="next" title="Example" href="example.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="example.html" title="Example"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-project-documentation">
+<h1>Welcome to Jia Mini Python documentation<a class="headerlink" href="#welcome-to-project-documentation" title="Permalink to this headline">¶</a></h1>
+<p class="centered">
+<strong>Version 2.0 released 5 September 2012</strong></p><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Due to a lack of foresight, this project used to be named Java Mini
+Python. It also has an Objective C implmentation that works on iOS
+and MacOS, and may see other platforms in the future, hence the
+current name.</p>
+</div>
+<p>Jia Mini Python provides an implementation of a useful subset of
+Python syntax and types in Java and Objective C.  The sweet spot is
+where you need a <a class="reference external" href="http://en.wikipedia.org/wiki/Domain-specific_language">DSL</a> (eg
+expressions, variables, conditionals, methods/macros, callbacks) and
+would like to use Python&#8217;s syntax and types (eg heterogeneous lists
+and dicts).  Think of it as adding those things to <a class="reference external" href="http://json.org">JSON</a> rather than cutting down Python.</p>
+<p>It was originally written in order to have a richer configuration file
+for an Android app library. For example you could make the brightness
+setting have a value of 7 except on Thursday afternoons, unless the
+program has been running for 24 hours.</p>
+<p>If you are looking for a fuller implementation of Python then try the
+<a class="reference external" href="http://www.jython.org/">Jython Project</a> for Java, or regular
+<a class="reference external" href="http://www.python.org/download">CPython</a>.</p>
+<p>Jia Mini Python is hosted at <a class="reference external" href="http://code.google.com/p/java-mini-python/">http://code.google.com/p/java-mini-python/</a></p>
+<p>Works with <a class="reference external" href="http://en.wikipedia.org/wiki/Java_version_history#J2SE_5.0_.28September_30.2C_2004.29">Java 1.5+</a>,
+iOS/MacOS with Clang and <a class="reference external" href="http://developer.apple.com/library/mac/#releasenotes/ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html">ARC</a>,
+and <a class="reference external" href="http://en.wikipedia.org/wiki/History_of_Python#Version_release_dates">Python 2.6+/3.1+</a>.</p>
+<p>As a JAR file Jia Mini Python comes in at 32kb, <a class="reference external" href="http://www.mozilla.org/rhino/">Rhino</a> (Javascript interpreter) comes in
+at 1.1MB or more and various Lua implementations are at least ½ MB.
+x86 CPython is over 1½ MB (plus numerous extra files), while Objective
+C Jia Mini Python is under 100kb.  Jia Mini Python doesn&#8217;t include a language
+parser or <a class="reference external" href="http://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">REPL</a>
+as you use <a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> to do the parsing.  This keeps things
+small - just the way we like it.</p>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="example.html">Example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="example.html#java">Java</a></li>
+<li class="toctree-l2"><a class="reference internal" href="example.html#objective-c">Objective C</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lang.html">Syntax/type support</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lang.html#what-is-supported">What is supported</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lang.html#what-is-not-supported">What is not supported</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lang.html#exceptions">Exceptions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="java.html">Java API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="java.html#types">Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="java.html#adding-methods">Adding methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="java.html#class-minipython">class MiniPython</a></li>
+<li class="toctree-l2"><a class="reference internal" href="java.html#interface-minipython-client">interface MiniPython.Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="java.html#class-minipython-executionerror">class MiniPython.ExecutionError</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="objc.html">Objective C API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="objc.html#types">Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objc.html#adding-methods">Adding methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objc.html#errors">Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Python reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="python.html#dict-type">dict type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python.html#list-type">list type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python.html#str-type">str type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python.html#global-functions">Global functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python.html#object-orientation">Object orientation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jmp-compile.html">jmp-compile</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jmp-compile.html#compiling">Compiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jmp-compile.html#dumping">Dumping</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quirks.html">Quirks and differences</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#comparisons">Comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#tuples">Tuples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#dictionary-keys">Dictionary keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#booleans">Booleans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#concurrent-container-modification-iteration">Concurrent container modification/iteration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#string-format">String format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quirks.html#augmented-assignments">Augmented Assignments</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="internals.html">Internals</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="internals.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals.html#bytecode-format">Bytecode Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals.html#anatomy-of-minipython-java">Anatomy of MiniPython.java</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#why-was-this-project-done">Why was this project done?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#what-about-hostile-code">What about hostile code?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#what-about-bugs">What about bugs?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#what-about-bugs-in-my-code">What about bugs in my code?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="changes.html">Change History</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="changes.html#id1">2.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changes.html#id2">1.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changes.html#id3">1.1</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="copyright.html">Copyright and License</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to Jia Mini Python documentation</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="example.html"
+                        title="next chapter">Example</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="example.html" title="Example"
+             >next</a> |</li>
+        <li><a href="#">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>

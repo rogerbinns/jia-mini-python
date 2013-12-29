@@ -1,0 +1,314 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>jmp-compile &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="next" title="Quirks and differences" href="quirks.html" />
+    <link rel="prev" title="Python reference" href="python.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="quirks.html" title="Quirks and differences"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="python.html" title="Python reference"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="jmp-compile">
+<h1>jmp-compile<a class="headerlink" href="#jmp-compile" title="Permalink to this headline">¶</a></h1>
+<p>This is the tool used to turn your Python syntax source into the
+internal representation used.  It can also dump the internal
+representation.</p>
+<p>You can use Python 2.6+ or 3.1+ to run <cite>jmp-compile</cite>.</p>
+<div class="section" id="compiling">
+<h2>Compiling<a class="headerlink" href="#compiling" title="Permalink to this headline">¶</a></h2>
+<p><cite>jmp-compile [options] input.py [output.jmp]</cite></p>
+<p>Produces an internal representation from <cite>input.py</cite>.  By default the
+output is alongside the input with a <cite>.jmp</cite> extension.</p>
+<dl class="option">
+<dt id="cmdoption-jmp-compile--print-function">
+<tt class="descname">--print-function</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--print-function" title="Permalink to this definition">¶</a></dt>
+<dd><p>If you run under Python 2 then <cite>print</cite> will be treated as a
+statement.  Supplying this flag will treat it is as a function.
+If you run <cite>jmp-compile</cite> under Python 3 then <cite>print</cite> is always
+treated as a function.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--asserts">
+<tt class="descname">--asserts</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--asserts" title="Permalink to this definition">¶</a></dt>
+<dd><p>By default asserts are ignored.  If you supply this flag then
+asserts will be evaluated and an exception to be thrown if it does
+not evaluate to a true value.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--omit-line-table">
+<tt class="descname">--omit-line-table</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--omit-line-table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normally a table that maps between internal program counter value
+and the corresponding source line number is included in the
+output.  This allows line numbers to be given in exceptions.
+However it consumes 4 bytes per line of executable code so you can
+save space by specifying this flag.  You can always work out the
+line number from a program counter using annotated output.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--annotate">
+<tt class="descname">--annotate</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--annotate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Places a file alongside the output with an extension of <cite>.i</cite> that
+has the source lines intermingled with the internal representation
+like <a class="reference internal" href="#cmdoption-jmp-compile--dump"><em class="xref std std-option">--dump</em></a> output.  It is recommended you use this
+option if omitting the line table so that later you can map the
+program counter to the corresponding line as this output always
+includes the line information.  You can see an example annotated
+file below.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--syntax">
+<tt class="descname">--syntax</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--syntax" title="Permalink to this definition">¶</a></dt>
+<dd><p>Does not produce an output file.  This checks the syntax and that
+various limits (eg string length, jmp size) are not exceeded.  The
+exit code will be non-zero on any error.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--no-optimization">
+<tt class="descname">--no-optimization</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--no-optimization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turns off optimizations such as constant expressions (replacing
+<tt class="docutils literal"><span class="pre">3+4</span></tt> with <tt class="docutils literal"><span class="pre">7</span></tt> and <tt class="docutils literal"><span class="pre">True</span> <span class="pre">or</span> <span class="pre">7</span></tt> with <tt class="docutils literal"><span class="pre">True</span></tt>) and omitting
+unreachable code (eg <tt class="docutils literal"><span class="pre">if</span> <span class="pre">False</span></tt>).</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--constant">
+<tt class="descname">--constant</tt><tt class="descclassname"> ``name=value``</tt><a class="headerlink" href="#cmdoption-jmp-compile--constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can be supplied multiple times.  value must be in Python syntax and
+can be any expression.  For example <tt class="docutils literal"><span class="pre">--constant</span> <span class="pre">DEBUG=True</span></tt>,
+<tt class="docutils literal"><span class="pre">--constant</span> <span class="pre">VERSION=&quot;2alpha1&quot;</span></tt>, <tt class="docutils literal"><span class="pre">--constant</span> <span class="pre">mapping={3:</span> <span class="pre">&quot;Three&quot;,</span>
+<span class="pre">4:</span> <span class="pre">&quot;a&quot;*7m</span> <span class="pre">5:</span> <span class="pre">func(1,2,3)}</span></tt>.  Be careful of the shell altering what
+you provide on the command line.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dumping">
+<h2>Dumping<a class="headerlink" href="#dumping" title="Permalink to this headline">¶</a></h2>
+<p><cite>jmp-compile &#8211;dump [options] file.jmp</cite></p>
+<p>This prints the internal representation from a <cite>.jmp</cite> file.</p>
+<dl class="option">
+<dt id="cmdoption-jmp-compile--dump">
+<tt class="descname">--dump</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption-jmp-compile--dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turns on dump mode</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-jmp-compile--dump-source">
+<tt class="descname">--dump-source</tt><tt class="descclassname"> &lt;input.py&gt;</tt><a class="headerlink" href="#cmdoption-jmp-compile--dump-source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional input file the <cite>.jmp</cite> was produced from.  The source
+lines are intermingled with the output.  By default a <cite>.py</cite> file
+alongside the <cite>.jmp</cite> file is looked for.</p>
+</dd></dl>
+
+<div class="section" id="dumping-example">
+<h3>Dumping Example<a class="headerlink" href="#dumping-example" title="Permalink to this headline">¶</a></h3>
+<p>This is an example of <a class="reference internal" href="#cmdoption-jmp-compile--dump"><em class="xref std std-option">--dump</em></a> or <a class="reference internal" href="#cmdoption-jmp-compile--annotate"><em class="xref std std-option">--annotate</em></a>
+output.  <a class="reference internal" href="internals.html"><em>Internals</em></a> describes what is going on in more detail.</p>
+<div class="highlight-python"><pre>
+#    1 x=3+4
+
+    0 PUSH_INT 3
+    3 PUSH_INT 4
+    6 ADD
+    7 STORE_NAME 0   	# string 0 = 'x'
+
+#    2 if x&gt;5:
+
+   10 LOAD_NAME 0   	# string 0 = 'x'
+   13 PUSH_INT 5
+   16 GT
+   17 IF_FALSE 28
+
+#    3   print "greater"
+
+   20 PUSH_STR 1   	# string 1 = 'greater'
+   23 PUSH_TRUE
+   24 PUSH_INT 1
+   27 PRINT
+
+#    5 def fact(n):
+
+   28 MAKE_METHOD 37
+   31 STORE_NAME 2   	# string 2 = 'fact'
+   34 GOTO 77
+   37 PUSH_INT 1
+   40 FUNCTION_PROLOG
+   41 STORE_NAME 3   	# string 3 = 'n'
+
+#    6   if n&lt;=1:
+
+   44 LOAD_NAME 3   	# string 3 = 'n'
+   47 PUSH_INT 1
+   50 LTE
+   51 IF_FALSE 58
+
+#    7      return 1
+
+   54 PUSH_INT 1
+   57 RETURN
+
+#    8   return n*fact(n-1)
+
+   58 LOAD_NAME 3   	# string 3 = 'n'
+   61 LOAD_NAME 3   	# string 3 = 'n'
+   64 PUSH_INT 1
+   67 SUB
+   68 PUSH_INT 1
+   71 LOAD_NAME 2   	# string 2 = 'fact'
+   74 CALL
+   75 MULT
+   76 RETURN
+
+#   10 print fact(10)
+
+   77 PUSH_INT 10
+   80 PUSH_INT 1
+   83 LOAD_NAME 2   	# string 2 = 'fact'
+   86 CALL
+   87 PUSH_TRUE
+   88 PUSH_INT 1
+   91 PRINT
+   92 EXIT_LOOP
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">jmp-compile</a><ul>
+<li><a class="reference internal" href="#compiling">Compiling</a></li>
+<li><a class="reference internal" href="#dumping">Dumping</a><ul>
+<li><a class="reference internal" href="#dumping-example">Dumping Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="python.html"
+                        title="previous chapter">Python reference</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="quirks.html"
+                        title="next chapter">Quirks and differences</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/jmp-compile.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="quirks.html" title="Quirks and differences"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="python.html" title="Python reference"
+             >previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>

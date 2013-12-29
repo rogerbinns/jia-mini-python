@@ -1,0 +1,212 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Change History &mdash; Jia Mini Python 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
+    <link rel="next" title="Copyright and License" href="copyright.html" />
+    <link rel="prev" title="Frequently Asked Questions" href="faq.html" />
+ 
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-27719934-2']);
+  _gaq.push(['_trackPageview']);
+</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="copyright.html" title="Copyright and License"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="faq.html" title="Frequently Asked Questions"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="change-history">
+<h1>Change History<a class="headerlink" href="#change-history" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>2.0<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>There is now a compatible Objective C solution that works on iOS and Mac</p>
+<p>Enhanced <a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> to evaluate constants in the source (eg
+<tt class="docutils literal"><span class="pre">3+4</span></tt> is replaced with <tt class="docutils literal"><span class="pre">7</span></tt>, and <tt class="docutils literal"><span class="pre">True</span> <span class="pre">or</span> <span class="pre">7</span></tt> is replaced with
+<tt class="docutils literal"><span class="pre">True</span></tt>).  It will also omit unreachable code (eg <tt class="docutils literal"><span class="pre">if</span> <span class="pre">False</span></tt>).  You
+can turn this optimisation off with <em class="xref std std-option">--no-optimizations</em>.  You
+can also supply your own constants such as <tt class="docutils literal"><span class="pre">DEBUG=True</span></tt> or
+<tt class="docutils literal"><span class="pre">VERSION=&quot;2.3&quot;</span></tt>.  The resulting bytecode still works correctly even
+against Jia Mini Python version 1.0.</p>
+<p><a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> detects trying to assign to builtin constants
+(eg <tt class="docutils literal"><span class="pre">True=0</span></tt>)</p>
+<p><a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> now understands list comprehensions.  The resulting
+bytecode still works correctly even against Jia Mini Python version 1.0.</p>
+<p>Added toPyReprString for Java</p>
+<p><tt class="docutils literal"><span class="pre">bool</span></tt> now always returns a value.  Before it would give TypeError
+for unknown types, which now give <tt class="docutils literal"><span class="pre">True</span></tt>.</p>
+<p>Correct Java string.split for various corner cases.</p>
+<p>Made Java implemented methods work correctly as dictionary keys.</p>
+<p>Calling a Java non-varargs method with an incorrect number of
+args now gives the correct exception type (<tt class="docutils literal"><span class="pre">TypeError</span></tt>)</p>
+<p>Deal with -2147483648 / -1 (gives -2147483648 because + 2147483648
+would be an overflow).  On Intel processors this operation would cause
+a <a class="reference external" href="http://kqueue.org/blog/2012/12/31/idiv-dos/">hardware fault</a>
+like dividing by zero does, so similar precautions are taken.  Note
+that Jia Mini Python only uses 32 bit signed integers.</p>
+<p>Fix global lookup for LOAD_NAME (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=14">Issue 14</a>)</p>
+</div>
+<div class="section" id="id2">
+<h2>1.2<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>Filled in the <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/Throwable.html#getCause()">cause</a> for
+<a class="reference internal" href="java.html#executionerror"><em>ExecutionError</em></a> and added toDetailedString()
+method.</p>
+<p>Added several annotations that help when the file is compiled with
+very strict warnings.</p>
+<p>Minor documentation tweaks and updates.</p>
+<p>Added toDetailedString() on the Exception which provides additional
+useful detail for logging and analytics.</p>
+</div>
+<div class="section" id="id3">
+<h2>1.1<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<p>All Java non-public items marked private to avoid them showing up in
+completions if you copied the code to your own package.  (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=1">Issue 1</a>)</p>
+<p>Do not use <cite>String.isEmpty()</cite> as it doesn&#8217;t exist on Android (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=2">Issue 2</a>)</p>
+<p>Public entry points are synchronized to prevent concurrent usage (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=3">Issue 3</a>)</p>
+<p>Added <cite>dict.get(key, default)</cite> (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=5">Issue 5</a>)</p>
+<p>Dictionary members can be obtained and set via attribute style access
+too (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=6">Issue 6</a>):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">a</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;foo&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
+<span class="c"># Get</span>
+<span class="k">print</span> <span class="n">a</span><span class="p">[</span><span class="s">&quot;foo&quot;</span><span class="p">],</span> <span class="n">a</span><span class="o">.</span><span class="n">foo</span>
+<span class="c"># Set</span>
+<span class="n">a</span><span class="o">.</span><span class="n">bar</span><span class="o">=</span><span class="mi">7</span>
+<span class="k">print</span> <span class="n">a</span><span class="p">[</span><span class="s">&quot;bar&quot;</span><span class="p">],</span> <span class="n">a</span><span class="o">.</span><span class="n">bar</span>
+</pre></div>
+</div>
+<p>Added <em>is/is not</em> operator.  Behind the scenes this translates <em>x is
+y</em> into <em>id(x) == id(y)</em>.</p>
+<p>It is possible to do a form of object orientation keeping data and the
+functions that operate on it together in the same dictionary as
+<a class="reference internal" href="python.html#pyobject"><em>documented here</em></a> (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=7">Issue 7</a>)</p>
+<p>Code that attempted to do a rich compare of dictionaries was removed
+and their <a class="reference internal" href="python.html#id" title="id"><tt class="xref py py-func docutils literal"><span class="pre">id()</span></tt></a> is used instead.  (<a class="reference internal" href="quirks.html#comparisons"><em>Comparisons</em></a>).</p>
+<p>Added dict.copy (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=8">Issue 8</a>)</p>
+<p>Added <a class="reference internal" href="jmp-compile.html"><em>jmp-compile</em></a> option to only do a syntax check</p>
+<p>Fixed returns within for loops (<a class="reference external" href="http://code.google.com/p/java-mini-python/issues/detail?id=10">Issue 10</a>)</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Change History</a><ul>
+<li><a class="reference internal" href="#id1">2.0</a></li>
+<li><a class="reference internal" href="#id2">1.2</a></li>
+<li><a class="reference internal" href="#id3">1.1</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="faq.html"
+                        title="previous chapter">Frequently Asked Questions</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="copyright.html"
+                        title="next chapter">Copyright and License</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/changes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="copyright.html" title="Copyright and License"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="faq.html" title="Frequently Asked Questions"
+             >previous</a> |</li>
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<div class="footer">This page uses <a href="http://analytics.google.com/">
+Google Analytics</a> to collect statistics. You can disable it by blocking
+the JavaScript coming from www.google-analytics.com.
+<script type="text/javascript">
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ?
+              'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.documentElement.firstChild.appendChild(ga);
+  })();
+</script>
+</div>
+
+  </body>
+</html>
