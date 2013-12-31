@@ -99,7 +99,7 @@ static void usage() {
 }
 - (id) init { if((self=[super init])) {underlying=[[NSMutableDictionary alloc] init];} return self;}
 - (BOOL) isEqual:(id)other { (void)other; return NO;}
-- (void) setObject:(id)v forKey:(id)k { [underlying setObject:v forKey:k];}
+- (void) setObject:(id)v forKey:(id<NSCopying>)k { [underlying setObject:v forKey:k];}
 @end
 
 
@@ -240,7 +240,7 @@ static int main2(int argc, char *argv[]) {
         NSOutputStream *thisisridiculous=[NSOutputStream outputStreamToMemory];
         [thisisridiculous open];
         [NSJSONSerialization writeJSONObject:@[out, err]
-                                    toStream:thisisridiculous options:0 error:nil];
+                                    toStream:thisisridiculous options:(NSJSONWritingOptions)0 error:nil];
         NSData *noreally=[thisisridiculous propertyForKey:NSStreamDataWrittenToMemoryStreamKey];
         fwrite([noreally bytes], [noreally length], 1, stdout);
         fflush(stdout);
