@@ -17,6 +17,7 @@ source_suffix = '.rst'
 extlinks={
     "jdoc": ("http://docs.oracle.com/javase/7/docs/api/%s", "javadoc"),
     "issue": ("https://github.com/rogerbinns/jia-mini-python/issues/%s", "Issue "),
+    "adoc": ("https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/%s_Class/Reference/Reference.html", ""),
 }
 
 # The encoding of source files.
@@ -64,7 +65,7 @@ html_theme = 'default'
 html_static_path = ['_static', "_build/javadoc" ]
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'JavaMiniPythondoc'
+htmlhelp_basename = 'JiaMiniPythondoc'
 
 html_theme_options = {'stickysidebar': True}
 
@@ -75,7 +76,7 @@ html_theme_options = {'stickysidebar': True}
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'JavaMiniPython.tex', u'Java Mini Python Documentation',
+  ('index', 'JiaMiniPython.tex', u'Jia Mini Python Documentation',
    u'Roger Binns', 'manual'),
 ]
 
@@ -84,14 +85,16 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'javaminipython', u'Java Mini Python Documentation',
+    ('index', 'jiaminipython', u'Jia Mini Python Documentation',
      [u'Roger Binns'], 1)
 ]
 
 # -- Options for Epub output ---------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'Java Mini Python'
+epub_title = project
 epub_author = u'Roger Binns'
 epub_publisher = u'Roger Binns'
-epub_copyright = u'2011, Roger Binns'
+epub_copyright = copyright
+
+add_module_names=False

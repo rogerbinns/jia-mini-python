@@ -1,5 +1,5 @@
-VERSION = 1.99
-DATE = "5 September 2012"
+VERSION = 2.0
+DATE = "31 December 2013"
 
 # use python3 for python3
 PYTHON=python

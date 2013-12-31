@@ -9,48 +9,48 @@ attributes (eg functions) do not exist.  For example in Python
 integers have 64 different attributes while they have none in this
 implementation.
 
-dict type
----------
+:index:`dict type`
+------------------
 
-.. method:: copy()  -> dict
+.. method:: dict.copy()  -> dict
 
    Returns a new dictionary with the same contents, but changes to the
    new one do not affect the original.
 
-.. method:: get(key, default)
+.. method:: dict.get(key, default)
 
    Returns value associated with key, and if it doesn't exist then `default`.
 
-.. method:: update(other)
+.. method:: dict.update(other)
 
    Copies all items from other into this dict.
 
-list type
----------
+:index:`list type`
+------------------
 
-.. method:: append(item)
+.. method:: list.append(item)
 
    Adds item to end of this list
 
-.. method:: extend(list)
+.. method:: list.extend(list)
 
    Appends every member of list to this list
 
-.. method:: index(item)
+.. method:: list.index(item)
 
    Returns position of item in list or -1 if not found.  Calls
    :jdoc:`List.indexOf <java/util/List.html#indexOf(java.lang.Object)>`
 
-.. method:: reverse()
+.. method:: list.reverse()
 
    Reverses the order of the elements in the list by calling
    :jdoc:`Collections.reverse <java/util/Collections.html#reverse(java.util.List)>`.
 
-.. method:: pop()
+.. method:: list.pop()
 
    Removes the last item in the list and returns it
 
-.. method:: sort(cmp=None, key=None, reverse=False)
+.. method:: list.sort(cmp=None, key=None, reverse=False)
 
    You can omit some or all of the arguments.  Since keyword arguments
    are not supported you will need to supply preceding arguments.
@@ -68,32 +68,32 @@ list type
    Java's :jdoc:`Collections.sort <java/util/Collections.html#sort(java.util.List, java.util.Comparator)>` is used whose implementation is derived
    from Python's `sort <http://en.wikipedia.org/wiki/Timsort>`__.
 
-str type
---------
+:index:`str type`
+-----------------
 
-.. method:: endswith(suffix)
+.. method:: str.endswith(suffix)
 
    Returns True if the string ends with the specified suffix.  Calls
    :jdoc:`String.endsWith <java/lang/String.html#endsWith(java.lang.String)>`.
 
-.. method:: join(list)
+.. method:: str.join(list)
 
    Return a string which is the concatenation of the strings in the
    list, separated by this string.
 
-.. method:: lower()
+.. method:: str.lower()
 
    Returns lower case version of string by calling
    :jdoc:`String.toLowerCase <java/lang/String.html#toLowerCase()>`.
 
-.. method:: replace(target, replacement)
+.. method:: str.replace(target, replacement)
 
    Returns a new string replacing all occurrences of `target` with
    `replacement` by calling :jdoc:`String.replace
    <java/lang/String.html#replace(java.lang.CharSequence,
    java.lang.CharSequence)>`.
 
-.. method:: split(sep, maxsplits)
+.. method:: str.split(sep, maxsplits)
 
    :param str sep: Separator to use.  If not specified then whitespace
       is used.
@@ -105,17 +105,17 @@ str type
    Splits string into a list of substrings around `sep` stopping when
    maxsplits have been found.
 
-.. method:: startswith(prefix)
+.. method:: str.startswith(prefix)
 
    Returns True is the string starts with prefix.  Calls
    :jdoc:`String.startsWith <java/lang/String.html#startsWith(java.lang.String)>`.
 
-.. method:: strip()
+.. method:: str.strip()
 
    Returns new string omitting leading and trailing whitespace.  Calls
    :jdoc:`String.trim <java/lang/String.html#trim()>`.
 
-.. method:: upper()
+.. method:: str.upper()
 
    Returns upper case version of string by calling
    :jdoc:`String.toUpperCase <java/lang/String.html#toUpperCase()>`.
@@ -269,6 +269,10 @@ similar to how Javascript works.)::
 	  # method members
 	  "area": area,
 	  "draw": draw}
+
+       # If you are happy exposing everything then this works
+       return locals()
+
 
     # This is how we make a new instance
     circ=Circle(25, 3, 12)

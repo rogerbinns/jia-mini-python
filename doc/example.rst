@@ -1,6 +1,9 @@
 :index:`Example`
 ****************
 
+Python Source
+=============
+
 Write your Python code::
 
   launches=0
@@ -10,9 +13,10 @@ Write your Python code::
        return base+10
     return base+7
 
-Turn that into the bytecode that |project| uses.  This checks the
-syntax, tokenizes and produces a smaller file.  The output is by
-default the same filename as the input but with an extension of .jmp::
+Turn that into the bytecode that |project| uses with
+:doc:`jmp-compile`.  This checks the syntax, tokenizes and produces a
+smaller file.  The output is by default the same filename as the input
+but with an extension of .jmp::
 
   jmp-compile settings.py
 
@@ -98,4 +102,3 @@ to your project.  Use it like this.
 
    // call a method passing in one parameter
    int brightness=[(NSNumber*)[mp callMethod:@"get_brightness" args:@[@2] error:&error] intValue];
-
