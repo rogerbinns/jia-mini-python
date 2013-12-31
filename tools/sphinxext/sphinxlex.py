@@ -5,11 +5,11 @@ Created on Jul 22, 2011
 '''
 import ply.lex as lex
 
-reserved = { 'void' : 'VOID' }
+reserved = { 'void' : 'VOID' , 'enum': 'ENUM' }
 
 class SphinxLexer:
 	# List of token names.   This is always required
-	
+
 	tokens = list(reserved.values()) + [
 		'WORD',
 	   'PLUS',
@@ -18,7 +18,9 @@ class SphinxLexer:
 	   'LPAREN',
 	   'RPAREN',
 	   'COLON',
-	] 
+           'GT',
+           'LT',
+	]
 
 	# Regular expression rules for simple tokens
 #	t_LITER =r'[a-zA-Z_]?(\.|[^\"])*'
@@ -28,14 +30,16 @@ class SphinxLexer:
 #	t_STRING_LITERAL = '[a-zA-Z_]?"(\\.|[^"])*"'
 	#t_WORD = r"[LuU8]?('([^'\\]*(?:\\.[^'\\]*)*)'" r'|"([^"\\]*(?:\\.[^"\\]*)*)")'
 
-	
+
 	t_PLUS	= r'\+'
 	t_MINUS   = r'-'
 	t_STAR   = r'\*'
 	t_LPAREN  = r'\('
 	t_RPAREN  = r'\)'
 	t_COLON = r':'
-	
+        t_GT = r'>'
+        t_LT = r'<'
+
 	def t_WORD(self,t):
 		r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*)\b'
 		t.type = reserved.get(t.value.lower(),'WORD')	# Check for reserved words
@@ -45,7 +49,7 @@ class SphinxLexer:
 	# Note addition of self parameter since we're in a class
 #	def t_NUMBER(self,t):
 #		r'\d+'
-#		t.value = int(t.value)	
+#		t.value = int(t.value)
 #		return t
 
 	# Define a rule so we can track line numbers
@@ -64,7 +68,7 @@ class SphinxLexer:
 	# Build the lexer
 	def build(self,**kwargs):
 		self.lexer = lex.lex(module=self, **kwargs)
-	
+
 	# Test it output
 	def test(self,data):
 		self.lexer.input(data)

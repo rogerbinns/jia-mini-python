@@ -20,45 +20,44 @@ class ObjCObject(ObjectDescription):
 
 	def add_target_and_index(self, sigobj, sig, signode):
 		pass
-	
+
 	def before_content(self):
 		pass
 
 	def after_content(self):
 		pass
-	
+
 
 
 
 
 	def handle_signature(self, sig, signode):
-		
+
 		def p_method_parts(p):
 			'''method : returnval WORD
 			          | returnval WORD COLON  parameters'''
 			if (len(p) == 5):
-				p[0] = p[1] 
+				p[0] = p[1]
 				p[0] += nodes.Text(u' ')
 				p[0] += addnodes.desc_name(p[2], p[2])
 				p[0] += addnodes.desc_annotation(p[3], p[3])
 				p[0] += p[4]
 			else:
-				p[0] = p[1] 
+				p[0] = p[1]
 				p[0] += nodes.Text(u' ')
 				p[0] += addnodes.desc_name(p[2], p[2])
-		
+
 		def p_expression_word(p):
 			'''expression : WORD
 		                  | WORD STAR
+                                  | WORD STAR STAR
+                                  | WORD LT WORD GT
+                                  | ENUM WORD
 		                  | VOID '''
-			if (len(p) == 3):
-				p[0] = addnodes.desc_type(p[1], p[1])
-				p[0] += addnodes.desc_addname(p[2], p[2])
-			else:
-				p[0] = addnodes.desc_type(p[1], p[1])
+                        p[0] = addnodes.desc_type(" ".join(p[1:]), " ".join(p[1:]))
 
-		
-			
+
+
 		def p_parameter_exp(p):
 			'''parameter  : methodname COLON LPAREN expression RPAREN methodname
 			              | parameter parameter'''
@@ -72,12 +71,12 @@ class ObjCObject(ObjectDescription):
 				p[0] += nodes.Text(u' ')
 				p[0] += addnodes.desc_annotation(p[5], p[5])
 				p[0] += p[6]
-		
+
 			else:
 				p[0] = p[1]
 				p[0] += nodes.Text(u' ')
 				p[0] += p[2]
-		
+
 		def p_parameters_exp(p):
 			'''parameters : LPAREN expression RPAREN methodname
 			              | LPAREN expression RPAREN methodname parameter'''
@@ -86,49 +85,49 @@ class ObjCObject(ObjectDescription):
 			p[0] += p[2]
 			p[0] += nodes.Text(u' ')
 			p[0] += addnodes.desc_annotation(p[3], p[3])
-			p[0] += p[4] 
+			p[0] += p[4]
 
 			if (len(p) == 6):
 				p[0] += nodes.Text(u' ')
 				p[0] += p[5]
-				
-				
-				
+
+
+
 		def p_method_word(p):
 			'''methodname : WORD'''
-			p[0] = addnodes.desc_type(p[1], p[1])		
-		
-		
+			p[0] = addnodes.desc_type(p[1], p[1])
+
+
 		def p_returnval_expr(p):
 			'''returnval : MINUS LPAREN expression RPAREN
 			             | PLUS LPAREN expression RPAREN'''
-			p[0] = addnodes.desc_annotation(p[1], p[1]) 
+			p[0] = addnodes.desc_annotation(p[1], p[1])
 			p[0] += nodes.Text(u' ')
 			p[0] += addnodes.desc_annotation(p[2], p[2])
 			p[0] += nodes.Text(u' ')
- 			p[0] += p[3] 
+ 			p[0] += p[3]
 			p[0] += nodes.Text(u' ')
-			p[0] += addnodes.desc_annotation(p[4], p[4]) 
-		
+			p[0] += addnodes.desc_annotation(p[4], p[4])
+
 		# Error rule for syntax errors
 		def p_error(p):
-			print "Syntax error in input!"
+			print "Syntax error in input!", p
 
-		
-		
-		
+
+
+
 		lex = SphinxLexer()
 		lex.build()
-		
+
 		#I know this looks like this is just setting out here, but this is used
 		#by yacc to find the tokens.
-		tokens = lex.tokens	
+		tokens = lex.tokens
 
 		parser = yacc.yacc(write_tables=0,debug=0)
 		result = parser.parse(sig)
 		signode += result
-		return result;	
-	
+		return result;
+
 class ObjCClassObject(ObjCObject):
 
 	def get_index_text(self, name):
@@ -161,7 +160,7 @@ class ObjectiveCDomain(Domain):
 	def resolve_xref(self, env, fromdocname, builder,
 					 typ, target, node, contnode):
 		pass
-	
+
 	def get_objects(self):
 		for refname, (docname, type) in self.data['objects'].iteritems():
 			yield (refname, refname, type, docname, refname, 1)
