@@ -21,7 +21,7 @@ help:
 
 docs: doc
 
-doc: javadoc
+doc: javadoc objdoc
 	make -C doc html VERSION=$(VERSION) DATE=$(DATE)
 
 linkcheck:
@@ -70,6 +70,8 @@ javadoc:
 	javadoc -notimestamp -quiet -nodeprecatedlist -use -notree -nohelp -sourcepath src -d $(JAVADOCDIR)/javadoc -link http://docs.oracle.com/javase/7/docs/api/  src/com/rogerbinns/MiniPython.java
 	tools/update-javadoc.py
 
+objdoc:
+	tools/update-objcdoc.py
 
 # Note that cobertura currently only works with Java 6.  You get all
 # sorts of errors with Java 7.  (It has expectations of the bytecode

@@ -1,9 +1,26 @@
 #import "Foundation/Foundation.h"
 
+// Points to the string constant for errors from MiniPython
+extern NSString *const MiniPythonErrorDomain;
+
+/**
+   A place to handle platform behaviour
+*/
 @protocol MiniPythonClientDelegate <NSObject>
+/**
+   Called whenever there is an error.
+
+   This provides one spot where you can perform logging and other
+   diagnostics.
+ */
+- (void)onError:(NSError *)e;
+/**
+   Called with a complete string from a print call/statement.  It will
+   be newline terminated, unless the print statement had a trailing
+   comma.
+*/
 - (void)print:(NSString *)s;
 
-- (void)onError:(NSError *)e;
 @end
 
 
@@ -34,37 +51,109 @@ enum MiniPythonErrorCode {
 };
 
 @interface MiniPython : NSObject
-- (void)setClient:(id <MiniPythonClientDelegate>)client;
+/**
+   Delegate to use for platform behaviour.
 
-- (void)clear;
+   :param client: Replaces existing client with this one.
+ */
+- (void)setClient:(id <MiniPythonClientDelegate>)client;
 
 /**
    Loads and executes byte code
 
-   :param code: The onputstream must already be opened
+   :param code: The inputstream must already be opened
 */
 - (BOOL)setCode:(NSInputStream *)code error:(NSError **)error;
 
-+ (NSString *)toPyString:(NSObject *)value;
+/**
+   Removes all internal state.
 
-+ (NSString *)toPyTypeString:(NSObject *)value;
+   This ensures that garbage collection is easier. You can reuse this
+   instance by calling addModule:named: to reregister modules and
+   setCode:error: to run new code.
 
-+ (NSString *)toPyReprString:(NSObject *)value;
+ */
+- (void)clear;
 
-- (void)setError:(enum MiniPythonErrorCode)code reason:(NSString *)reason userInfo:(NSDictionary *)userinfo;
+/**
+   Makes methods implemented in `module` available within Python
+   code as module `name`.
 
-- (void)setNSError:(NSError *)error;
+   See :ref:`adding methods <objc_adding_methods>` for details on
+   which methods are made available.
+*/
+- (void)addModule:(NSObject*)module named:(NSString *)name;
 
-- (NSError *)getError;
+/**
+   Calls a method in Python and returns the result
 
-- (void)addModule:(NSObject *)module named:(NSString *)name;
+   :param name:  Global method name
+   :param args:  list of arguments that it takes
 
+   If an error occurs then nil will be returned and error (if
+   supplied) will point to the :adoc:`NSError`.
+ */
 - (NSObject *)callMethod:(NSString *)name args:(NSArray *)args error:(NSError **)error;
 
+/**
+   Returns YES if the `object` is a MiniPython object and can be
+   called.  This is useful if you need to do type checking.
+*/
 - (BOOL)isCallable:(NSObject *)object;
+/**
+   Calls a method in Python and returns the result
 
+   :param name:  Global method name
+   :param args:  list of arguments that it takes
+
+   If an error occurs then nil will be returned and error (if
+   supplied) will point to the error.
+ */
 - (NSObject *)callObject:(NSObject *)object args:(NSArray *)args error:(NSError **)error;
-@end
 
-// Error handling
-extern NSString *const MiniPythonErrorDomain;
+/**
+   Returns a string representing the object using Python nomenclature where
+   possible
+
+   For example `nil` is returned as `None`, `YES` as `True`
+   etc. Container types like dict/NSDictionary and list/NSArray will
+   include the items.
+*/
++ (NSString *)toPyString:(NSObject *)value;
+
+/**
+   Returns a string representing the type of the object using Python
+   nomenclature where possible
+
+   For example `nil` is returned as `NoneType`, `YES` as `bool`,
+   `NSDictionary` as `dict` etc.
+
+   :param value:  Object whose type to stringify
+*/
++ (NSString *)toPyTypeString:(NSObject *)value;
+
+/**
+   Same as toPyString except strings are quoted and backslash
+   escaped. If you emit an error message this is preferable as it
+   makes it clear a value is a string.
+*/
++ (NSString *)toPyReprString:(NSObject *)value;
+
+/**
+   Use this function to indicate an error has occurred, for example in
+   a :ref:`module method <objc_adding_methods>`.  See also
+   :ref:`objcerror`.
+*/
+- (void)setError:(enum MiniPythonErrorCode)code reason:(NSString *)reason userInfo:(NSDictionary *)userinfo;
+
+/**
+   Similar to setError:readon:userInfo: except supplying a generic
+   :adoc:`NSError`.
+*/
+- (void)setNSError:(NSError *)error;
+
+/**
+   Returns the most recent error
+*/
+- (NSError *)getError;
+@end
