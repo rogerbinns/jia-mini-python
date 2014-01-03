@@ -12,9 +12,21 @@ require version coordination if the app already used those libraries.
 Additionally those libraries are orders of magnitude larger than the
 original project which is very undesirable.
 
-|project| is just over 800 lines of code, and a single source
-file which you are encouraged to put into your own packages thereby
-avoiding having to coordinate versions.
+|project| is just over 800 lines of code (Java)/1,000 (Objective C),
+and a single source file which you are encouraged to put into your own
+packages thereby avoiding having to coordinate versions.
+
+Is it used in the real world?
+-----------------------------
+
+Yes.  It is used to implement the `Appington
+<http://www.appington.com>`__ SDK.  The same Python code is used to
+control audio downloads and playback.  For example when playing an
+audio prompt the locale, time since last audio, caps, and other
+criteria need to be taken into account.
+
+The SDK is used in several different Android and iOS applications,
+covering millions of users all over the world.
 
 What about hostile code?
 ------------------------
@@ -56,13 +68,13 @@ written in Python.
 There is over 99% line coverage **and** branch coverage in the code.
 While this doesn't guarantee the absence of bugs, it at least assures
 that the vast majority of code is tested.  (The remaining uncovered
-5 lines are some defensive coding around reflection.)
+5 lines are some defensive coding around reflection in Java.)
 
 The scope being limited (note "Mini" in the name!) there is also less
 functionality and less to go wrong.
 
 Please use the discussion group
-https://groups.google.com/forum/#!forum/java-mini-python and bug
+https://groups.google.com/forum/#!forum/jia-mini-python and bug
 tracker at https://github.com/rogerbinns/jia-mini-python/issues if you
 encounter any issues.
 
@@ -70,13 +82,9 @@ What about bugs in my code?
 ---------------------------
 
 There is no debugger provided or any similar notion of interactivity.
-It is easiest/quickest to develop your code using normal Python `mocking
-<http://en.wikipedia.org/wiki/Mock_object>`__ the Java implemented
-parts.
-
-Once happy, start using Java.  Print statements are the easiest way to
-track program progress and values.  In your :ref:`Client` you can make
-your print method log, display or take similar action.
+It is easiest/quickest to develop your code using print statements.
+On a host computer you can use normal Python `mocking
+<http://en.wikipedia.org/wiki/Mock_object>`__ the modules.
 
 When there are errors you get a line number that can be looked up, as
 well as a program counter which can be used with an :doc:`annotated

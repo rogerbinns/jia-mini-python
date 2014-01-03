@@ -7,7 +7,7 @@ PYTHON=python
 # Used for coverage
 COBERTURADIR=/space/cobertura
 
-.PHONY: doc docs publish test ant nose help javadoc coverage dist obin valgrind ocoverage clean
+.PHONY: doc docs publish test ant help javadoc coverage dist obin valgrind ocoverage clean
 
 help:
 	@echo "Use \`make <target>' where target is one of"
@@ -79,7 +79,7 @@ coverage:
 	@rm -rf coverage
 	@mkdir -p coverage/bin
 	env PATH=/usr/lib/jvm/java-6-openjdk-amd64/jre/bin:$(PATH) ant -q
-	bash $(COBERTURADIR)/cobertura-instrument.sh --datafile /space/java-mini-python/coverage/cobertura.ser --destination coverage bin/*.jar
+	bash $(COBERTURADIR)/cobertura-instrument.sh --datafile `pwd`/coverage/cobertura.ser --destination coverage bin/*.jar
 	env JMPCOVERAGE=t COBERTURADIR=$(COBERTURADIR) python test/main_test.py
 	bash $(COBERTURADIR)/cobertura-report.sh --datafile coverage/cobertura.ser --destination coverage src
 	@echo "Report in coverage/com.rogerbinns.MiniPython.html"
@@ -94,14 +94,5 @@ dist: clean doc
 	cp src/MiniPython.[mh] "$(BUILDDIR)"
 	cp -r doc/_build/html "$(BUILDDIR)/doc"
 	mkdir dist
-	cd build ; zip -9r "../dist/JavaMiniPython-$(VERSION).zip" *
+	cd build ; zip -9r "../dist/JiaMiniPython-$(VERSION).zip" *
 	for f in dist/* ; do gpg --use-agent --armor --detach-sig "$$f" ; done
-
-upload:
-	@if [ -z "$(GC_USER)" ] ; then echo "Specify googlecode user by setting GC_USER environment variable" ; exit 1 ; fi
-	@if [ -z "$(GC_PASSWORD)" ] ; then echo "Specify googlecode password by setting GC_PASSWORD environment variable" ; exit 1 ; fi
-	test -f tools/googlecode_upload.py
-	test -f dist/JavaMiniPython-$(VERSION).zip
-	test -f dist/JavaMiniPython-$(VERSION).zip.asc
-	python tools/googlecode_upload.py --user "$(GC_USER)" --password "$(GC_PASSWORD)" -p java-mini-python -s "$(VERSION) GPG signature" -l "Type-Signatures,OpSys-All" dist/JavaMiniPython-$(VERSION).zip.asc
-	python tools/googlecode_upload.py --user "$(GC_USER)" --password "$(GC_PASSWORD)" -p java-mini-python -s "$(VERSION) (Source, includes HTML documentation)" -l "Type-Source,OpSys-All" dist/JavaMiniPython-$(VERSION).zip
