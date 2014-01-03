@@ -53,10 +53,10 @@ bin/testminipython: src/MiniPython.h src/MiniPython.m src/testMiniPython.m Makef
 # use -a with gcov to get each block
 COVERAGECC=clang
 ocoverage:
-	-rm -f *.gcda *.gcno *.gcov
+	-rm -rf *.gcda *.gcno *.gcov coverage
 	$(COVERAGECC) --coverage -fsanitize -g -Weverything -fobjc-arc src/MiniPython.m src/testMiniPython.m -framework Foundation -lobjc  -o bin/testminipython
 	python test/main_test.py objc
-	gcov src/MiniPython.m
+	gcov -bc src/MiniPython.m
 
 valgrind: obin
 	valgrind --dsymutil=yes --redzone-size=4096 --track-origins=yes --freelist-vol=1000000000 --leak-check=full --show-reachable=yes bin/testminipython $(TEST)
