@@ -38,13 +38,11 @@ implementation.
 
 .. method:: list.index(item)
 
-   Returns position of item in list or -1 if not found.  Calls
-   :jdoc:`List.indexOf <java/util/List.html#indexOf(java.lang.Object)>`
+   Returns position of item in list or -1 if not found.
 
 .. method:: list.reverse()
 
-   Reverses the order of the elements in the list by calling
-   :jdoc:`Collections.reverse <java/util/Collections.html#reverse(java.util.List)>`.
+   Reverses the order of the elements in the list
 
 .. method:: list.pop()
 
@@ -65,16 +63,13 @@ implementation.
    Unlike Python's implementation this does require that cmp and key
    are callables if supplied.
 
-   Java's :jdoc:`Collections.sort <java/util/Collections.html#sort(java.util.List, java.util.Comparator)>` is used whose implementation is derived
-   from Python's `sort <http://en.wikipedia.org/wiki/Timsort>`__.
 
 :index:`str type`
 -----------------
 
 .. method:: str.endswith(suffix)
 
-   Returns True if the string ends with the specified suffix.  Calls
-   :jdoc:`String.endsWith <java/lang/String.html#endsWith(java.lang.String)>`.
+   Returns True if the string ends with the specified suffix.
 
 .. method:: str.join(list)
 
@@ -84,14 +79,15 @@ implementation.
 .. method:: str.lower()
 
    Returns lower case version of string by calling
-   :jdoc:`String.toLowerCase <java/lang/String.html#toLowerCase()>`.
+   :jdoc:`String.toLowerCase <java/lang/String.html#toLowerCase()>`
+   (Java) :aref:`NSString lowercaseString
+   <NSString.html#//apple_ref/occ/instm/NSString/lowercaseString>`
+   (ObjC).
 
 .. method:: str.replace(target, replacement)
 
    Returns a new string replacing all occurrences of `target` with
-   `replacement` by calling :jdoc:`String.replace
-   <java/lang/String.html#replace(java.lang.CharSequence,
-   java.lang.CharSequence)>`.
+   `replacement`.
 
 .. method:: str.split(sep, maxsplits)
 
@@ -107,18 +103,19 @@ implementation.
 
 .. method:: str.startswith(prefix)
 
-   Returns True is the string starts with prefix.  Calls
-   :jdoc:`String.startsWith <java/lang/String.html#startsWith(java.lang.String)>`.
+   Returns True is the string starts with prefix.
 
 .. method:: str.strip()
 
-   Returns new string omitting leading and trailing whitespace.  Calls
-   :jdoc:`String.trim <java/lang/String.html#trim()>`.
+   Returns new string omitting leading and trailing whitespace.
 
 .. method:: str.upper()
 
    Returns upper case version of string by calling
-   :jdoc:`String.toUpperCase <java/lang/String.html#toUpperCase()>`.
+   :jdoc:`String.toUpperCase <java/lang/String.html#toUpperCase()>`
+   (Java) :aref:`NSString uppercaseString
+   <NSString.html#//apple_ref/occ/instm/NSString/uppercaseString>`
+   (ObjC).
 
 .. _global_functions:
 
@@ -161,7 +158,8 @@ Global functions
    Returns a numeric code uniquely representing this instance.  Behind
    the scenes it returns the result of
    :jdoc:`System.getIdentityHashcode()
-   <java/lang/System.html#identityHashCode(java.lang.Object)>`.
+   <java/lang/System.html#identityHashCode(java.lang.Object)>` (Java)
+   or the object pointer (ObjC).
 
 .. function:: int(item)
 
@@ -200,14 +198,19 @@ Global functions
    Returns the string corresponding to item.
 
    For :doc:`non basic types <java>` their :jdoc:`toString()
-   <java/lang/Object.html#toString()>` method is called.
+   <java/lang/Object.html#toString()>` (Java) `NSObject description
+   <https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Protocols/NSObject_Protocol/Reference/NSObject.html#//apple_ref/occ/intfm/NSObject/description>`__
+   (ObjC) method is called.
 
 .. function:: type(item)
 
    Unlike regular Python this returns a string.  For the basic types
    it will be the expected name.  For others it will be their
    :jdoc:`Class.getSimpleName()
-   <java/lang/Class.html#getSimpleName()>`.
+   <java/lang/Class.html#getSimpleName()>` (Java) or `class
+   description
+   <https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Protocols/NSObject_Protocol/Reference/NSObject.html#//apple_ref/occ/intfm/NSObject/description>`__
+   (ObjC)
 
 .. _pyobject:
 

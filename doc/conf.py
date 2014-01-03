@@ -18,6 +18,7 @@ extlinks={
     "jdoc": ("http://docs.oracle.com/javase/7/docs/api/%s", "javadoc"),
     "issue": ("https://github.com/rogerbinns/jia-mini-python/issues/%s", "Issue "),
     "adoc": ("https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/%s_Class/Reference/Reference.html", ""),
+    "aref": ("https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/NSString_Class/Reference/%s", ""),
 }
 
 # The encoding of source files.
@@ -28,7 +29,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Jia Mini Python'
-copyright = u'2011-2013, Roger Binns <rogerb@rogerbinns.com>'
+copyright = u'2011-2014, Roger Binns <rogerb@rogerbinns.com>'
 
 rst_prolog="""
 .. |project| replace:: %s

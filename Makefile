@@ -40,7 +40,6 @@ ant:
 test: ant
 	$(PYTHON) test/main_test.py
 
-
 otest: obin
 	$(PYTHON) test/main_test.py objc
 
