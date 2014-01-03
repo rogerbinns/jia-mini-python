@@ -24,9 +24,7 @@ jmpcompiler=opj(topdir, "host", "jmp-compile")
 covoptions=["-cp", jarfile]
 if os.getenv("JMPCOVERAGE"):
     assert os.getenv("COBERTURADIR"), "$COBERTURADIR needs to be set"
-    jars=[jarfile, opj(os.getenv("COBERTURADIR"), "cobertura.jar")]
-    for f in glob.glob(opj(os.getenv("COBERTURADIR"), "lib", "*.jar")):
-        jars.append(f)
+    jars=[jarfile, opj(os.getenv("COBERTURADIR"), "cobertura.jar"), opj(os.getenv("COBERTURADIR"), "lib", "*")]
     covoptions=["-cp", os.pathsep.join(jars),
                 "-Dnet.sourceforge.cobertura.datafile="+os.path.abspath(opj(coveragedir, "cobertura.ser"))]
 

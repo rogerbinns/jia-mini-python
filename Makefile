@@ -72,14 +72,13 @@ javadoc:
 objdoc:
 	tools/update-objcdoc.py
 
-# Note that cobertura currently only works with Java 6.  You get all
-# sorts of errors with Java 7.  (It has expectations of the bytecode
-# layout)
+# The cobertura-instrument script shipped by them is completely borken
+# hence taking matters into our own hands
 coverage:
-	@rm -rf coverage
+	@rm -rf coverage bin
 	@mkdir -p coverage/bin
-	env PATH=/usr/lib/jvm/java-6-openjdk-amd64/jre/bin:$(PATH) ant -q
-	bash $(COBERTURADIR)/cobertura-instrument.sh --datafile `pwd`/coverage/cobertura.ser --destination coverage bin/*.jar
+	ant -q
+	java -classpath "$(COBERTURADIR)/cobertura.jar:$(COBERTURADIR)/lib/*:bin/MiniPython.jar" net.sourceforge.cobertura.instrument.Main --datafile `pwd`/coverage/cobertura.ser --destination coverage bin/MiniPython.jar
 	env JMPCOVERAGE=t COBERTURADIR=$(COBERTURADIR) python test/main_test.py
 	bash $(COBERTURADIR)/cobertura-report.sh --datafile coverage/cobertura.ser --destination coverage src
 	@echo "Report in coverage/com.rogerbinns.MiniPython.html"
