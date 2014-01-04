@@ -1137,8 +1137,12 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
         if (!quote) {
             return (NSString *) value;
         }
-        return [NSString stringWithFormat:@"\"%@\"", [[S(value) stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
-            stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""]];
+        return [NSString stringWithFormat:@"\"%@\"", [[[[S(value)
+                                                          stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
+                                                          stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""]
+                                                          stringByReplacingOccurrencesOfString:@"\n" withString:@"\\n"]
+                                                          stringByReplacingOccurrencesOfString:@"\t" withString:@"\\t"]
+                ];
     }
     if (ISINT(value)) {
         return [N(value) description];

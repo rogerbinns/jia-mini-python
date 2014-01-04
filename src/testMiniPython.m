@@ -75,6 +75,7 @@ static void usage() {
 - (void) foo:(int)i :(int)j {(void)i;(void)j;}
 - (void) takesFloat:(float)v { (void)v; }
 - (float) returnsFloat { return 3.14f; }
+- (NSString*) toPyReprString:(id)o { return [MiniPython toPyReprString:o]; }
 @end
 
 @implementation ListBadEquals

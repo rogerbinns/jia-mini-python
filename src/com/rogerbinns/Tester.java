@@ -165,6 +165,7 @@ public class Tester {
 		public List badeqlist() { return new ListBadEquals(); }
 		@SuppressWarnings("rawtypes")
 		public Map badeqDict() { return new MapBadEquals(); }
+                public String toPyReprString(Object o) { return MiniPython.toPyReprString(o); }
 	}
 
 	// these two simulate a container that can't determine if its items are actually

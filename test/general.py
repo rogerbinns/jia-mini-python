@@ -289,3 +289,8 @@ assert len({
         test1.returnNone(): 4,
         3: None,
         4: test1.returnNone()})==3
+
+assert test1.toPyReprString("True")=='"True"'
+assert test1.toPyReprString(True)=='True'
+assert test1.toPyReprString("a\n\t\"")==r'"a\n\t\""'
+assert test1.toPyReprString("\\")==r'"\\"'

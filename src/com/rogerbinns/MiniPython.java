@@ -1427,7 +1427,7 @@ public class MiniPython {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private String _toPyString(Object o, boolean quotestrings,
+	private static String _toPyString(Object o, boolean quotestrings,
 			Set<Integer> seencontainers) {
 		if (o == null)
 			return "None";
@@ -1437,6 +1437,7 @@ public class MiniPython {
 			String s = (String) o;
 			if (quotestrings)
 				return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+                                    .replace("\n", "\\n").replace("\t", "\\t")
 						+ "\"";
 			return s;
 		}
@@ -1503,7 +1504,7 @@ public class MiniPython {
 	 * @param o
 	 *            Object to stringify. Can be null.
 	 */
-	public String toPyString(Object o) {
+	public static String toPyString(Object o) {
 		return _toPyString(o, false, null);
 	}
 
@@ -1515,7 +1516,7 @@ public class MiniPython {
 	 * @param o
 	 *            Object to stringify. Can be null.
 	 */
-	public String toPyReprString(Object o) {
+	public static String toPyReprString(Object o) {
 		return _toPyString(o, true, null);
 	}
 
