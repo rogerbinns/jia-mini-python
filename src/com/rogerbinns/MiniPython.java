@@ -218,8 +218,7 @@ public class MiniPython {
 		Object[] getPrefixArgs();
 	}
 
-	private final class TBuiltinInstanceMethod implements TNativeMethod,
-	Comparable<TBuiltinInstanceMethod> {
+        private final class TBuiltinInstanceMethod implements TNativeMethod {
 		Object[] prefixargs;
 		String prettyname;
 		Method method;
@@ -263,19 +262,9 @@ public class MiniPython {
 					toPyTypeString(prefixargs[0]), prettyname,
 					builtin_id(prefixargs[0]));
 		}
-
-		@Override
-		public int compareTo(TBuiltinInstanceMethod o) {
-			try {
-				return builtin_cmp(this.toString(), o.toString());
-			} catch (ExecutionError e) {
-				return 0;
-			}
-		}
 	}
 
-	private final class TModuleNativeMethod implements TNativeMethod,
-	Comparable<TModuleNativeMethod> {
+        private final class TModuleNativeMethod implements TNativeMethod {
 		TModule mod;
 		String name;
 		Method nativeMethod;
@@ -328,14 +317,6 @@ public class MiniPython {
 		@Override
 		public Object[] getPrefixArgs() {
 			return null;
-		}
-
-		public int compareTo(TModuleNativeMethod o) {
-			try {
-				return builtin_cmp(this.toString(), o.toString());
-			} catch (ExecutionError e) {
-				return 0;
-			}
 		}
 
 		@Override
@@ -712,7 +693,7 @@ public class MiniPython {
 				case 26: // != NOT_EQ
 					res = cmp != 0;
 					break;
-				}
+    				}
 				stack[++stacktop] = res;
 				continue;
 			}
@@ -1615,8 +1596,12 @@ public class MiniPython {
 		return o instanceof Callable;
 	}
 
-	private int builtin_cmp(Object left, Object right) throws ExecutionError {
+	private int builtin_cmp(Object left, Object right) {
+            try {
 		return compareTo(left, right);
+            } catch(ExecutionError e) {
+                return builtin_id(left)-builtin_id(right);
+            }
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
