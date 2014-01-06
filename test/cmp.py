@@ -2017,6 +2017,10 @@ assert ( {0: 'zero', 1: 'pne'} != {0: 'zero', 1: 'pne'} )==False
 
 def meth(): pass
 
+def meth2(): pass
+
+d={ 'x': meth, 'y': meth, 'z': meth2}
+
 # Extended type check - see general.py around line 70
 assert None==None
 assert True==True
@@ -2025,7 +2029,22 @@ assert []==[]
 assert 3==3
 assert ""==""
 assert meth==meth
+assert meth!=3
+assert meth!=meth2
+assert meth2==meth2
+assert d.x!=meth
+assert d.x==d.y
+assert d.y!=d.z
 assert cmp==cmp
 assert test1.retSelf==test1.retSelf
 assert test1==test1
 assert [].sort != [].sort
+
+assert (meth>meth2 and meth2<meth) or (meth<meth2 and meth2>meth)
+
+d2={}
+assert d.copy!=3
+assert d.copy!=d.update
+assert d2.copy!=d.copy
+
+assert (d.copy < d.update and d.update > d.copy) or (d.copy > d.update and d.update > d.copy)

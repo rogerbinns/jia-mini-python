@@ -171,6 +171,10 @@ test1.takesAll(3, 0, 0, 0, 0, 0, 0)
 test1.takesAll(True, 3, 0, 0, 0, 0, 0)
 #> TypeError.*dict.*
 test1.takesAll(False, True, 4, 0, 0, 0, 0)
+#> TypeError.*got NoneType.*expect.*bool.*
+test1.takesAll(False, None, 0, 0, 0, 0, 0)
+#> TypeError.*got dict.*expect.*bool.*
+test1.takesAll(False, {}, 0, 0, 0, 0, 0)
 #> TypeError.*list.*
 test1.takesAll(False, True, {}, {}, 0, 0, 0)
 #> TypeError.*int.*
@@ -179,6 +183,10 @@ test1.takesAll(False, True, {}, [], "fff", 0, 0)
 test1.takesAll(False, True, {}, [], 3, "", 0)
 #> TypeError.*Test1.*
 test1.takesAll(False, True, {}, [], 3, 3, "")
+#> TypeError.*got bool.*expect.*int
+test1.takesAll(False, True, None, None, True, True, None)
+#>  TypeError.*got bool.*expect.*int
+test1.takesAll(False, True, None, None, 3, True, None)
 #> TypeError.*(Test1|takesAll).*
 test1.takesAll(test1.retSelf())
 

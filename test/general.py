@@ -223,12 +223,20 @@ assert "aeiouaeiou".replace("iou", "OU")=="aeOUaeOU"
 
 assert "fsdafdsaf".split("343")==["fsdafdsaf"]
 assert "edward    is a   \nvampire   ".split()==["edward", "is", "a", "vampire"]
+assert "".split()==[]
+assert " xxx".split()==["xxx"]
+assert "xxx ".split()==["xxx"]
+v="\n\r\t \r\t \n\t \n\r \n\r\t "
+assert v.split()==[]
+for i in range(len(v)):
+    assert (v[:i]+"xx"+v[i:]).split()==["xx"]
 assert "abc.*abc.*".split(".*")==["abc", "abc", ""]
 assert "abc.*abc.*".split("abc", 0)==["abc.*abc.*"]
 assert "abc.*abc.*".split("abc", 1)==["", ".*abc.*"]
 assert "abc.*abc.*".split("abc", 2)==["", ".*", ".*"]
 assert "a1a2a3a4".split("a", 2)==['', '1', '2a3a4']
 assert "1a2a3a4a".split("a", -2)==['1', '2', '3', '4', '']
+assert "a1a2a3a4a".split("a")==["", "1", "2", "3", "4", ""]
 
 assert "".strip()==""
 assert "     ".strip()==""
@@ -290,6 +298,7 @@ assert len({
         3: None,
         4: test1.returnNone()})==3
 
+# C API function
 assert test1.toPyReprString("True")=='"True"'
 assert test1.toPyReprString(True)=='True'
 assert test1.toPyReprString("a\n\t\"")==r'"a\n\t\""'
