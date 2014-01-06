@@ -2265,7 +2265,7 @@ NSString *const MiniPythonErrorDomain = @"MiniPythonErrorDomain";
 - (BOOL)isEqual:(id)other {
     if ([other isMemberOfClass:[self class]]) {
         MiniPythonNativeMethod *o = other;
-        return mp == o->mp && object == o->object && instance == o->instance;
+        return mp == o->mp && object == o->object && instance == o->instance && [name isEqualToString:o->name];
     }
     return NO;
 }
