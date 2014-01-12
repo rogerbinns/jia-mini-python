@@ -83,7 +83,7 @@ coverage:
 	bash $(COBERTURADIR)/cobertura-report.sh --datafile coverage/cobertura.ser --destination coverage src
 	@echo "Report in coverage/com.rogerbinns.MiniPython.html"
 
-BUILDDIR="build/JavaMiniPython-$(VERSION)"
+BUILDDIR="build/JiaMiniPython-$(VERSION)"
 
 dist: clean doc
 	@rm -rf build dist
