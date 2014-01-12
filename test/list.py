@@ -113,3 +113,12 @@ l2=l[:]
 l2.sort(cmp)
 
 assert l1==l2
+
+l1=[4,5,"4","04", {}, []]
+l1.append(l1)
+l2=l1[:]
+
+l1.sort()
+l2.sort(lambda l,r: -cmp(l,r), None, True)
+
+assert l1==l2

@@ -303,3 +303,10 @@ assert test1.toPyReprString("True")=='"True"'
 assert test1.toPyReprString(True)=='True'
 assert test1.toPyReprString("a\n\t\"")==r'"a\n\t\""'
 assert test1.toPyReprString("\\")==r'"\\"'
+
+assert globals()["globals"]==globals
+
+def foo():
+    return len(locals())
+
+assert foo()==0

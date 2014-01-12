@@ -65,10 +65,10 @@ There is a comprehensive test suite.  Since Python already exists it
 provides something to verify answers against.  The test harness is
 written in Python.
 
-There is over 99% line coverage **and** branch coverage in the code.
-While this doesn't guarantee the absence of bugs, it at least assures
-that the vast majority of code is tested.  (The remaining uncovered
-5 lines are some defensive coding around reflection in Java.)
+There is over 99% line coverage and similar branch coverage in the
+code.  While this doesn't guarantee the absence of bugs, it at least
+assures that the vast majority of code is tested.  (The remaining
+lines/branches are generally defensive coding.)
 
 The scope being limited (note "Mini" in the name!) there is also less
 functionality and less to go wrong.

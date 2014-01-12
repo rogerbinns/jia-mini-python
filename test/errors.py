@@ -29,6 +29,14 @@ None + 3
 3/{}
 #> TypeError:.*bool.*
 True/3
+#> TypeError
+3+"3"
+#> TypeError
+"3"+3
+#> TypeError
+3+[]
+#> TypeError
+[]+3
 #> ArithmeticException
 1/0
 #> TypeError:
@@ -102,6 +110,10 @@ del [][:2]
 #> TypeError
 # see above
 del [1,2,3][2:]
+#> TypeError
+{}.update("fdsfds")
+#> TypeError
+"dsfdsf".startswith([])
 
 #> NameError
 name=3
@@ -244,6 +256,9 @@ range(1,2,3,4,5,6)
 #> TypeError.*callable.*
 [].sort(True)
 
+#> .*(ClassCastException|TypeError: Got str expected int).*
+[1,2,3].sort(lambda l,r: "not an int")
+
 #> AssertionError
 def meth(a,b):
     assert False
@@ -265,6 +280,11 @@ apply(None, [])
 #> (RuntimeError|.*stack overflow).*
 x=test1.call
 apply(test1.call, ["x"]*65536)
+
+#> RuntimeError.*stack.*
+def recursive(x,y,z):
+    return x+recursive(3,4,5)
+recursive(1,2,3)
 
 #> TypeError
 test1.vacall(3)
