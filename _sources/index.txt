@@ -3,13 +3,6 @@ Welcome to |project| documentation
 
 .. centered::  Version |version| released |today|
 
-.. note::
-
-  Due to a lack of foresight, this project used to be named Java Mini
-  Python. It also has an Objective C implmentation that works on iOS
-  and MacOS, and may see other platforms in the future, hence the
-  current name.
-
 |project| provides an implementation of a useful subset of
 Python syntax and types in Java and Objective C.  The sweet spot is
 where you need a `DSL
@@ -32,10 +25,11 @@ If you are looking for a fuller implementation of Python then try the
 
 Works with `Java 1.5+
 <http://en.wikipedia.org/wiki/Java_version_history#J2SE_5.0_.28September_30.2C_2004.29>`__,
-iOS/MacOS with Clang and `ARC
-<http://developer.apple.com/library/mac/#releasenotes/ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html>`__,
-and `Python 2.6+/3.1+
-<http://en.wikipedia.org/wiki/History_of_Python#Version_release_dates>`__.
+and iOS/MacOS with Clang and `ARC
+<http://developer.apple.com/library/mac/#releasenotes/ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html>`__.
+You need `Python 2.6+/3.1+
+<http://en.wikipedia.org/wiki/History_of_Python#Version_release_dates>`__
+on a host computer to translate Python text into the bytecode used.
 
 As a JAR file |project| comes in at 32kb, `Rhino
 <http://www.mozilla.org/rhino/>`__ (Javascript interpreter) comes in
@@ -63,9 +57,6 @@ Contents:
    faq
    changes
    copyright
-
-
-
 
 Indices and tables
 ==================

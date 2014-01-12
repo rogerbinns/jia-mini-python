@@ -3,8 +3,8 @@ Java API Reference
 
 .. default-domain:: java
 
-:index:`Types`
---------------
+:index:`Types <single:Types; Java>`
+-----------------------------------
 
 Where possible types are mapped directly from Python to Java.
 

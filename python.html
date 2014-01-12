@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Python reference &mdash; Jia Mini Python 1.99 documentation</title>
+    <title>Python reference &mdash; Jia Mini Python 2.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.99',
+        VERSION:     '2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="copyright" title="Copyright" href="copyright.html" />
-    <link rel="top" title="Jia Mini Python 1.99 documentation" href="index.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
     <link rel="next" title="jmp-compile" href="jmp-compile.html" />
     <link rel="prev" title="Objective C API Reference" href="objc.html" />
  
@@ -50,7 +50,7 @@
         <li class="right" >
           <a href="objc.html" title="Objective C API Reference"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Jia Mini Python 1.99 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -69,64 +69,62 @@ attributes (eg functions) do not exist.  For example in Python
 integers have 64 different attributes while they have none in this
 implementation.</p>
 <div class="section" id="dict-type">
-<h2>dict type<a class="headerlink" href="#dict-type" title="Permalink to this headline">¶</a></h2>
+<h2><span class="target" id="index-0"></span>dict type<a class="headerlink" href="#dict-type" title="Permalink to this headline">¶</a></h2>
 <dl class="method">
-<dt id="copy">
-<tt class="descname">copy</tt><big>(</big><big>)</big> &rarr; dict<a class="headerlink" href="#copy" title="Permalink to this definition">¶</a></dt>
+<dt id="dict.copy">
+<tt class="descclassname">dict.</tt><tt class="descname">copy</tt><big>(</big><big>)</big> &rarr; dict<a class="headerlink" href="#dict.copy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a new dictionary with the same contents, but changes to the
 new one do not affect the original.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="get">
-<tt class="descname">get</tt><big>(</big><em>key</em>, <em>default</em><big>)</big><a class="headerlink" href="#get" title="Permalink to this definition">¶</a></dt>
+<dt id="dict.get">
+<tt class="descclassname">dict.</tt><tt class="descname">get</tt><big>(</big><em>key</em>, <em>default</em><big>)</big><a class="headerlink" href="#dict.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns value associated with key, and if it doesn&#8217;t exist then <cite>default</cite>.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="update">
-<tt class="descname">update</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#update" title="Permalink to this definition">¶</a></dt>
+<dt id="dict.update">
+<tt class="descclassname">dict.</tt><tt class="descname">update</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#dict.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Copies all items from other into this dict.</p>
 </dd></dl>
 
 </div>
 <div class="section" id="list-type">
-<h2>list type<a class="headerlink" href="#list-type" title="Permalink to this headline">¶</a></h2>
+<h2><span class="target" id="index-1"></span>list type<a class="headerlink" href="#list-type" title="Permalink to this headline">¶</a></h2>
 <dl class="method">
-<dt id="append">
-<tt class="descname">append</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#append" title="Permalink to this definition">¶</a></dt>
+<dt id="list.append">
+<tt class="descclassname">list.</tt><tt class="descname">append</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#list.append" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds item to end of this list</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="extend">
-<tt class="descname">extend</tt><big>(</big><em>list</em><big>)</big><a class="headerlink" href="#extend" title="Permalink to this definition">¶</a></dt>
+<dt id="list.extend">
+<tt class="descclassname">list.</tt><tt class="descname">extend</tt><big>(</big><em>list</em><big>)</big><a class="headerlink" href="#list.extend" title="Permalink to this definition">¶</a></dt>
 <dd><p>Appends every member of list to this list</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="index">
-<tt class="descname">index</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#index" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns position of item in list or -1 if not found.  Calls
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/util/List.html#indexOf(java.lang.Object)">List.indexOf</a></p>
+<dt id="list.index">
+<tt class="descclassname">list.</tt><tt class="descname">index</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#list.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns position of item in list or -1 if not found.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="reverse">
-<tt class="descname">reverse</tt><big>(</big><big>)</big><a class="headerlink" href="#reverse" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reverses the order of the elements in the list by calling
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/util/Collections.html#reverse(java.util.List)">Collections.reverse</a>.</p>
+<dt id="list.reverse">
+<tt class="descclassname">list.</tt><tt class="descname">reverse</tt><big>(</big><big>)</big><a class="headerlink" href="#list.reverse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reverses the order of the elements in the list</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pop">
-<tt class="descname">pop</tt><big>(</big><big>)</big><a class="headerlink" href="#pop" title="Permalink to this definition">¶</a></dt>
+<dt id="list.pop">
+<tt class="descclassname">list.</tt><tt class="descname">pop</tt><big>(</big><big>)</big><a class="headerlink" href="#list.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Removes the last item in the list and returns it</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="sort">
-<tt class="descname">sort</tt><big>(</big><em>cmp=None</em>, <em>key=None</em>, <em>reverse=False</em><big>)</big><a class="headerlink" href="#sort" title="Permalink to this definition">¶</a></dt>
+<dt id="list.sort">
+<tt class="descclassname">list.</tt><tt class="descname">sort</tt><big>(</big><em>cmp=None</em>, <em>key=None</em>, <em>reverse=False</em><big>)</big><a class="headerlink" href="#list.sort" title="Permalink to this definition">¶</a></dt>
 <dd><p>You can omit some or all of the arguments.  Since keyword arguments
 are not supported you will need to supply preceding arguments.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -147,44 +145,43 @@ returning a derived value to use for the comparison.</li>
 </table>
 <p>Unlike Python&#8217;s implementation this does require that cmp and key
 are callables if supplied.</p>
-<p>Java&#8217;s <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/util/Collections.html#sort(java.util.List, java.util.Comparator)">Collections.sort</a> is used whose implementation is derived
-from Python&#8217;s <a class="reference external" href="http://en.wikipedia.org/wiki/Timsort">sort</a>.</p>
 </dd></dl>
 
 </div>
 <div class="section" id="str-type">
-<h2>str type<a class="headerlink" href="#str-type" title="Permalink to this headline">¶</a></h2>
+<h2><span class="target" id="index-2"></span>str type<a class="headerlink" href="#str-type" title="Permalink to this headline">¶</a></h2>
 <dl class="method">
-<dt id="endswith">
-<tt class="descname">endswith</tt><big>(</big><em>suffix</em><big>)</big><a class="headerlink" href="#endswith" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns True if the string ends with the specified suffix.  Calls
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#endsWith(java.lang.String)">String.endsWith</a>.</p>
+<dt id="str.endswith">
+<tt class="descclassname">str.</tt><tt class="descname">endswith</tt><big>(</big><em>suffix</em><big>)</big><a class="headerlink" href="#str.endswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the string ends with the specified suffix.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="join">
-<tt class="descname">join</tt><big>(</big><em>list</em><big>)</big><a class="headerlink" href="#join" title="Permalink to this definition">¶</a></dt>
+<dt id="str.join">
+<tt class="descclassname">str.</tt><tt class="descname">join</tt><big>(</big><em>list</em><big>)</big><a class="headerlink" href="#str.join" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a string which is the concatenation of the strings in the
 list, separated by this string.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="lower">
-<tt class="descname">lower</tt><big>(</big><big>)</big><a class="headerlink" href="#lower" title="Permalink to this definition">¶</a></dt>
+<dt id="str.lower">
+<tt class="descclassname">str.</tt><tt class="descname">lower</tt><big>(</big><big>)</big><a class="headerlink" href="#str.lower" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns lower case version of string by calling
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#toLowerCase()">String.toLowerCase</a>.</p>
+<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#toLowerCase()">String.toLowerCase</a>
+(Java) <a class="reference external" href="https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/NSString_Class/Reference/NSString.html#//apple_ref/occ/instm/NSString/lowercaseString">NSString lowercaseString</a>
+(ObjC).</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="replace">
-<tt class="descname">replace</tt><big>(</big><em>target</em>, <em>replacement</em><big>)</big><a class="headerlink" href="#replace" title="Permalink to this definition">¶</a></dt>
+<dt id="str.replace">
+<tt class="descclassname">str.</tt><tt class="descname">replace</tt><big>(</big><em>target</em>, <em>replacement</em><big>)</big><a class="headerlink" href="#str.replace" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a new string replacing all occurrences of <cite>target</cite> with
-<cite>replacement</cite> by calling <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#replace(java.lang.CharSequence, java.lang.CharSequence)">String.replace</a>.</p>
+<cite>replacement</cite>.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="split">
-<tt class="descname">split</tt><big>(</big><em>sep</em>, <em>maxsplits</em><big>)</big><a class="headerlink" href="#split" title="Permalink to this definition">¶</a></dt>
+<dt id="str.split">
+<tt class="descclassname">str.</tt><tt class="descname">split</tt><big>(</big><em>sep</em>, <em>maxsplits</em><big>)</big><a class="headerlink" href="#str.split" title="Permalink to this definition">¶</a></dt>
 <dd><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -208,24 +205,24 @@ maxsplits have been found.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="startswith">
-<tt class="descname">startswith</tt><big>(</big><em>prefix</em><big>)</big><a class="headerlink" href="#startswith" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns True is the string starts with prefix.  Calls
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#startsWith(java.lang.String)">String.startsWith</a>.</p>
+<dt id="str.startswith">
+<tt class="descclassname">str.</tt><tt class="descname">startswith</tt><big>(</big><em>prefix</em><big>)</big><a class="headerlink" href="#str.startswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True is the string starts with prefix.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="strip">
-<tt class="descname">strip</tt><big>(</big><big>)</big><a class="headerlink" href="#strip" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns new string omitting leading and trailing whitespace.  Calls
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#trim()">String.trim</a>.</p>
+<dt id="str.strip">
+<tt class="descclassname">str.</tt><tt class="descname">strip</tt><big>(</big><big>)</big><a class="headerlink" href="#str.strip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns new string omitting leading and trailing whitespace.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="upper">
-<tt class="descname">upper</tt><big>(</big><big>)</big><a class="headerlink" href="#upper" title="Permalink to this definition">¶</a></dt>
+<dt id="str.upper">
+<tt class="descclassname">str.</tt><tt class="descname">upper</tt><big>(</big><big>)</big><a class="headerlink" href="#str.upper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns upper case version of string by calling
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#toUpperCase()">String.toUpperCase</a>.</p>
+<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#toUpperCase()">String.toUpperCase</a>
+(Java) <a class="reference external" href="https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/NSString_Class/Reference/NSString.html#//apple_ref/occ/instm/NSString/uppercaseString">NSString uppercaseString</a>
+(ObjC).</p>
 </dd></dl>
 
 </div>
@@ -288,7 +285,8 @@ returned true.</p>
 <tt class="descname">id</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#id" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a numeric code uniquely representing this instance.  Behind
 the scenes it returns the result of
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/System.html#identityHashCode(java.lang.Object)">System.getIdentityHashcode()</a>.</p>
+<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/System.html#identityHashCode(java.lang.Object)">System.getIdentityHashcode()</a> (Java)
+or the object pointer (ObjC).</p>
 </dd></dl>
 
 <dl class="function">
@@ -339,7 +337,8 @@ under Python 3 or supplied the <cite>&#8211;print-function</cite> argument.</p>
 <dt id="str">
 <tt class="descname">str</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#str" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the string corresponding to item.</p>
-<p>For <a class="reference internal" href="java.html"><em>non basic types</em></a> their <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#toString()">toString()</a> method is called.</p>
+<p>For <a class="reference internal" href="java.html"><em>non basic types</em></a> their <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#toString()">toString()</a> (Java) <a class="reference external" href="https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Protocols/NSObject_Protocol/Reference/NSObject.html#//apple_ref/occ/intfm/NSObject/description">NSObject description</a>
+(ObjC) method is called.</p>
 </dd></dl>
 
 <dl class="function">
@@ -347,7 +346,9 @@ under Python 3 or supplied the <cite>&#8211;print-function</cite> argument.</p>
 <tt class="descname">type</tt><big>(</big><em>item</em><big>)</big><a class="headerlink" href="#type" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unlike regular Python this returns a string.  For the basic types
 it will be the expected name.  For others it will be their
-<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getSimpleName()">Class.getSimpleName()</a>.</p>
+<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getSimpleName()">Class.getSimpleName()</a> (Java) or <a class="reference external" href="https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Protocols/NSObject_Protocol/Reference/NSObject.html#//apple_ref/occ/intfm/NSObject/description">class
+description</a>
+(ObjC)</p>
 </dd></dl>
 
 </div>
@@ -405,6 +406,10 @@ similar to how Javascript works.):</p>
       <span class="c"># method members</span>
       <span class="s">&quot;area&quot;</span><span class="p">:</span> <span class="n">area</span><span class="p">,</span>
       <span class="s">&quot;draw&quot;</span><span class="p">:</span> <span class="n">draw</span><span class="p">}</span>
+
+   <span class="c"># If you are happy exposing everything then this works</span>
+   <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+
 
 <span class="c"># This is how we make a new instance</span>
 <span class="n">circ</span><span class="o">=</span><span class="n">Circle</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
@@ -472,12 +477,12 @@ similar to how Javascript works.):</p>
         <li class="right" >
           <a href="objc.html" title="Objective C API Reference"
              >previous</a> |</li>
-        <li><a href="index.html">Jia Mini Python 1.99 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
 
     <div class="footer">
-        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+        &copy; <a href="copyright.html">Copyright</a> 2011-2014, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
 <div class="footer">This page uses <a href="http://analytics.google.com/">

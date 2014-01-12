@@ -45,7 +45,7 @@ Operators
 * [] (list and dict indexing)
 * [from:to] list slicing (step not supported)
 * x if y else z (ternary)
-* Augmented assignments (+= -= /= etc). :ref:`note <augassign>`)
+* Augmented assignments += -= /= etc (:ref:`note <augassign>`)
 * List comprehensions
 
 What is not supported

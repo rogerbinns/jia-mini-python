@@ -1,6 +1,21 @@
 :index:`Example`
 ****************
 
+Steps
+=====
+
+1. Write your :ref:`Python code <example_python>`
+2. Use :doc:`jmp-compile` on a host computer to translate into the
+   compact jmp bytecode format (:ref:`example <example_jmp_compile>`)
+3. In your deployment systems, create a MiniPython instance, add
+   modules and load the byte code (:ref:`Java <example_java>`)
+   (:ref:`Objective C <example_objc>`)
+
+.. _example_python:
+
+Python Source
+=============
+
 Write your Python code::
 
   launches=0
@@ -10,11 +25,19 @@ Write your Python code::
        return base+10
     return base+7
 
-Turn that into the bytecode that |project| uses.  This checks the
-syntax, tokenizes and produces a smaller file.  The output is by
-default the same filename as the input but with an extension of .jmp::
+.. _example_jmp_compile:
+
+jmp-compile
+===========
+
+Turn that into the bytecode that |project| uses with
+:doc:`jmp-compile`.  This checks the syntax, tokenizes and produces a
+smaller file.  The output is by default the same filename as the input
+but with an extension of .jmp::
 
   jmp-compile settings.py
+
+.. _example_java:
 
 Java
 ====
@@ -55,6 +78,8 @@ using it as well, having version clashes etc.
   // Call a method passing in one parameter
   int brightness=(Integer)mp.callMethod("get_brightness", 2);
 
+.. _example_objc:
+
 Objective C
 ===========
 
@@ -90,12 +115,11 @@ to your project.  Use it like this.
    [mp setClient:self];
 
    // give it code to run
-   NSInputStream *in=[NSInputStream inputStreamWithFileAtPath:filename];
-   [in open];
+   NSInputStream *input=[NSInputStream inputStreamWithFileAtPath:filename];
+   [input open];
 
    NSError *error;
-   BOOL success=[mp setCode:in error:&error];
+   BOOL success=[mp setCode:input error:&error];
 
    // call a method passing in one parameter
    int brightness=[(NSNumber*)[mp callMethod:@"get_brightness" args:@[@2] error:&error] intValue];
-

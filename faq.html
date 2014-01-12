@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Frequently Asked Questions &mdash; Jia Mini Python 1.99 documentation</title>
+    <title>Frequently Asked Questions &mdash; Jia Mini Python 2.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.99',
+        VERSION:     '2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="copyright" title="Copyright" href="copyright.html" />
-    <link rel="top" title="Jia Mini Python 1.99 documentation" href="index.html" />
+    <link rel="top" title="Jia Mini Python 2.0 documentation" href="index.html" />
     <link rel="next" title="Change History" href="changes.html" />
     <link rel="prev" title="Internals" href="internals.html" />
  
@@ -50,7 +50,7 @@
         <li class="right" >
           <a href="internals.html" title="Internals"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Jia Mini Python 1.99 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -69,9 +69,18 @@ that fell between a JSON configuration file and full blown code.</p>
 require version coordination if the app already used those libraries.
 Additionally those libraries are orders of magnitude larger than the
 original project which is very undesirable.</p>
-<p>Jia Mini Python is just over 800 lines of code, and a single source
-file which you are encouraged to put into your own packages thereby
-avoiding having to coordinate versions.</p>
+<p>Jia Mini Python is just over 800 lines of code (Java)/1,000 (Objective C),
+and a single source file which you are encouraged to put into your own
+packages thereby avoiding having to coordinate versions.</p>
+</div>
+<div class="section" id="is-it-used-in-the-real-world">
+<h2>Is it used in the real world?<a class="headerlink" href="#is-it-used-in-the-real-world" title="Permalink to this headline">¶</a></h2>
+<p>Yes.  It is used to implement the <a class="reference external" href="http://www.appington.com">Appington</a> SDK.  The same Python code is used to
+control audio downloads and playback.  For example when playing an
+audio prompt the locale, time since last audio, caps, and other
+criteria need to be taken into account.</p>
+<p>The SDK is used in several different Android and iOS applications,
+covering millions of users all over the world.</p>
 </div>
 <div class="section" id="what-about-hostile-code">
 <h2>What about hostile code?<a class="headerlink" href="#what-about-hostile-code" title="Permalink to this headline">¶</a></h2>
@@ -105,25 +114,22 @@ that would put them into undesirable states.</p>
 <p>There is a comprehensive test suite.  Since Python already exists it
 provides something to verify answers against.  The test harness is
 written in Python.</p>
-<p>There is over 99% line coverage <strong>and</strong> branch coverage in the code.
-While this doesn&#8217;t guarantee the absence of bugs, it at least assures
-that the vast majority of code is tested.  (The remaining uncovered
-5 lines are some defensive coding around reflection.)</p>
+<p>There is over 99% line coverage and similar branch coverage in the
+code.  While this doesn&#8217;t guarantee the absence of bugs, it at least
+assures that the vast majority of code is tested.  (The remaining
+lines/branches are generally defensive coding.)</p>
 <p>The scope being limited (note &#8220;Mini&#8221; in the name!) there is also less
 functionality and less to go wrong.</p>
 <p>Please use the discussion group
-<a class="reference external" href="https://groups.google.com/forum/#!forum/java-mini-python">https://groups.google.com/forum/#!forum/java-mini-python</a> and bug
+<a class="reference external" href="https://groups.google.com/forum/#!forum/jia-mini-python">https://groups.google.com/forum/#!forum/jia-mini-python</a> and bug
 tracker at <a class="reference external" href="https://github.com/rogerbinns/jia-mini-python/issues">https://github.com/rogerbinns/jia-mini-python/issues</a> if you
 encounter any issues.</p>
 </div>
 <div class="section" id="what-about-bugs-in-my-code">
 <h2>What about bugs in my code?<a class="headerlink" href="#what-about-bugs-in-my-code" title="Permalink to this headline">¶</a></h2>
 <p>There is no debugger provided or any similar notion of interactivity.
-It is easiest/quickest to develop your code using normal Python <a class="reference external" href="http://en.wikipedia.org/wiki/Mock_object">mocking</a> the Java implemented
-parts.</p>
-<p>Once happy, start using Java.  Print statements are the easiest way to
-track program progress and values.  In your <a class="reference internal" href="java.html#client"><em>interface MiniPython.Client</em></a> you can make
-your print method log, display or take similar action.</p>
+It is easiest/quickest to develop your code using print statements.
+On a host computer you can use normal Python <a class="reference external" href="http://en.wikipedia.org/wiki/Mock_object">mocking</a> the modules.</p>
 <p>When there are errors you get a line number that can be looked up, as
 well as a program counter which can be used with an <a class="reference internal" href="jmp-compile.html"><em>annotated
 listing</em></a> to find the exact issue.</p>
@@ -144,6 +150,7 @@ using asserts.</p>
   <ul>
 <li><a class="reference internal" href="#">Frequently Asked Questions</a><ul>
 <li><a class="reference internal" href="#why-was-this-project-done">Why was this project done?</a></li>
+<li><a class="reference internal" href="#is-it-used-in-the-real-world">Is it used in the real world?</a></li>
 <li><a class="reference internal" href="#what-about-hostile-code">What about hostile code?</a></li>
 <li><a class="reference internal" href="#what-about-bugs">What about bugs?</a></li>
 <li><a class="reference internal" href="#what-about-bugs-in-my-code">What about bugs in my code?</a></li>
@@ -191,12 +198,12 @@ using asserts.</p>
         <li class="right" >
           <a href="internals.html" title="Internals"
              >previous</a> |</li>
-        <li><a href="index.html">Jia Mini Python 1.99 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Jia Mini Python 2.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
 
     <div class="footer">
-        &copy; <a href="copyright.html">Copyright</a> 2011-2013, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
+        &copy; <a href="copyright.html">Copyright</a> 2011-2014, Roger Binns &lt;rogerb@rogerbinns.com&gt;.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
 <div class="footer">This page uses <a href="http://analytics.google.com/">
