@@ -310,3 +310,22 @@ def foo():
     return len(locals())
 
 assert foo()==0
+
+# Check scoping of identical names
+def all(expr, values):
+    for v in values:
+        if not expr(v):
+            return False
+    return True
+
+dicts=[
+    {"a": 1},
+    {"a": 2},
+    {"a": 3}
+]
+
+assert all(lambda v: v.a, dicts)
+assert not all(lambda v: v.a<3, dicts)
+
+for v in dicts:
+    assert all(lambda v: v.a, [v])
