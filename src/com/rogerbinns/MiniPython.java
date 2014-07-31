@@ -173,6 +173,7 @@ public class MiniPython {
 		// address of method in bytecode
 		int addr;
 		Context context;
+		String name="";
 		Object self; // set if a bound method
 
 		TMethod(int addr, Context context) {
@@ -183,11 +184,16 @@ public class MiniPython {
 
 		public String toString() {
 			if (self != null)
-				return String.format("<bound method of id %d at %d>",
-						builtin_id(self), addr);
-			return String.format("<method at %d>", addr);
+				return String.format("<bound method %sof id %d at %d>",
+						name, builtin_id(self), addr);
+			return String.format("<method %sat %d>", name, addr);
 		}
 
+		void setName(String n) {
+			if (name.equals(""))
+				name=n+" ";
+		}
+		
 		@Override
 		public boolean equals(Object other) {
 			return other instanceof TMethod
@@ -1012,7 +1018,10 @@ public class MiniPython {
 						&& current.globals.contains(strings[val])) {
 					c = root;
 				}
-				c.variables.put(strings[val], stack[stacktop--]);
+				Object o=stack[stacktop--];
+				if (o instanceof TMethod) 
+					((TMethod)o).setName(strings[val]);
+				c.variables.put(strings[val], o);
 				continue;
 			}
 			case 163: // GLOBAL

@@ -1,6 +1,11 @@
 Change History
 **************
 
+2.0.1
+=====
+
+Methods now give their name when stringified.
+
 2.0
 ===
 
