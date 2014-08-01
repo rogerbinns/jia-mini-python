@@ -173,13 +173,14 @@ public class MiniPython {
 		// address of method in bytecode
 		int addr;
 		Context context;
-		String name="";
+		String name;
 		Object self; // set if a bound method
 
-		TMethod(int addr, Context context) {
+		TMethod(int addr, Context context, String name) {
 			this.addr = addr;
 			this.context = context;
 			this.self = null;
+			this.name = (name==null) ? "" : name;
 		}
 
 		public String toString() {
@@ -538,6 +539,8 @@ public class MiniPython {
 					Object k = stack[stacktop + 1 + i * 2 + 1];
 					Object v = stack[stacktop + 1 + i * 2];
 					m.put(k, v);
+					if (v instanceof TMethod)
+						((TMethod)v).setName( (k==null) ? "null" : k.toString() );
 				}
 				stack[++stacktop] = m;
 				continue;
@@ -1041,7 +1044,7 @@ public class MiniPython {
 			// Function call related
 			case 128: // MAKE_METHOD
 			{
-				stack[++stacktop] = new TMethod(val, current);
+				stack[++stacktop] = new TMethod(val, current, null);
 				continue;
 			}
 			case 10: // CALL
@@ -1324,7 +1327,7 @@ public class MiniPython {
 				if (retval instanceof TMethod) {
 					TMethod t = (TMethod) retval;
 					if (t.self == null) {
-						t = new TMethod(t.addr, t.context);
+						t = new TMethod(t.addr, t.context, t.name);
 						t.self = o;
 						retval = t;
 					}

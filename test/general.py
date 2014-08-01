@@ -329,3 +329,27 @@ assert not all(lambda v: v.a<3, dicts)
 
 for v in dicts:
     assert all(lambda v: v.a, [v])
+
+
+def xyzzy(): pass
+
+assert "xyzzy" in str({1: xyzzy})
+
+d={"a": xyzzy}
+
+assert "bound" in str(d.a)
+assert "xyzzy" in str(d.a)
+
+def fakeclass():
+
+    def one(self):
+        return 1
+
+    def two(self, x):
+        return self.one+self.one
+
+    return locals()
+
+fakeinst=fakeclass()
+assert "method one" in str(fakeinst.one)
+assert "method two" in str(fakeinst)
