@@ -353,3 +353,5 @@ def fakeclass():
 fakeinst=fakeclass()
 assert "method one" in str(fakeinst.one)
 assert "method two" in str(fakeinst)
+
+assert "None" in str({None: lambda: 3}[None])
