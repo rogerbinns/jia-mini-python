@@ -43,6 +43,8 @@ public class MiniPython {
 	private int pc;
 
 	private static int STACK_SIZE;
+	
+	private MethodCache<Method> instancemethodcache;
 
 	public MiniPython() {
 		STACK_SIZE = 1024;
@@ -62,6 +64,7 @@ public class MiniPython {
 		linenumbers = null;
 		code = null;
 		mTheClient = null;
+		instancemethodcache = null;
 	}
 
 	/**
@@ -91,6 +94,7 @@ public class MiniPython {
 		stack = new Object[STACK_SIZE];
 		stacktop = -1;
 		pc = 0;
+		instancemethodcache = new MethodCache<Method>();
 		addBuiltins();
 
 		// version
@@ -206,14 +210,24 @@ public class MiniPython {
 	private static final class TModule {
 		String name;
 		Object o;
+		MethodCache<Method> mcache;
 
 		TModule(Object o, String name) {
 			this.o = o;
 			this.name = name;
+			this.mcache = new MethodCache<Method>();
 		}
 
 		public String toString() {
 			return String.format("<module %s>", name);
+		}
+		
+		void putCache(String n, Method m) {
+			mcache.put(n, m);
+		}
+		
+		Method getCache(String n) {
+			return mcache.get(n);
 		}
 	}
 
@@ -279,15 +293,19 @@ public class MiniPython {
 		TModuleNativeMethod(TModule mod, String name) throws ExecutionError {
 			this.mod = mod;
 			this.name = name;
-			for (Method m : mod.o.getClass().getDeclaredMethods()) {
-				// we only want public methods
-				if ((m.getModifiers() & Modifier.PUBLIC) == 0) {
-					continue;
-				}
-				if (m.getName().equals(name)) {
-					nativeMethod = m;
-					break;
-				}
+			nativeMethod = mod.getCache(name);
+			if (nativeMethod==null) {
+			    for (Method m : mod.o.getClass().getDeclaredMethods()) {
+				    // we only want public methods
+				    if ((m.getModifiers() & Modifier.PUBLIC) == 0) {
+					    continue;
+				    }
+				    if (m.getName().equals(name)) {
+					   nativeMethod = m;
+					   mod.putCache(name, m);
+					   break;
+				    }
+			    }
 			}
 			if (nativeMethod == null)
 				throw internalError("AttributeError", "No method named " + name);
@@ -333,6 +351,21 @@ public class MiniPython {
 
 	}
 
+    static class MethodCache<T> {
+    	HashMap<String, T> cache;
+    	
+    	T get(String name) {
+    		return (cache==null) ? null : cache.get(name);
+    	}
+    	
+    	void put(String name, T obj) {
+    		if (cache==null)
+    			cache=new HashMap<String, T>();
+    		cache.put(name, obj);
+    	}
+    }
+        
+        
 	private final void addBuiltins() {
 		TModule tm = new TModule(this, "__builtins__");
 		for (Method m : this.getClass().getDeclaredMethods()) {
@@ -540,7 +573,7 @@ public class MiniPython {
 					Object v = stack[stacktop + 1 + i * 2];
 					m.put(k, v);
 					if (v instanceof TMethod)
-						((TMethod)v).setName( (k==null) ? "null" : k.toString() );
+						((TMethod)v).setName( (k==null) ? "None" : k.toString() );
 				}
 				stack[++stacktop] = m;
 				continue;
@@ -1338,11 +1371,20 @@ public class MiniPython {
 
 		// find an instance method
 		String target = "instance_" + toPyTypeString(o) + "_" + name;
-		for (Method meth : this.getClass().getDeclaredMethods()) {
-			if (meth.getName().equals(target))
-				return new TBuiltinInstanceMethod(new Object[] { o }, meth,
-						name);
+		Method method = instancemethodcache.get(target);
+		if (method==null) {
+		    for (Method meth : this.getClass().getDeclaredMethods()) {
+			    if (meth.getName().equals(target)) {
+			    	method = meth;
+			    	instancemethodcache.put(target, meth);
+			    	break;
+			    }
+		    }
 		}
+		
+		if (method!=null)
+				return new TBuiltinInstanceMethod(new Object[] { o }, method,
+						name);
 
 		throw internalError("AttributeError",
 				String.format("No attribute '%s' of %s", name, toPyString(o)));

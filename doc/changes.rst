@@ -1,10 +1,13 @@
 Change History
 **************
 
-2.0.1
+2.1
 =====
 
 Methods now give their name when stringified.
+
+Java: use a cache for Java implemented methods as
+class.getDeclaredMethods can be very slow on some platforms.
 
 2.0
 ===
